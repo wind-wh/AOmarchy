@@ -266,9 +266,9 @@ public final class Installer {
         }
     }
 
-    /** Bytes used by a tree (the rootfs is ~100k files, so this runs off the UI thread when needed). */
+    /** Bytes used by a tree (the rootfs is ~100k files, so this runs off the UI thread). Symlinks are not followed. */
     public static long dirSize(File f) {
-        if (f == null || !f.exists())
+        if (f == null || !f.exists() || isSymlink(f))
             return 0;
         if (f.isFile())
             return f.length();
@@ -281,10 +281,21 @@ public final class Installer {
         return total;
     }
 
+    /** True for a symlink: File.isDirectory() follows it, and some rootfs links point outside (etc/mtab -> /proc/mounts). */
+    private static boolean isSymlink(File f) {
+        try {
+            return android.system.OsConstants.S_ISLNK(android.system.Os.lstat(f.getPath()).st_mode);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /** Recursive delete; returns false when something could not be removed. */
     public static boolean deleteTree(File f) {
         if (f == null || !f.exists())
             return true;
+        if (isSymlink(f))
+            return f.delete(); // deleting the link, never what it points at
         if (f.isDirectory()) {
             // Extracted trees carry the archive's modes: a read-only directory refuses to lose its children.
             f.setWritable(true, true);
