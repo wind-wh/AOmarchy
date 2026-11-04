@@ -162,7 +162,7 @@ public final class Apps {
 
     /** Launches a Linux application on the desktop (needs a running session). */
     public static void launchLinux(Context ctx, LinuxApp app) {
-        SessionService.runInSession(ctx, "gtk-launch", app.id);
+        SessionService.runInSession(ctx, "exec gtk-launch " + app.id);
     }
 
     public static String size(Context ctx, List<?> list) {

@@ -378,12 +378,12 @@ public class SessionService extends Service {
         return env;
     }
 
-    /** Runs one command inside the rootfs with the session environment: the console launching a Linux app. */
-    public static void runInSession(Context ctx, String... command) {
+    /** Runs one shell command inside the rootfs with the session environment: the console launching a Linux app. */
+    public static void runInSession(Context ctx, String command) {
         String launcher = ctx.getApplicationInfo().nativeLibraryDir + "/liblotfixrun.so";
-        java.util.List<String> full = new java.util.ArrayList<>();
-        full.add(launcher);
-        full.addAll(java.util.Arrays.asList(command));
+        // The launcher takes -c <command>; the session PATH is not inherited from Android, so set it here.
+        java.util.List<String> full = java.util.Arrays.asList(launcher, "-c",
+                "export PATH=/usr/share/omarchy/bin:/usr/local/bin:/usr/bin:/bin; " + command);
         ProcessBuilder pb = new ProcessBuilder(full);
         pb.environment().clear();
         pb.environment().putAll(archEnv(ctx, runDir(ctx), daemonSocket(ctx)));
