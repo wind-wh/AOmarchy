@@ -92,28 +92,33 @@ jobs:
           fail_on_unmatched_files: true
           files: dist/*
           body: |
-            **AOmarchy 2.5** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
+            **AOmarchy 2.6** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
 
             This release was built and signed by GitHub Actions from the repository source.
 
-            ## What is new in 2.5
+            ## What is new in 2.6
 
-            - **Back up from the overview.** The 概览 backup card now has **立即备份 / Back up now**: one tap snapshots
-              the whole Linux system with the progress shown in the card, and **管理备份** jumps to the System page for
-              restoring, exporting or deleting. The card still shows how old the newest backup is, and turns red when
-              there is none or it is over 30 days old.
-            - **The settings export says what it contains.** The exported file is plain JSON including your name and
-              email, and the 配置备份 page now says so.
-            - **Launcher shortcuts have brand icons** (console / system / settings / terminal) instead of the generic
-              system ones.
-            - **Cleanup:** the strings, styles and colours left behind by the settings screen removed in 2.2 are gone
-              (114 unused strings and 4 string arrays per locale, the old settings theme and its colours), so the APK
-              carries only what it uses.
-            - Everything from 2.4 stays: settings export/import, the working launcher shortcuts, the backup age card.
+            - **A Quick Settings tile.** Pull down the shade, tap the AOmarchy tile and the console opens — or the
+              terminal, when the startup mode is 终端; with no system installed it lands on the System page. The tile
+              label follows the state (未安装 / 控制台 / 终端). This is the same quick-access pattern the other
+              "Linux on Android" apps offer.
+            - **Backups no longer fill the tablet.** 系统 → 备份与回滚 shows how many backups exist and how much space
+              they take, and adds **保留最近 / Keep the newest** (default: the newest 3) and **清理旧备份 / Prune old
+              backups**. Archives beyond the chosen count are pruned automatically after each backup, and interrupted
+              `.partial` leftovers are removed. The overview card shows the count and total size as well.
+            - Everything from 2.5 stays: one-tap backup from the overview, the settings export/import, launcher
+              shortcuts, Chinese/English console.
+
+            ## Notes from the competitor comparison
+
+            AOmarchy runs Arch Linux ARM with fakechroot (not proot) and draws Hyprland through the tablet's GPU, with
+            bi-directional audio — that is the reason this project exists, and it is why it does not chase multi-distro
+            installs or VNC desktops like Andronix / UserLAnd / AnLinux. The comparison and the deliberate non-goals
+            are written down in the design document.
 
             ## Upgrading
 
-            - From **2.4 / 2.3 / 2.2 / 2.1 / 2.0**: install over it, nothing else to do.
+            - From **2.5 / 2.4 / 2.3 / 2.2 / 2.1 / 2.0**: install over it, nothing else to do.
             - From **1.x**: the package is `app.aomarchy`; save what you need from the desktop, uninstall the old app,
               install AOmarchy and set the system up again (a local archive makes that work offline).
 
