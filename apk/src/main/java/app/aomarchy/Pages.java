@@ -639,15 +639,17 @@ class AppsPage extends Page {
 
     @Override
     void build(LinearLayout body) {
-        LinearLayout head = Ui.card(shell, "应用");
-        status = Ui.text(shell, "读取中…", 13, Ui.DIM, false);
-        head.addView(status);
-        head.addView(Ui.gap(shell, 10));
-        LinearLayout buttons = Ui.row(shell);
-        buttons.addView(Ui.button(shell, "刷新", false, v -> load()));
-        buttons.addView(Ui.space(shell, 10));
-        buttons.addView(Ui.button(shell, "进入桌面", true, v -> shell.openDesktop()));
-        head.addView(buttons);
+        LinearLayout head = Ui.card(shell, null);
+        LinearLayout row = Ui.row(shell);
+        row.addView(Ui.text(shell, "应用", 15, Ui.TEXT, true));
+        row.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
+        status = Ui.text(shell, "读取中…", 12, Ui.DIM, false);
+        row.addView(status);
+        TextView refresh = Ui.text(shell, "刷新", 13, Ui.ACCENT, false);
+        refresh.setPadding(Ui.dp(shell, 12), 0, 0, 0);
+        refresh.setOnClickListener(v -> load());
+        row.addView(refresh);
+        head.addView(row);
         body.addView(head);
 
         flatBox = Ui.card(shell, "Flatpak 沙箱");
@@ -692,8 +694,7 @@ class AppsPage extends Page {
 
     private void fillFlatpak(java.util.List<Apps.LinuxApp> apps) {
         flatBox.removeAllViews();
-        flatBox.addView(Ui.text(shell, "已安装的 Flatpak 应用（点名称在桌面里打开）。", 13, Ui.DIM, false));
-        flatBox.addView(Ui.gap(shell, 6));
+        flatBox.addView(Ui.text(shell, "已安装的 Flatpak（点名称在桌面打开）", 12, Ui.DIM, false));
         if (apps.isEmpty()) {
             flatBox.addView(Ui.text(shell, "还没有 Flatpak 应用。到桌面里用「软件」商店安装。", 13, Ui.FAINT, false));
             return;
@@ -704,8 +705,7 @@ class AppsPage extends Page {
 
     private void fillLinux(java.util.List<Apps.LinuxApp> apps) {
         linuxBox.removeAllViews();
-        linuxBox.addView(Ui.text(shell, "桌面自带的应用（Omarchy、终端、文件等）。", 13, Ui.DIM, false));
-        linuxBox.addView(Ui.gap(shell, 6));
+        linuxBox.addView(Ui.text(shell, "桌面自带（Omarchy、终端、文件等）", 12, Ui.DIM, false));
         for (int i = 0; i < Math.min(apps.size(), 24); i++)
             linuxBox.addView(appRow(apps.get(i)));
         if (apps.isEmpty())
@@ -737,14 +737,14 @@ class AppsPage extends Page {
 
     private void fillAndroid(java.util.List<Apps.AndroidApp> apps) {
         androidBox.removeAllViews();
-        androidBox.addView(Ui.text(shell, "点一个应用，它以浮动窗口打开，和桌面并排使用。", 13, Ui.DIM, false));
-        androidBox.addView(Ui.gap(shell, 8));
+        androidBox.addView(Ui.text(shell, "点按以浮动窗口打开，和桌面并排", 12, Ui.DIM, false));
         if (apps.isEmpty()) {
             androidBox.addView(Ui.text(shell, "没有可启动的 Android 应用。", 13, Ui.FAINT, false));
             return;
         }
         LinearLayout row = null;
-        int perRow = 4;
+        int perRow = shell.getResources().getConfiguration().orientation
+                == android.content.res.Configuration.ORIENTATION_LANDSCAPE ? 8 : 4;
         for (int i = 0; i < Math.min(apps.size(), 32); i++) {
             if (i % perRow == 0) {
                 row = Ui.row(shell);
@@ -758,10 +758,10 @@ class AppsPage extends Page {
     private View androidTile(Apps.AndroidApp app) {
         LinearLayout cell = Ui.column(shell);
         cell.setGravity(android.view.Gravity.CENTER);
-        cell.setPadding(0, Ui.dp(shell, 6), 0, Ui.dp(shell, 6));
+        cell.setPadding(0, Ui.dp(shell, 4), 0, Ui.dp(shell, 4));
         android.widget.ImageView icon = new android.widget.ImageView(shell);
         icon.setImageDrawable(app.icon);
-        cell.addView(icon, new LinearLayout.LayoutParams(Ui.dp(shell, 40), Ui.dp(shell, 40)));
+        cell.addView(icon, new LinearLayout.LayoutParams(Ui.dp(shell, 36), Ui.dp(shell, 36)));
         TextView label = Ui.text(shell, app.label, 11, Ui.DIM, false);
         label.setGravity(android.view.Gravity.CENTER);
         label.setMaxLines(1);
@@ -825,8 +825,7 @@ class SettingsPage extends Page {
     @Override
     void build(LinearLayout body) {
         LinearLayout identity = Ui.card(shell, "身份 · Linux 用户与 git");
-        identity.addView(Ui.text(shell, "原来在首启表单里填的姓名和邮箱。填了会写进 Linux 的 git 身份与 XCompose，下次进入桌面生效。",
-                13, Ui.DIM, false));
+        identity.addView(Ui.text(shell, "写入 Linux 的 git 身份与 XCompose，下次进桌面生效。", 12, Ui.DIM, false));
         identity.addView(Ui.gap(shell, 8));
         nameValue = value("—", Ui.TEXT);
         identity.addView(row("姓名", nameValue, () -> editText("姓名", "user_name", nameValue)));
@@ -836,7 +835,7 @@ class SettingsPage extends Page {
         body.addView(identity);
 
         LinearLayout keyboard = Ui.card(shell, "键盘");
-        keyboard.addView(Ui.text(shell, "系统键盘布局：第一个是物理键盘，屏幕键盘在其间循环。", 13, Ui.DIM, false));
+        keyboard.addView(Ui.text(shell, "第一个是物理键盘，屏幕键盘在其间循环。", 12, Ui.DIM, false));
         keyboard.addView(Ui.gap(shell, 8));
         kbValue = value("—", Ui.TEXT);
         keyboard.addView(row("系统布局", kbValue, this::pickLayout));
@@ -844,7 +843,7 @@ class SettingsPage extends Page {
 
         LinearLayout startup = Ui.card(shell, "启动");
         LinearLayout row = Ui.row(shell);
-        row.setPadding(0, Ui.dp(shell, 10), 0, Ui.dp(shell, 10));
+        row.setPadding(0, Ui.dp(shell, 8), 0, Ui.dp(shell, 8));
         row.addView(Ui.text(shell, "打开 App 后直接进入桌面", 15, Ui.TEXT, false));
         row.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
         final boolean[] on = {prefs().getBoolean("open_desktop_on_start", false)};
@@ -862,8 +861,7 @@ class SettingsPage extends Page {
         body.addView(startup);
 
         LinearLayout detailed = Ui.card(shell, "详细设置（旧版页面）");
-        detailed.addView(Ui.text(shell, "键盘按键、触摸板、连接、显示等逐项配置暂时还在旧版设置页里，下一步会搬进控制台。",
-                13, Ui.DIM, false));
+        detailed.addView(Ui.text(shell, "逐项配置暂时还在旧版设置页。", 12, Ui.DIM, false));
         detailed.addView(Ui.gap(shell, 6));
         detailed.addView(row("键盘与按键", value("›", Ui.FAINT), () -> openSettings()));
         detailed.addView(Ui.divider(shell));

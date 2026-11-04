@@ -67,24 +67,33 @@ final class ControlsView {
         LinearLayout sound = Ui.card(ctx, "声音");
         int max = audio != null ? audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC) : 15;
         sound.addView(slider("媒体音量", AudioManager.STREAM_MUSIC, max));
-        sound.addView(Ui.gap(ctx, 8));
+        sound.addView(Ui.gap(ctx, 6));
         sound.addView(slider("通话音量", AudioManager.STREAM_VOICE_CALL,
                 audio != null ? audio.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL) : 7));
         root.addView(sound);
 
-        LinearLayout display = Ui.card(ctx, "显示");
+        LinearLayout display = Ui.card(ctx, "显示与输入");
         android.util.DisplayMetrics dm = ctx.getResources().getDisplayMetrics();
-        display.addView(Ui.kv(ctx, "分辨率", Ui.mono(ctx, dm.widthPixels + " × " + dm.heightPixels, 15, Ui.TEXT)));
-        display.addView(Ui.kv(ctx, "密度", Ui.mono(ctx, String.valueOf(dm.densityDpi) + " dpi", 15, Ui.DIM)));
-        display.addView(Ui.gap(ctx, 8));
-        display.addView(Ui.button(ctx, "显示与刘海设置", false,
-                v -> ctx.startActivity(new Intent(ctx, SettingsActivity.class))));
+        String screen = dm.widthPixels + " × " + dm.heightPixels + " · " + dm.densityDpi + " dpi";
+        try {
+            float hz = ((android.app.Activity) ctx).getWindowManager().getDefaultDisplay().getRefreshRate();
+            if (hz > 0)
+                screen += String.format(java.util.Locale.US, " · %.0f Hz", hz);
+        } catch (RuntimeException ignored) {
+            // refresh rate is device-specific
+        }
+        display.addView(Ui.kv2(ctx, "屏幕", Ui.mono(ctx, screen, 14, Ui.TEXT), "Android 显示"));
+        display.addView(Ui.kv2(ctx, "输入", Ui.mono(ctx, "触摸板 · 虚拟键盘", 14, Ui.TEXT), "按键映射在设置里"));
+        TextView displayLink = Ui.text(ctx, "显示、方向与刘海设置 ›", 12, Ui.ACCENT, false);
+        displayLink.setPadding(0, Ui.dp(ctx, 4), 0, 0);
+        displayLink.setOnClickListener(v -> ctx.startActivity(new Intent(ctx, SettingsActivity.class)));
+        display.addView(displayLink);
         root.addView(display);
 
         LinearLayout clip = Ui.card(ctx, "剪贴板");
-        clipboardState = Ui.text(ctx, "Android ↔ 桌面双向同步", 13, Ui.DIM, false);
+        clipboardState = Ui.text(ctx, "Android ↔ 桌面双向同步", 12, Ui.DIM, false);
         clip.addView(clipboardState);
-        clip.addView(Ui.gap(ctx, 10));
+        clip.addView(Ui.gap(ctx, 6));
         LinearLayout clipButtons = Ui.row(ctx);
         clipButtons.addView(Ui.button(ctx, "发送到桌面", false, v -> pushClipboard()));
         clipButtons.addView(Ui.space(ctx, 8));
@@ -92,12 +101,7 @@ final class ControlsView {
         clip.addView(clipButtons);
         root.addView(clip);
 
-        LinearLayout input = Ui.card(ctx, "输入");
-        input.addView(Ui.text(ctx, "虚拟键盘、触摸板、指针捕获在设置里逐项配置。", 13, Ui.DIM, false));
-        input.addView(Ui.gap(ctx, 8));
-        input.addView(Ui.button(ctx, "键盘与触摸板设置", false,
-                v -> ctx.startActivity(new Intent(ctx, SettingsActivity.class))));
-        root.addView(input);
+
     }
 
     private LinearLayout slider(String label, int stream, int max) {
