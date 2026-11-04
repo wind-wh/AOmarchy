@@ -387,6 +387,8 @@ public class SessionService extends Service {
         ProcessBuilder pb = new ProcessBuilder(full);
         pb.environment().clear();
         pb.environment().putAll(archEnv(ctx, runDir(ctx), daemonSocket(ctx)));
+        pb.environment().put("WAYLAND_DISPLAY", "wayland-1"); // the compositor the session started
+        pb.environment().put("XDG_SESSION_TYPE", "wayland");
         pb.redirectErrorStream(true).redirectOutput(new File(runDir(ctx), "ui-run.log"));
         try {
             pb.start();
