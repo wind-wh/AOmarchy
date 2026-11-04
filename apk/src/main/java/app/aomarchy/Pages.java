@@ -814,13 +814,17 @@ class SettingsPage extends Page {
         row.setPadding(0, Ui.dp(shell, 10), 0, Ui.dp(shell, 10));
         row.addView(Ui.text(shell, "打开 App 后直接进入桌面", 15, Ui.TEXT, false));
         row.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
-        android.widget.Switch sw = new android.widget.Switch(shell);
-        sw.setChecked(prefs().getBoolean("open_desktop_on_start", false));
-        sw.setOnCheckedChangeListener((v, checked) -> {
-            prefs().edit().putBoolean("open_desktop_on_start", checked).apply();
-            toast(checked ? "下次打开 App 直接进桌面" : "下次打开 App 先进控制台");
+        final boolean[] on = {prefs().getBoolean("open_desktop_on_start", false)};
+        TextView toggle = Ui.text(shell, on[0] ? "开启" : "关闭", 14, on[0] ? Ui.ACCENT : Ui.DIM, true);
+        row.addView(toggle);
+        row.setOnClickListener(v -> {
+            on[0] = !on[0];
+            prefs().edit().putBoolean("open_desktop_on_start", on[0]).apply();
+            toggle.setText(on[0] ? "开启" : "关闭");
+            toggle.setTextColor(on[0] ? Ui.ACCENT : Ui.DIM);
+            toast(on[0] ? "下次打开 App 直接进桌面" : "下次打开 App 先进控制台");
         });
-        row.addView(sw);
+        row.setClickable(true);
         startup.addView(row);
         body.addView(startup);
 
@@ -918,7 +922,7 @@ class SettingsPage extends Page {
                 return "";
             for (String line : java.nio.file.Files.readAllLines(f.toPath())) {
                 if (line.startsWith("KB_LAYOUTS=")) {
-                    String v = line.substring("KB_LAYOUTS=".length()).trim();
+                    String v = line.substring("KB_LAYOUTS=".length()).trim().split("\\s+")[0];
                     if (v.startsWith("'") && v.endsWith("'"))
                         v = v.substring(1, v.length() - 1);
                     return v;
