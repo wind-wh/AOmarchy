@@ -92,33 +92,29 @@ jobs:
           fail_on_unmatched_files: true
           files: dist/*
           body: |
-            **AOmarchy 2.6** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
+            **AOmarchy 2.7** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
 
             This release was built and signed by GitHub Actions from the repository source.
 
-            ## What is new in 2.6
+            ## What is new in 2.7
 
-            - **A Quick Settings tile.** Pull down the shade, tap the AOmarchy tile and the console opens — or the
-              terminal, when the startup mode is 终端; with no system installed it lands on the System page. The tile
-              label follows the state (未安装 / 控制台 / 终端). This is the same quick-access pattern the other
-              "Linux on Android" apps offer.
-            - **Backups no longer fill the tablet.** 系统 → 备份与回滚 shows how many backups exist and how much space
-              they take, and adds **保留最近 / Keep the newest** (default: the newest 3) and **清理旧备份 / Prune old
-              backups**. Archives beyond the chosen count are pruned automatically after each backup, and interrupted
-              `.partial` leftovers are removed. The overview card shows the count and total size as well.
-            - Everything from 2.5 stays: one-tap backup from the overview, the settings export/import, launcher
-              shortcuts, Chinese/English console.
-
-            ## Notes from the competitor comparison
-
-            AOmarchy runs Arch Linux ARM with fakechroot (not proot) and draws Hyprland through the tablet's GPU, with
-            bi-directional audio — that is the reason this project exists, and it is why it does not chase multi-distro
-            installs or VNC desktops like Andronix / UserLAnd / AnLinux. The comparison and the deliberate non-goals
-            are written down in the design document.
+            - **A new app icon.** The launcher icon now speaks the console's language: a dark tile with the brand's
+              four-panel glyph (three accent tiles, one mint) — an adaptive icon with a themeable monochrome layer for
+              Android 13 — instead of the leftover green Omarchy box with the Android robot.
+            - **A home-screen widget** (4×2): the session state (未安装 / 就绪 / 运行中 / 终端模式) plus one-tap
+              控制台 and 终端 entries. It refreshes when the session starts or stops and follows the console's
+              language. No background polling.
+            - **Suggestions on the overview.** A new 智能建议 card reads the live numbers and offers the two most
+              useful next actions: install Linux on a fresh device, clean backups when the system disk is nearly full,
+              switch to terminal mode when memory is tight, open the desktop when the session is not running, or
+              manage oversized backup folders. It only redraws when the suggestion changes.
+            - Fixes: ending the session now resets the widget to 就绪 (the service's `started` flag was never cleared),
+              and switching the interface language refreshes the widget immediately.
+            - Everything from 2.6 stays: quick settings tile, backup retention and disk usage, Chinese/English console.
 
             ## Upgrading
 
-            - From **2.5 / 2.4 / 2.3 / 2.2 / 2.1 / 2.0**: install over it, nothing else to do.
+            - From **2.6 / 2.5 / 2.4 / 2.3 / 2.2 / 2.1 / 2.0**: install over it, nothing else to do.
             - From **1.x**: the package is `app.aomarchy`; save what you need from the desktop, uninstall the old app,
               install AOmarchy and set the system up again (a local archive makes that work offline).
 
