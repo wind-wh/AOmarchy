@@ -21,6 +21,10 @@ import app.aomarchy.ui.Ui;
  * to use the Linux side (about a fifth of the desktop's memory, and it starts in a couple of seconds).
  */
 public class TerminalActivity extends Activity {
+    static {
+        System.loadLibrary("andromarchy_consumer"); // the pty natives live in the same .so as the display consumer
+    }
+
     private TerminalView terminal;
 
     @Override
