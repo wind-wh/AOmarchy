@@ -139,6 +139,7 @@ public final class Backup {
                 tmp.delete();
                 cb.failed("已取消");
             } catch (IOException e) {
+                android.util.Log.e("AOmarchyBackup", "backup failed", e);
                 tmp.delete();
                 cb.failed(e.getMessage() == null ? "备份失败" : e.getMessage());
             } catch (Exception e) {
@@ -200,9 +201,11 @@ public final class Backup {
                 cb.done("系统已恢复到 " + stamp(archive) + " 的状态。进入桌面即用这份系统。");
                 Installer.deleteTree(old); // best effort, the restore already succeeded
             } catch (IOException e) {
+                android.util.Log.e("AOmarchyBackup", "restore failed", e);
                 Installer.deleteTree(partial);
                 cb.failed(e.getMessage() == null ? "恢复失败" : e.getMessage());
             } catch (Exception e) {
+                android.util.Log.e("AOmarchyBackup", "restore failed", e);
                 Installer.deleteTree(partial);
                 cb.failed(String.valueOf(e));
             } finally {
