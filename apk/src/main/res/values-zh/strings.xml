@@ -7,6 +7,12 @@
     <string name="shortcut_settings">设置</string>
     <string name="shortcut_terminal">终端模式</string>
 
+    <!-- Quick settings tile (SessionTileService) -->
+    <string name="tile_label">AOmarchy</string>
+    <string name="tile_console">控制台</string>
+    <string name="tile_terminal">终端</string>
+    <string name="tile_uninstalled">未安装</string>
+
     <!-- Settings notification (MainActivity.showSettingsNotification; notification_switch/hint are legacy row labels
          kept together with the rest of the notification_* group) -->
     <string name="notification_switch">显示设置通知</string>

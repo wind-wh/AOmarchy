@@ -67,7 +67,19 @@ are untested.
 The [user guide](docs/user-guide.md) explains the touch gestures, the on-screen keyboard, the Android settings to
 change (HyperOS/MIUI take some gestures for themselves), installing apps, and the self-test.
 
+## What's new in 2.6
+
+- **A Quick Settings tile.** Pull down the shade and tap the AOmarchy tile to open the console, or the terminal when
+  the startup mode is 终端; with no system installed it lands on the System page. The tile's label follows the state.
+- **Backups no longer fill the tablet.** 系统 → 备份与回滚 now shows how many backups there are and how much space
+  they take, has **保留最近 / Keep the newest** (default: the newest 3) and **清理旧备份 / Prune old backups**; archives
+  beyond the chosen count are pruned automatically after each backup (the progress card says so). The overview card
+  shows the count and the total size too. Interrupted `.partial` leftovers are removed as well.
+- The README-style competitor comparison that drove these choices (Andronix / UserLAnd / Breadstick / Winlator vs
+  AOmarchy: fakechroot vs proot, real GPU, Hyprland, backup model) is in the design document.
+
 ## What's new in 2.5
+
 
 - **Back up from the overview.** The 概览 backup card now has **立即备份 / Back up now**: one tap snapshots the system
   with the progress in the card's own line, and **管理备份** jumps to the System page for restoring, exporting or

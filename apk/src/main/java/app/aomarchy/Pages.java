@@ -108,6 +108,7 @@ class OverviewPage extends Page {
     private TextView backupHint;
     private TextView backupAction;
     private boolean backupRunning;
+    private TextView backupDetail;
 
     OverviewPage(ShellActivity shell) {
         super(shell);
@@ -209,6 +210,8 @@ class OverviewPage extends Page {
         LinearLayout backupStatus = card(T.t("card.backup_status"));
         backupHint = Ui.text(shell, T.t("overview.backup_never"), 12, Ui.DIM, false);
         backupStatus.addView(backupHint);
+        backupDetail = Ui.text(shell, "", 11, Ui.FAINT, false);
+        backupStatus.addView(backupDetail);
         backupStatus.addView(Ui.gap(shell, 8));
         LinearLayout backupRow = Ui.row(shell);
         backupAction = button(T.t("btn.backup_now"), false, v -> startQuickBackup());
@@ -330,6 +333,10 @@ class OverviewPage extends Page {
         boolean stale = System.currentTimeMillis() - newest > 30L * 24 * 60 * 60 * 1000;
         backupHint.setText(T.t(stale ? "overview.backup_stale" : "overview.backup_last", ago));
         backupHint.setTextColor(stale ? Ui.WARN : Ui.DIM);
+        if (backupDetail != null)
+            backupDetail.setText(T.t("system.backup_stats",
+                    String.valueOf(app.aomarchy.data.Backup.count(shell)),
+                    app.aomarchy.data.Installer.humanSize(app.aomarchy.data.Backup.totalBytes(shell))));
     }
 
     /** Human age for the backup line (the generic duration() is too verbose for "3 h ago"). */
@@ -411,6 +418,7 @@ class SystemPage extends Page {
     private LinearLayout backupList;
     private LinearLayout backupProgressBox;
     private TextView backupText;
+    private TextView backupStats;
     private app.aomarchy.ui.SpringBar backupBar;
     private File pendingExport;
     private boolean importing;
@@ -490,6 +498,28 @@ class SystemPage extends Page {
         backupButtons.addView(importBtn);
         backup.addView(backupButtons);
 
+        backupStats = Ui.text(shell, "", 12, Ui.DIM, false);
+        backup.addView(Ui.gap(shell, 4));
+        backup.addView(backupStats);
+        backup.addView(Ui.text(shell, T.t("system.backup_keep_note"), 11, Ui.FAINT, false));
+        LinearLayout backupTools = Ui.row(shell);
+        TextView pruneBtn = Ui.text(shell, T.t("system.backup_prune"), 13, Ui.ACCENT, true);
+        pruneBtn.setPadding(Ui.dp(shell, 4), Ui.dp(shell, 8), Ui.dp(shell, 4), Ui.dp(shell, 8));
+        pruneBtn.setMinimumHeight(Ui.dp(shell, 48));
+        pruneBtn.setContentDescription(T.t("system.backup_prune"));
+        pruneBtn.setOnClickListener(v -> pruneBackups());
+        backupTools.addView(pruneBtn);
+        View toolsSpace = new View(shell);
+        decorative(toolsSpace);
+        backupTools.addView(toolsSpace, new LinearLayout.LayoutParams(0, 1, 1f));
+        TextView keepBtn = Ui.text(shell, T.t("system.backup_keep") + " ›", 13, Ui.ACCENT, true);
+        keepBtn.setPadding(Ui.dp(shell, 4), Ui.dp(shell, 8), Ui.dp(shell, 4), Ui.dp(shell, 8));
+        keepBtn.setMinimumHeight(Ui.dp(shell, 48));
+        keepBtn.setContentDescription(T.t("system.backup_keep"));
+        keepBtn.setOnClickListener(v -> pickBackupKeep());
+        backupTools.addView(keepBtn);
+        backup.addView(backupTools);
+
         backupProgressBox = Ui.column(shell);
         backupProgressBox.setVisibility(View.GONE);
         backupProgressBox.setPadding(0, Ui.dp(shell, 10), 0, 0);
@@ -539,6 +569,14 @@ class SystemPage extends Page {
         if (backupList == null)
             return;
         backupList.removeAllViews();
+        if (backupStats != null) {
+            int keep = backupKeep();
+            String keepText = keep > 0 ? T.t("system.backup_keep_value", String.valueOf(keep))
+                    : T.t("system.backup_keep_none");
+            backupStats.setText(T.t("system.backup_stats",
+                    String.valueOf(app.aomarchy.data.Backup.count(shell)),
+                    smallSize(app.aomarchy.data.Backup.totalBytes(shell))) + " · " + keepText);
+        }
         java.util.List<File> backups = app.aomarchy.data.Backup.list(shell);
         if (backups.isEmpty()) {
             backupList.addView(Ui.text(shell, T.t("system.no_backups"), 12, Ui.FAINT, false));
@@ -632,6 +670,75 @@ class SystemPage extends Page {
             backupList.setVisibility(View.VISIBLE);
         paintBackups();
         refresh();
+        autoPruneBackups();
+    }
+
+    /** Backup archives are ~2 GB each: keep only the newest N when the user picked a retention. */
+    private void autoPruneBackups() {
+        final int keep = backupKeep();
+        if (keep <= 0)
+            return;
+        new Thread(() -> {
+            // done() arrives just before Backup clears its running flag; let it finish before pruning.
+            try {
+                Thread.sleep(300);
+            } catch (InterruptedException ignored) {
+                return;
+            }
+            int removed = app.aomarchy.data.Backup.prune(shell, keep);
+            if (removed > 0) {
+                shell.runOnUiThread(() -> {
+                    paintBackups();
+                    toast(T.t("system.backup_pruned", String.valueOf(removed)));
+                });
+            }
+        }, "backup-prune").start();
+    }
+
+    private int backupKeep() {
+        return shell.getSharedPreferences(Prefs.NAME, android.content.Context.MODE_PRIVATE)
+                .getInt("backup_keep", 3);
+    }
+
+    /** Retention picker: 0 means keep everything; the default is the newest 3. */
+    private void pickBackupKeep() {
+        final int[] choices = {3, 2, 5, 10, 0};
+        String[] labels = new String[choices.length];
+        int checked = 0;
+        int current = backupKeep();
+        for (int i = 0; i < choices.length; i++) {
+            labels[i] = choices[i] == 0 ? T.t("system.backup_keep_none")
+                    : T.t("system.backup_keep_value", String.valueOf(choices[i]));
+            if (choices[i] == current)
+                checked = i;
+        }
+        new android.app.AlertDialog.Builder(shell)
+                .setTitle(T.t("dialog.backup_keep_title"))
+                .setSingleChoiceItems(labels, checked, (d, which) -> {
+                    shell.getSharedPreferences(Prefs.NAME, android.content.Context.MODE_PRIVATE)
+                            .edit().putInt("backup_keep", choices[which]).apply();
+                    d.dismiss();
+                    paintBackups();
+                    if (choices[which] > 0)
+                        autoPruneBackups();
+                })
+                .setNegativeButton(T.t("btn.cancel"), null)
+                .show();
+    }
+
+    private void pruneBackups() {
+        if (app.aomarchy.data.Backup.running()) {
+            toast(T.t("toast.busy"));
+            return;
+        }
+        final int keep = backupKeep();
+        new Thread(() -> {
+            int removed = app.aomarchy.data.Backup.prune(shell, keep);
+            shell.runOnUiThread(() -> {
+                paintBackups();
+                toast(T.t("system.backup_pruned", String.valueOf(removed)));
+            });
+        }, "backup-prune-manual").start();
     }
 
     private void confirmRestore(File backup) {

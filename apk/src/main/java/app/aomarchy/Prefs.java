@@ -37,6 +37,7 @@ final class Prefs {
         {"open_desktop_on_start", false},
         {"session_mode", "desktop"}, // desktop | terminal: what the big button starts
         {"term_font", 13f}, // terminal mode font size in sp
+        {"backup_keep", 3}, // how many backup archives to keep; older ones are pruned after a backup
     };
 
     private static boolean done;

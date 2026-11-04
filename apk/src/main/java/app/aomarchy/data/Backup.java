@@ -28,6 +28,11 @@ import app.aomarchy.i18n.T;
  * the current system usable.
  */
 public final class Backup {
+    private static final String TAG = "AOmarchyBackup";
+    private static final String SUFFIX = ".tar.gz";
+    /** Written by {@link #create} while the archive is being produced; never a complete backup. */
+    private static final String PARTIAL_SUFFIX = ".tar.gz.partial";
+
     public interface Callback {
         void progress(int permille, String text);
 
@@ -68,6 +73,100 @@ public final class Backup {
         }
         out.sort((a, b) -> b.getName().compareTo(a.getName()));
         return out;
+    }
+
+    /** Number of complete backups (aborted .partial files are not counted). */
+    public static int count(Context ctx) {
+        return list(ctx).size();
+    }
+
+    /** The most recently written complete backup, or null when there is none. */
+    public static File newest(Context ctx) {
+        File newest = null;
+        for (File f : list(ctx)) {
+            if (newest == null || f.lastModified() > newest.lastModified())
+                newest = f;
+        }
+        return newest;
+    }
+
+    /** Disk usage of the backups folder: complete archives plus leftover .partial files. */
+    public static long totalBytes(Context ctx) {
+        File[] files = files(ctx);
+        if (files == null)
+            return 0;
+        long total = 0;
+        for (File f : files) {
+            if (isBackup(f) || isPartial(f))
+                total += f.length();
+        }
+        return total;
+    }
+
+    /**
+     * Retention: keep the newest {@code keep} complete backups (by lastModified) and delete the older ones, then
+     * delete .tar.gz.partial files left behind by aborted backups. {@code keep <= 0} keeps every complete backup and
+     * only cleans the partial leftovers.
+     *
+     * <p>Does nothing while a backup is running, so the .partial file being written is never touched. File deletions
+     * are best effort (a failed delete is logged, not thrown); returns the number of files actually deleted.
+     */
+    public static int prune(Context ctx, int keep) {
+        if (running) {
+            android.util.Log.w(TAG, "prune skipped: a backup is running");
+            return 0;
+        }
+        File[] files = files(ctx);
+        if (files == null)
+            return 0;
+
+        int deleted = 0;
+        List<File> complete = new ArrayList<>();
+        for (File f : files) {
+            if (isPartial(f)) {
+                if (f.delete()) {
+                    deleted++;
+                } else {
+                    android.util.Log.w(TAG, "could not delete leftover partial " + f);
+                }
+            } else if (isBackup(f)) {
+                complete.add(f);
+            }
+        }
+        if (keep > 0 && complete.size() > keep) {
+            complete.sort((a, b) -> {
+                int byTime = Long.compare(b.lastModified(), a.lastModified());
+                return byTime != 0 ? byTime : b.getName().compareTo(a.getName());
+            });
+            for (int i = keep; i < complete.size(); i++) {
+                File old = complete.get(i);
+                if (old.delete()) {
+                    deleted++;
+                } else {
+                    android.util.Log.w(TAG, "could not delete old backup " + old);
+                }
+            }
+        }
+        return deleted;
+    }
+
+    private static boolean isBackup(File f) {
+        return f.isFile() && f.getName().endsWith(SUFFIX);
+    }
+
+    private static boolean isPartial(File f) {
+        return f.isFile() && f.getName().endsWith(PARTIAL_SUFFIX);
+    }
+
+    /** The backups folder contents; null (and logged) when it cannot be listed. */
+    private static File[] files(Context ctx) {
+        File dir = dir(ctx);
+        File[] files = dir.listFiles();
+        if (files == null) {
+            android.util.Log.w(TAG, "cannot list " + dir);
+            return null;
+        }
+        return files;
     }
 
     public static String name(long millis) {
