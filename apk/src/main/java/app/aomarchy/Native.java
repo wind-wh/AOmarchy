@@ -37,4 +37,11 @@ public final class Native {
     public static native void nativeSetMicEnabled(boolean enabled);
     public static native void nativeSetAudioLatency(int speakerMs, int micMs);
     public static native void nativeSetAudioKeepalive(boolean enabled);
+
+    // Terminal mode: a pty running the rootfs launcher. Returns (pid << 32) | master fd, or -1.
+    public static native long nativePtyStart(String[] argv, String[] env, String cwd, int cols, int rows);
+
+    public static native void nativePtyResize(int fd, int cols, int rows);
+
+    public static native void nativePtyClose(int fd);
 }

@@ -163,11 +163,14 @@ final class ControlsView {
             return;
         }
         if (ctx instanceof android.app.Activity)
-            ((android.app.Activity) ctx).finish(); // leave the sheet so the desktop is visible
-        SessionService.start(ctx);
-        Intent desktop = new Intent(ctx, MainActivity.class);
-        desktop.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        ctx.startActivity(desktop);
+            ((android.app.Activity) ctx).finish(); // leave the sheet so the session is visible
+        boolean terminal = "terminal".equals(ctx.getSharedPreferences(Prefs.NAME,
+                android.content.Context.MODE_PRIVATE).getString("session_mode", "desktop"));
+        if (!terminal)
+            SessionService.start(ctx);
+        Intent next = new Intent(ctx, terminal ? TerminalActivity.class : MainActivity.class);
+        next.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        ctx.startActivity(next);
     }
 
     private void confirmPower(String action, String title) {

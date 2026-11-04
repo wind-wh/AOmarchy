@@ -1057,6 +1057,7 @@ class SettingsPage extends Page {
     private TextView nameValue;
     private TextView emailValue;
     private TextView kbValue;
+    private TextView modeValue;
 
     SettingsPage(ShellActivity shell) {
         super(shell);
@@ -1086,6 +1087,9 @@ class SettingsPage extends Page {
         body.addView(keyboard);
 
         LinearLayout startup = Ui.card(shell, "启动");
+        modeValue = value("—", Ui.TEXT);
+        startup.addView(row("启动方式", modeValue, this::pickMode));
+        startup.addView(Ui.divider(shell));
         LinearLayout row = Ui.row(shell);
         row.setPadding(0, Ui.dp(shell, 8), 0, Ui.dp(shell, 8));
         row.addView(Ui.text(shell, "打开 App 后直接进入桌面", 15, Ui.TEXT, false));
@@ -1150,6 +1154,20 @@ class SettingsPage extends Page {
                 .show();
     }
 
+    private void pickMode() {
+        String[] names = {"完整桌面（Hyprland）", "终端（省资源：不启动桌面）"};
+        int checked = "terminal".equals(prefs().getString("session_mode", "desktop")) ? 1 : 0;
+        new android.app.AlertDialog.Builder(shell)
+                .setTitle("启动方式")
+                .setSingleChoiceItems(names, checked, (d, which) -> {
+                    prefs().edit().putString("session_mode", which == 1 ? "terminal" : "desktop").apply();
+                    d.dismiss();
+                    refresh();
+                    toast(which == 1 ? "下次进入终端：不起桌面，内存约 1/5" : "下次进入完整桌面");
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
     private void pickLayout() {
         String current = prefs().getString("kb_layouts", "");
         int checked = 0;
@@ -1183,6 +1201,8 @@ class SettingsPage extends Page {
         if (kb.isEmpty())
             kb = installedLayout(); // what the installer picked from the device language
         kbValue.setText(orDash(kb));
+        String mode = prefs().getString("session_mode", "desktop");
+        modeValue.setText("terminal".equals(mode) ? "终端（省资源）" : "完整桌面");
     }
 
     private static String orDash(String s) {

@@ -30,6 +30,7 @@ public class ShellActivity extends Activity {
     private TextView status;
     private int current = -1;
     private View indicator;
+    private TextView entryButton;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -47,6 +48,7 @@ public class ShellActivity extends Activity {
     protected void onResume() {
         super.onResume();
         updateStatus();
+        updateEntryLabel();
         if (pages[current] != null) pages[current].refresh();
     }
 
@@ -119,8 +121,8 @@ public class ShellActivity extends Activity {
         status = Ui.chip(this, "○ 未安装", Ui.DIM);
         top.addView(status);
         top.addView(Ui.space(this, 10));
-        TextView desktop = Ui.button(this, "进入桌面", true, v -> openDesktop());
-        top.addView(desktop);
+        entryButton = Ui.button(this, "进入桌面", true, v -> openDesktop());
+        top.addView(entryButton);
         content.addView(top);
 
         host = new FrameLayout(this);
@@ -129,6 +131,7 @@ public class ShellActivity extends Activity {
 
         setContentView(root);
         updateStatus();
+        updateEntryLabel();
     }
 
     @Override
@@ -211,14 +214,30 @@ public class ShellActivity extends Activity {
         }
     }
 
-    /** The one action the whole shell is about: show the Linux desktop, installing it first if it is not there. */
+    /** The one action the whole shell is about: show the Linux side, installing it first if it is not there. */
     void openDesktop() {
         if (!SessionService.rootfsReady(this)) {
             startActivity(new Intent(this, InstallActivity.class));
             return;
         }
+        boolean terminal = "terminal".equals(getSharedPreferences(Prefs.NAME, MODE_PRIVATE)
+                .getString("session_mode", "desktop"));
+        if (terminal) {
+            // Terminal mode runs one pty, not the desktop: no service, no compositor, a fifth of the memory.
+            startActivity(new Intent(this, TerminalActivity.class));
+            return;
+        }
         SessionService.start(this);
         startActivity(new Intent(this, MainActivity.class));
+    }
+
+    /** The big button follows the startup mode chosen in Settings. */
+    private void updateEntryLabel() {
+        if (entryButton == null)
+            return;
+        boolean terminal = "terminal".equals(getSharedPreferences(Prefs.NAME, MODE_PRIVATE)
+                .getString("session_mode", "desktop"));
+        entryButton.setText(terminal ? "进入终端" : "进入桌面");
     }
 
     /** Jump to a page by rail index (0 概览 … 4 设置). */

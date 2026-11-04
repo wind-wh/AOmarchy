@@ -455,6 +455,29 @@ public class SessionService extends Service {
         f.getParentFile().mkdirs();
         java.nio.file.Files.write(f.toPath(), text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
+    /** argv for a pty login shell inside the rootfs: terminal mode reuses the same launcher the desktop session uses. */
+    public static String[] ptyArgv(Context ctx, String command) {
+        return new String[] {ctx.getApplicationInfo().nativeLibraryDir + "/liblotfixrun.so", "-c",
+                "export PATH=/usr/share/omarchy/bin:/usr/local/bin:/usr/bin:/bin; " + command};
+    }
+
+    /** The session environment as a KEY=value array, for execve of the pty child. */
+    public static String[] ptyEnv(Context ctx) {
+        java.util.Map<String, String> env = archEnv(ctx, runDir(ctx), daemonSocket(ctx));
+        env.put("TERM", "xterm-256color");
+        env.put("COLORTERM", "truecolor");
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (java.util.Map.Entry<String, String> e : env.entrySet()) {
+            if (e.getKey() != null && e.getValue() != null)
+                out.add(e.getKey() + "=" + e.getValue());
+        }
+        return out.toArray(new String[0]);
+    }
+
+    /** Where the pty child starts: the rootfs itself (the launcher chroots and the shell lands in /root). */
+    public static File ptyCwd(Context ctx) {
+        return rootfs(ctx);
+    }
     /** Runs one shell command inside the rootfs with the session environment: the console launching a Linux app. */
     public static void runInSession(Context ctx, String command) {
         String launcher = ctx.getApplicationInfo().nativeLibraryDir + "/liblotfixrun.so";

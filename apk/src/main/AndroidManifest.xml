@@ -25,6 +25,11 @@
         android:label="AOmarchy"
         android:theme="@style/Theme.AOmarchy">
         <activity
+            android:name=".TerminalActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.AOmarchy" />        <activity
             android:name=".ShellActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:enableOnBackInvokedCallback="false"

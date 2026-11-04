@@ -7,6 +7,7 @@ add_library(andromarchy_consumer SHARED
     native_consumer.c
     native_audio.c
     camera_service.c
+    pty.c
     ${ANDROMARCHY_CORE_DIR}/libdisplay_consumer/display_consumer.c
     ${ANDROMARCHY_CORE_DIR}/common/socket_utils.c
 )
