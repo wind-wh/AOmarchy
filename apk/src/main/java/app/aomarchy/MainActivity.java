@@ -291,35 +291,47 @@ public class MainActivity extends Activity
         compatibleFdReady = false;
     }
 
-    /** Small handle over the desktop: opens the console; the Linux session keeps running behind it. */
-    private void addConsoleHandle(FrameLayout root) {
+    /**
+     * Small handle over the desktop that opens the console. It has to live in its own window: this activity draws the
+     * desktop with a SurfaceView, and that surface is composited above the activity's own views.
+     */
+    private void addConsoleHandle() {
         android.widget.TextView handle = new android.widget.TextView(this);
         handle.setText("A");
         handle.setTextColor(0xFFFFFFFF);
         handle.setTextSize(15);
         handle.setGravity(android.view.Gravity.CENTER);
         android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-        bg.setColor(0x59000000);
+        bg.setColor(0x99000000);
         bg.setCornerRadius(20 * mDensity);
-        bg.setStroke(Math.max(1, (int) mDensity), 0x8A7C8CFF);
+        bg.setStroke(Math.max(1, (int) mDensity), 0xFF7C8CFF);
         handle.setBackground(bg);
-        handle.setAlpha(0.6f);
-        consoleHandle = handle;
-        handle.setOnClickListener(v -> {
-            v.setAlpha(0.25f);
-            startActivity(new android.content.Intent(this, ShellActivity.class));
-        });
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
-                (int) (34 * mDensity), (int) (34 * mDensity),
-                android.view.Gravity.TOP | android.view.Gravity.START);
-        lp.leftMargin = (int) (8 * mDensity);
-        lp.topMargin = (int) (44 * mDensity);
-        root.addView(handle, lp);
-        android.util.Log.i("ConsoleHandle", "added " + handle.getWidth() + "x" + handle.getHeight() + " at " + lp.leftMargin + "," + lp.topMargin);
-        handle.post(() -> android.util.Log.i("ConsoleHandle", "laid out " + handle.getLeft() + "," + handle.getTop() + " " + handle.getWidth() + "x" + handle.getHeight() + " vis=" + handle.getVisibility()));
-    }
+        handle.setAlpha(0.75f);
+        handle.setOnClickListener(v -> startActivity(new android.content.Intent(this, ShellActivity.class)));
 
-    private View consoleHandle;
+        consoleDialog = new android.app.Dialog(this);
+        consoleDialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
+        consoleDialog.setContentView(handle);
+        android.view.Window w = consoleDialog.getWindow();
+        if (w != null) {
+            w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0));
+            w.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            w.addFlags(android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                    | android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                    | android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+            android.view.WindowManager.LayoutParams lp = w.getAttributes();
+            lp.width = (int) (34 * mDensity);
+            lp.height = (int) (34 * mDensity);
+            lp.gravity = android.view.Gravity.TOP | android.view.Gravity.START;
+            lp.x = (int) (8 * mDensity);
+            lp.y = (int) (44 * mDensity);
+            w.setAttributes(lp);
+        }
+        consoleDialog.setOnDismissListener(d -> consoleDialog = null);
+        consoleDialog.show();
+        android.util.Log.i("ConsoleHandle", "shown at " + (int) (8 * mDensity) + "," + (int) (44 * mDensity));
+    }
+    private android.app.Dialog consoleDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -436,7 +448,7 @@ public class MainActivity extends Activity
 
         setContentView(root);
         // A small semi-transparent handle in the corner: back to the AOmarchy console without losing the session.
-        addConsoleHandle(root);
+        addConsoleHandle();
         SplashScreen.showIfStarting(this);
         // Establish a focused descendant after attachment so the DecorView routes
         // input through the surface even while the extra-keys bar is hidden.
@@ -929,8 +941,8 @@ public class MainActivity extends Activity
     public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode,
             Configuration newConfig) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
-        if (consoleHandle != null)
-            consoleHandle.setVisibility(isInPictureInPictureMode ? View.GONE : View.VISIBLE);
+        if (consoleDialog != null)
+            consoleDialog.hide(); // the small window would just cover the picture-in-picture one
         mPipTransitionPending = false;
 
         if (isInPictureInPictureMode) {
@@ -951,6 +963,10 @@ public class MainActivity extends Activity
 
     @Override
     protected void onDestroy() {
+        if (consoleDialog != null) {
+            consoleDialog.dismiss();
+            consoleDialog = null;
+        }
         if (redirected) { // only forwarded to InstallActivity: nothing was set up
             super.onDestroy();
             return;
