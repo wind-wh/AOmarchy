@@ -21,7 +21,8 @@ import app.aomarchy.ui.Ui;
 
 /**
  * Terminal mode: one pty with a login shell inside the rootfs, no compositor, no desktop. This is the low-resource way
- * to use the Linux side (about a fifth of the desktop's memory, and it starts in a couple of seconds).
+ * to use the Linux side: measured on the tablet, a desktop session adds about 750 MB of system memory while the
+ * terminal adds about 80 MB, and it starts in a couple of seconds instead of a dozen.
  */
 public class TerminalActivity extends Activity implements TerminalView.Listener {
     static {

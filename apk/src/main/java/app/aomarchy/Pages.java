@@ -226,7 +226,7 @@ class OverviewPage extends Page {
         if (heroEntry != null)
             heroEntry.setText(terminal ? "进入终端" : "进入桌面");
         uptime.setText(!ready ? "Arch Linux · Hyprland · 整个系统跑在 Android 上，不需要 root 和 proot。"
-                : terminal ? "终端模式：只跑一个 shell，不启动 Hyprland，内存约是桌面的 1/5。"
+                : terminal ? "终端模式：只跑一个 shell，不启动 Hyprland，实测比完整桌面省约 700 MB。"
                 : SessionService.started ? "已运行 " + duration(System.currentTimeMillis() - SessionService.startedAt)
                 : "Arch Linux · Hyprland · 整个系统跑在 Android 上，不需要 root 和 proot。");
         poll();
@@ -1170,7 +1170,7 @@ class SettingsPage extends Page {
                     prefs().edit().putString("session_mode", which == 1 ? "terminal" : "desktop").apply();
                     d.dismiss();
                     refresh();
-                    toast(which == 1 ? "下次进入终端：不起桌面，内存约 1/5" : "下次进入完整桌面");
+                    toast(which == 1 ? "下次进入终端：不起桌面，实测省约 700 MB" : "下次进入完整桌面");
                     shell.updateEntryLabel();
                 })
                 .setNegativeButton("取消", null)

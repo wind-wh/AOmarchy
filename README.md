@@ -27,6 +27,12 @@ keyboard, startup).
 The desktop itself, with the small **A** handle that returns to the console without stopping the session:
 
 [<img src="docs/screenshots/desktop.jpg" width="360">](docs/screenshots/desktop.jpg)
+
+**Terminal mode** (2.1): a login shell with no compositor, drawn by the app itself — about 700 MB less memory than
+the desktop and a start in seconds, with scrollback, drag selection, copy/paste, font size and the keys a soft
+keyboard does not have (Esc, Tab, ^C, ^D, ^Z, arrows):
+
+[<img src="docs/screenshots/terminal.jpg" width="480">](docs/screenshots/terminal.jpg)
 ## Requirements
 
 - Android 11 or later, with a **Qualcomm Adreno GPU** (Snapdragon).
@@ -45,6 +51,8 @@ are untested.
    on the device (**Local archive**).
 3. Press **进入桌面**. Omarchy's menu opens with **Super + Space**. Your name, email and keyboard layout now live in
    the settings (they are asked once, after the system is installed).
+   Or switch **设置 → 启动方式** to **终端** and the same button opens a terminal instead of the desktop: one shell,
+   no Hyprland, roughly 700 MB less memory — the quick way to run `pacman`.
 
 > **2.0 uses the package name `app.aomarchy`.** Android does not let an app read another app's private data, so a
 > 1.x install cannot be migrated: keep a copy of your files, uninstall the old app, then install AOmarchy and set the
@@ -52,6 +60,23 @@ are untested.
 
 The [user guide](docs/user-guide.md) explains the touch gestures, the on-screen keyboard, the Android settings to
 change (HyperOS/MIUI take some gestures for themselves), installing apps, and the self-test.
+
+## What's new in 2.1
+
+- **Terminal mode.** 设置 → 启动方式 picks what the big button starts: the full desktop, or a terminal — one login
+  shell in the installed system, without Hyprland, the bar or the app menu. The terminal is drawn by the app itself
+  (VT100/ANSI: colours, cursor, scroll regions, alternate screen, CJK double-width cells), so it needs no VNC and no
+  desktop. Measured on the tablet it saves about 700 MB of system memory and starts in seconds.
+  It has scrollback (drag), selection (long press, then drag), copy/paste in the bar, font size (A− / A+) and a key
+  strip for Esc, Tab, ^C, ^D, ^Z and the arrows.
+- **Backup and restore.** 系统 → 备份与回滚 snapshots the whole Linux system to a `.tar.gz` (about 4.8 GB → 1.9 GB,
+  a few minutes with progress and cancel), restores it, exports it to a file or imports one back. Restore swaps
+  directories and rolls back on failure.
+- **Motion and density.** The console got the Kinetik-style motion language in native code — the rail's flowing
+  indicator, rolling numbers, card glints, spring progress bars, the morphing controls sheet and in-app toasts — and
+  the pages were re-dense'd: fixed-height metric cards, one-line rows, merged display/input cards, more visible per
+  screen.
+- The A handle over the desktop keeps returning to the console (also from the session notification).
 
 ## What's new in 2.0
 

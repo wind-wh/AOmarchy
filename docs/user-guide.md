@@ -142,6 +142,28 @@ with a "shutdown failed" notification and leave the desktop running.)
   file or text onto the desktop. Files land in `~/Downloads`; text goes to the clipboard.
 - **Android apps** are in the **Apps → Mobile Apps** menu and open in a floating window.
 
+## Terminal mode
+
+The same installed system, but with a shell instead of the desktop: no Hyprland, no bar, no app menu. It is the low
+memory way to use Linux — measured on the tablet, a desktop session adds about 750 MB of system memory while the
+terminal adds about 80 MB — and it starts in seconds, which makes `pacman -S ...` or a quick `git` cheap.
+
+- Switch with **设置 → 启动方式 → 终端**. The big button on the console then says **进入终端 / Enter terminal**,
+  and the Overview and Controls pages show the same state. Switch back the same way.
+- Leaving the terminal (the back gesture or **‹ 控制台**) ends the shell; nothing keeps running in the background.
+- The bar has **复制 / Copy**, **粘贴 / Paste**, **A− / A+** for the font size, **键盘 / Keyboard** and
+  **重启 / Restart**.
+- Copy a selection: long-press the text, then drag to extend it, then tap **复制**. With nothing selected, **复制**
+  copies the visible screen.
+- Scroll back by dragging up. The green **↓ 底部 / Bottom** pill (or a tap on the terminal) returns to the live
+  output; typing anything does the same.
+- The key strip at the bottom sends what a soft keyboard cannot: **Esc**, **Tab**, **^C**, **^D**, **^Z** and the
+  arrow keys — so `vim`, `less`, `top` and cancelling a long command all work.
+- Tapping the terminal shows or hides the keyboard.
+
+The terminal is drawn by the app (no VNC, no X server): the pty comes from the app's own native code and the shell
+runs inside the installed system, so the files, packages and settings are exactly the desktop's.
+
 ## Installing apps
 
 - **App store**: GNOME Software, with Flathub. Flatpak apps run on the tablet's GPU. If the store is empty, run this in a terminal: `flatpak --user remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo`

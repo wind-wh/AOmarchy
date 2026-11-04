@@ -92,28 +92,35 @@ jobs:
           fail_on_unmatched_files: true
           files: dist/*
           body: |
-            **AOmarchy 2.0** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
+            **AOmarchy 2.1** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
 
             This release was built and signed by GitHub Actions from the repository source.
 
-            ## What is new in 2.0
+            ## What is new in 2.1
 
-            - **A console around the desktop.** The app opens on five pages — 概览 / 系统 / 应用 / 控制 / 设置 — with
-              live session metrics, the system installer, the app list, the volume/clipboard/controls switchboard and
-              the settings. The Linux desktop is one destination instead of the only screen, and a small A handle in
-              its corner (or the session notification) brings you back without stopping it.
-            - **The first-launch form is gone.** Install the system from 系统 → 安装系统 (online download or a local
-              `lotfix-rootfs.tar.gz`); name/email and the keyboard layout live in 设置 and are applied on every session
-              start; “open the desktop directly” is a setting.
-            - Fixed brand dark theme; the console is independent from the desktop's Omarchy theme.
-            - CJK text and the power menu (shutdown / reboot / log out) work as in 1.0.2 / 1.0.3.
+            - **Terminal mode.** 设置 → 启动方式 chooses what the big button starts: the full desktop, or a terminal —
+              one login shell in the installed system, without Hyprland, the bar or the app menu. The terminal is drawn
+              by the app itself (VT100/ANSI: colours, cursor, scroll regions, alternate screen, CJK double-width
+              cells), so it needs no VNC and no desktop: about **700 MB less memory** and a start in seconds.
+              It has scrollback (drag), selection (long press then drag), copy/paste, font size (A− / A+) and a key
+              strip with Esc, Tab, ^C, ^D, ^Z and the arrows.
+            - **Backup and restore.** 系统 → 备份与回滚 snapshots the whole Linux system to a `.tar.gz` (about 4.8 GB
+              to 1.9 GB, a few minutes, with progress and cancel), restores it, exports it, or imports one; a restore
+              moves the old system aside and rolls back if anything fails.
+            - **Motion and density.** The console now uses the Kinetik-style motion language in native code (rail
+              indicator, rolling numbers, card glints, spring progress bars, morphing controls sheet, in-app toasts)
+              and the pages are denser: fixed-height metric cards with detail lines, one-line app rows, merged
+              display/input cards.
+            - The A handle over the desktop still returns to the console, and the session notification keeps its
+              控制 / 控制台 buttons.
 
-            ## Upgrading from 1.x
+            ## Upgrading
 
-            The package is now `app.aomarchy`. Android does not let one app read another app's private data, so a 1.x
-            install cannot be migrated: save what you need from the desktop, uninstall the old app, install AOmarchy and
-            set the system up again (a local archive makes that work offline). The 1.x builds stay available in
-            `wind-wh/AOmarchy-legacy`.
+            - From **2.0**: install over it, nothing else to do.
+            - From **1.x**: the package is `app.aomarchy` and Android does not let one app read another app's private
+              data, so a 1.x install cannot be migrated. Save what you need from the desktop, uninstall the old app,
+              install AOmarchy and set the system up again (a local archive makes that work offline). The 1.x builds
+              stay available in `wind-wh/AOmarchy-legacy`.
 
             ## Install
 
