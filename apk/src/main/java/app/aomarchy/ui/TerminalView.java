@@ -725,9 +725,12 @@ public class TerminalView extends View {
 
     @Override
     public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
+        // Plain text, not a password variation: MIUI switches to its full-screen security keyboard for password
+        // editors, and that window sat over the terminal as a black sheet.
         outAttrs.inputType = InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-                | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD;
-        outAttrs.imeOptions = EditorInfo.IME_ACTION_NONE | EditorInfo.IME_FLAG_NO_FULLSCREEN;
+                | InputType.TYPE_TEXT_FLAG_MULTI_LINE;
+        outAttrs.imeOptions = EditorInfo.IME_ACTION_NONE | EditorInfo.IME_FLAG_NO_FULLSCREEN
+                | EditorInfo.IME_FLAG_NO_EXTRACT_UI;
         return new BaseInputConnection(this, true) {
             @Override
             public boolean commitText(CharSequence text, int newCursorPosition) {
