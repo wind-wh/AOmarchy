@@ -12,6 +12,10 @@
         <item name="android:forceDarkAllowed">false</item>
     </style>
 
+    <style name="Theme.AOmarchy.Terminal" parent="Theme.AOmarchy">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowDisablePreview">true</item>
+    </style>
     <!-- The detailed settings pages keep their light theme (long plain list, unrelated to the shell). -->
     <style name="Theme.AOmarchy.Settings"
            parent="@android:style/Theme.DeviceDefault.Light.NoActionBar">
