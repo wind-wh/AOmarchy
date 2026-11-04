@@ -49,6 +49,8 @@ public class SessionService extends Service {
 
     /** The session runs in this process (false: anything left in run/ is from a previous one). */
     static volatile boolean started;
+    /** Wall clock of the session start, for the overview's uptime. */
+    static volatile long startedAt;
 
     public static File runDir(Context ctx) {
         return new File(ctx.getFilesDir(), "run");
@@ -253,6 +255,7 @@ public class SessionService extends Service {
     private void startSession() throws IOException {
         installCjkFonts(); // before anything fontconfig-based runs: Chinese text has a font to fall back to
         installSystemdInhibitShim(); // before Omarchy's power menu can be used: shutdown needs a fake inhibitor
+        startedAt = System.currentTimeMillis();
 
         File run = runDir(this);
         File sock = daemonSocket(this);

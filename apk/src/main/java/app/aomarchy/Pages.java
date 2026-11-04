@@ -10,6 +10,8 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import app.aomarchy.data.Metrics;
+import app.aomarchy.ui.Sparkline;
 import app.aomarchy.ui.Ui;
 
 /** One shell page: a scrolling column of cards. Subclasses fill it in {@link #build}. */
@@ -33,6 +35,14 @@ abstract class Page {
 
     abstract void build(LinearLayout body);
 
+    /** Called when the page becomes the visible one: start timers / watchers here. */
+    void onShown() {
+    }
+
+    /** Called when another page replaces this one: stop everything started in {@link #onShown()}. */
+    void onHidden() {
+    }
+
     void refresh() {
     }
 
@@ -45,11 +55,32 @@ abstract class Page {
     }
 }
 
-/** 概览: is the session up, and the numbers that answer "is it healthy". Real metrics land in M1. */
+/** 概览: is the session up, and the numbers that answer "is it healthy". */
 class OverviewPage extends Page {
+    private final Metrics metrics = new Metrics();
+    private final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable poller = new Runnable() {
+        @Override
+        public void run() {
+            poll();
+            handler.postDelayed(this, 2000);
+        }
+    };
+
     private TextView state;
     private TextView heroChip;
-    private TextView[] placeholders;
+    private TextView uptime;
+    private TextView cpuValue;
+    private TextView cpuSub;
+    private TextView memValue;
+    private TextView memSub;
+    private TextView diskValue;
+    private TextView diskSub;
+    private TextView batteryValue;
+    private TextView batterySub;
+    private TextView networkValue;
+    private TextView gpuValue;
+    private Sparkline sparkline;
 
     OverviewPage(ShellActivity shell) {
         super(shell);
@@ -57,7 +88,6 @@ class OverviewPage extends Page {
 
     @Override
     void build(LinearLayout body) {
-        placeholders = new TextView[4];
         LinearLayout hero = Ui.card(shell, null);
         LinearLayout head = Ui.row(shell);
         state = Ui.text(shell, "会话", 18, Ui.TEXT, true);
@@ -67,8 +97,9 @@ class OverviewPage extends Page {
         head.addView(heroChip);
         hero.addView(head);
         hero.addView(Ui.gap(shell, 6));
-        hero.addView(Ui.text(shell, "Arch Linux · Hyprland · 整个系统跑在 Android 上，不需要 root 和 proot。",
-                13, Ui.DIM, false));
+        uptime = Ui.text(shell, "Arch Linux · Hyprland · 整个系统跑在 Android 上，不需要 root 和 proot。",
+                13, Ui.DIM, false);
+        hero.addView(uptime);
         hero.addView(Ui.gap(shell, 16));
         LinearLayout actions = Ui.row(shell);
         actions.addView(Ui.button(shell, "进入桌面", true, v -> shell.openDesktop()));
@@ -77,39 +108,91 @@ class OverviewPage extends Page {
         hero.addView(actions);
         body.addView(hero);
 
-        String[] names = {"CPU", "内存", "磁盘", "电量"};
-        for (int i = 0; i < names.length; i += 2) {
-            LinearLayout row = Ui.row(shell);
-            row.setLayoutParams(new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-            LinearLayout a = statCard(names[i], i);
-            LinearLayout b = statCard(names[i + 1], i + 1);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-            lp.rightMargin = Ui.dp(shell, 12);
-            row.addView(a, lp);
-            LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-            row.addView(b, rp);
-            body.addView(row);
-            body.addView(Ui.gap(shell, 12));
-        }
+        // CPU with its little history line, then the plain numbers.
+        LinearLayout cpuCard = card("CPU");
+        cpuValue = big("—");
+        cpuCard.addView(cpuValue);
+        cpuSub = Ui.text(shell, "", 12, Ui.DIM, false);
+        cpuCard.addView(cpuSub);
+        sparkline = new Sparkline(shell);
+        LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(shell, 34));
+        slp.topMargin = Ui.dp(shell, 8);
+        cpuCard.addView(sparkline, slp);
+        LinearLayout row1 = Ui.row(shell);
+        row1.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout.LayoutParams l1 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        l1.rightMargin = Ui.dp(shell, 12);
+        row1.addView(cpuCard, l1);
+        LinearLayout memCard = card("内存");
+        memValue = big("—");
+        memCard.addView(memValue);
+        memSub = Ui.text(shell, "", 12, Ui.DIM, false);
+        memCard.addView(memSub);
+        row1.addView(memCard, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        body.addView(row1);
+        body.addView(Ui.gap(shell, 12));
 
-        LinearLayout note = Ui.card(shell, "下一步");
-        note.addView(Ui.text(shell, "指标接入（M1）：会话启动时由 Linux 侧写 run/metrics，这里显示 CPU / 内存 / 磁盘 / 电量 / 网络 / GPU 和工作区数量。",
-                13, Ui.DIM, false));
-        body.addView(note);
+        LinearLayout row2 = Ui.row(shell);
+        row2.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout diskCard = card("磁盘");
+        diskValue = big("—");
+        diskCard.addView(diskValue);
+        diskSub = Ui.text(shell, "", 12, Ui.DIM, false);
+        diskCard.addView(diskSub);
+        LinearLayout.LayoutParams l2 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        l2.rightMargin = Ui.dp(shell, 12);
+        row2.addView(diskCard, l2);
+        LinearLayout batCard = card("电量");
+        batteryValue = big("—");
+        batCard.addView(batteryValue);
+        batterySub = Ui.text(shell, "", 12, Ui.DIM, false);
+        batCard.addView(batterySub);
+        row2.addView(batCard, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        body.addView(row2);
+        body.addView(Ui.gap(shell, 12));
+
+        LinearLayout row3 = Ui.row(shell);
+        row3.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout netCard = card("网络");
+        networkValue = big("—");
+        netCard.addView(networkValue);
+        LinearLayout.LayoutParams l3 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        l3.rightMargin = Ui.dp(shell, 12);
+        row3.addView(netCard, l3);
+        LinearLayout gpuCard = card("GPU");
+        gpuValue = big("—");
+        gpuCard.addView(gpuValue);
+        row3.addView(gpuCard, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        body.addView(row3);
     }
 
-    private LinearLayout statCard(String name, int index) {
-        LinearLayout card = Ui.card(shell, name);
+    private LinearLayout card(String title) {
+        LinearLayout card = Ui.card(shell, title);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.bottomMargin = 0;
         card.setLayoutParams(lp);
-        TextView v = value("—", Ui.TEXT);
-        v.setTextSize(22);
-        placeholders[index] = v;
-        card.addView(v);
         return card;
+    }
+
+    private TextView big(String text) {
+        TextView v = value(text, Ui.TEXT);
+        v.setTextSize(22);
+        return v;
+    }
+
+    @Override
+    void onShown() {
+        handler.post(poller);
+    }
+
+    @Override
+    void onHidden() {
+        handler.removeCallbacks(poller);
     }
 
     @Override
@@ -119,6 +202,41 @@ class OverviewPage extends Page {
         state.setTextColor(ready ? Ui.TEXT : Ui.DIM);
         heroChip.setText(ready ? (SessionService.started ? "● 运行中" : "● 就绪") : "○ 未安装");
         heroChip.setTextColor(ready ? Ui.MINT : Ui.FAINT);
+        uptime.setText(ready && SessionService.started
+                ? "已运行 " + duration(System.currentTimeMillis() - SessionService.startedAt)
+                : "Arch Linux · Hyprland · 整个系统跑在 Android 上，不需要 root 和 proot。");
+        poll();
+    }
+
+    private void poll() {
+        if (!isAdded())
+            return;
+        metrics.read(shell);
+        cpuValue.setText(metrics.cpuPercent < 0 ? "—" : metrics.cpuPercent + "%");
+        cpuSub.setText("device".equals(metrics.cpuScope) ? "设备整体" : metrics.processCount + " 个进程（会话）");
+        sparkline.push(metrics.cpuPercent);
+        memValue.setText(metrics.memPercent() < 0 ? "—" : metrics.memPercent() + "%");
+        memSub.setText(Metrics.gb(metrics.memUsed) + " / " + Metrics.gb(metrics.memTotal));
+        diskValue.setText(metrics.diskPercent() < 0 ? "—" : metrics.diskPercent() + "%");
+        diskSub.setText(Metrics.gb(metrics.diskUsed) + " / " + Metrics.gb(metrics.diskTotal));
+        batteryValue.setText(metrics.batteryPercent < 0 ? "—" : metrics.batteryPercent + "%");
+        batterySub.setText(metrics.charging ? "充电中" : "使用电池");
+        networkValue.setText(metrics.network);
+        networkValue.setTextSize(18);
+        gpuValue.setText(Metrics.gpu());
+        gpuValue.setTextSize(18);
+    }
+
+    private boolean isAdded() {
+        return root.getParent() != null;
+    }
+
+    private static String duration(long ms) {
+        long s = ms / 1000;
+        long h = s / 3600, m = (s % 3600) / 60;
+        if (h > 0)
+            return h + " 小时 " + m + " 分";
+        return m + " 分 " + (s % 60) + " 秒";
     }
 }
 

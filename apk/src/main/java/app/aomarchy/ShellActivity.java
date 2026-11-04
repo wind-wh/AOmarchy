@@ -28,7 +28,7 @@ public class ShellActivity extends Activity {
     private final TextView[] tabLabels = new TextView[TITLES.length];
     private FrameLayout host;
     private TextView status;
-    private int current;
+    private int current = -1;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -104,12 +104,15 @@ public class ShellActivity extends Activity {
     }
 
     private void show(int index) {
+        if (current >= 0 && pages[current] != null)
+            pages[current].onHidden();
         current = index;
         if (pages[index] == null) pages[index] = newPage(index);
         host.removeAllViews();
         host.addView(pages[index].root, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         pages[index].refresh();
+        pages[index].onShown();
         for (int i = 0; i < tabs.length; i++) {
             boolean on = i == index;
             tabs[i].setBackground(on ? Ui.surface(this, 16) : null);
