@@ -744,9 +744,9 @@ class AppsPage extends Page {
         return cell;
     }
 }
-/** 控制: high-frequency switches — display, input, sound, power (M4). */
+/** 控制: the high-frequency switchboard — same view as the half-screen sheet over the desktop. */
 class ControlsPage extends Page {
-    private TextView resolution;
+    private ControlsView controls;
 
     ControlsPage(ShellActivity shell) {
         super(shell);
@@ -754,45 +754,21 @@ class ControlsPage extends Page {
 
     @Override
     void build(LinearLayout body) {
-        LinearLayout display = Ui.card(shell, "显示");
-        resolution = value("—", Ui.TEXT);
-        display.addView(Ui.kv(shell, "分辨率", resolution));
-        body.addView(display);
-
-        LinearLayout input = Ui.card(shell, "输入");
-        input.addView(Ui.text(shell, "虚拟键盘、触摸板模式、指针捕获、键盘布局（M4）。", 13, Ui.DIM, false));
-        body.addView(input);
-
-        LinearLayout sound = Ui.card(shell, "声音");
-        sound.addView(Ui.text(shell, "输出 / 输入音量、音频延迟预设（M4）。", 13, Ui.DIM, false));
-        body.addView(sound);
-
-        LinearLayout power = Ui.card(shell, "电源");
-        power.addView(Ui.text(shell, "重启会话 / 关闭桌面回到 Android（会话没装好时不可用）。", 13, Ui.DIM, false));
-        power.addView(Ui.gap(shell, 12));
-        LinearLayout prow = Ui.row(shell);
-        prow.addView(Ui.button(shell, "重启会话", false, v -> power("reboot")));
-        prow.addView(Ui.space(shell, 10));
-        prow.addView(Ui.button(shell, "关闭桌面", false, v -> power("shutdown")));
-        power.addView(prow);
-        body.addView(power);
+        controls = new ControlsView(shell);
+        body.addView(controls.root);
     }
 
-    private void power(String action) {
-        if (!SessionService.rootfsReady(shell)) {
-            toast("系统还没装好");
-            return;
-        }
-        Restarter.power(shell, action);
+    @Override
+    void onShown() {
+        controls.refresh();
     }
 
     @Override
     void refresh() {
-        android.util.DisplayMetrics m = shell.getResources().getDisplayMetrics();
-        resolution.setText(m.widthPixels + " × " + m.heightPixels);
+        if (controls != null)
+            controls.refresh();
     }
 }
-
 /** 设置: low-frequency configuration; the existing SettingsActivity still owns the detailed pages. */
 class SettingsPage extends Page {
     SettingsPage(ShellActivity shell) {

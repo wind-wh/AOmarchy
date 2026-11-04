@@ -215,11 +215,17 @@ public class SessionService extends Service {
         nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Session", NotificationManager.IMPORTANCE_LOW));
         PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class),
                 PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent controls = PendingIntent.getActivity(this, 1, new Intent(this, ControlsActivity.class),
+                PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent console = PendingIntent.getActivity(this, 2, new Intent(this, ShellActivity.class),
+                PendingIntent.FLAG_IMMUTABLE);
         Notification n = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_menu_view)
-                .setContentTitle("Andromarchy")
-                .setContentText("Omarchy session running")
+                .setContentTitle("AOmarchy")
+                .setContentText("Linux 桌面运行中")
                 .setContentIntent(open)
+                .addAction(new Notification.Action.Builder(null, "控制", controls).build())
+                .addAction(new Notification.Action.Builder(null, "控制台", console).build())
                 .setOngoing(true)
                 .build();
         startForeground(NOTIFICATION_ID, n);
