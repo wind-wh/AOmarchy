@@ -82,6 +82,12 @@ public class TerminalActivity extends Activity {
                     SessionService.ptyCwd(this).getPath());
         }
         terminal.requestFocus();
+        // MIUI can keep its launch animation (a black frame) until the window reports a second frame: nudge it.
+        terminal.postDelayed(() -> {
+            terminal.invalidate();
+            getWindow().getDecorView().invalidate();
+            reportFullyDrawn();
+        }, 400);
     }
 
     private TextView action(String label, int color, View.OnClickListener onClick) {

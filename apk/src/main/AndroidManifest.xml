@@ -28,13 +28,13 @@
             android:name=".TerminalActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:exported="false"
-            android:launchMode="singleTask"
-            android:theme="@style/Theme.AOmarchy.Terminal" />        <activity
+
+            android:theme="@style/Theme.AOmarchy" />        <activity
             android:name=".ShellActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:enableOnBackInvokedCallback="false"
             android:exported="true"
-            android:launchMode="singleTask"
+
             android:resizeableActivity="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -46,7 +46,7 @@
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:enableOnBackInvokedCallback="false"
             android:exported="false"
-            android:launchMode="singleTask"
+
             android:resizeableActivity="true"
             android:supportsPictureInPicture="true">
             <property
