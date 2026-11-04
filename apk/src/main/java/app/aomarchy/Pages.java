@@ -111,7 +111,7 @@ class OverviewPage extends Page {
         LinearLayout actions = Ui.row(shell);
         actions.addView(Ui.button(shell, "进入桌面", true, v -> shell.openDesktop()));
         actions.addView(Ui.space(shell, 10));
-        actions.addView(Ui.button(shell, "安装 / 重装系统", false, v -> shell.installSystem()));
+        actions.addView(Ui.button(shell, "安装 / 重装系统", false, v -> shell.showTab(1)));
         hero.addView(actions);
         body.addView(hero);
 

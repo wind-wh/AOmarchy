@@ -155,8 +155,14 @@ public class ShellActivity extends Activity {
         startActivity(new Intent(this, MainActivity.class));
     }
 
+    /** Jump to a page by rail index (0 概览 … 4 设置). */
+    void showTab(int index) {
+        if (index >= 0 && index < TITLES.length)
+            show(index);
+    }
+
     void installSystem() {
-        startActivity(new Intent(this, InstallActivity.class));
+        showTab(1); // installing lives in the System page now
     }
 
     private void updateStatus() {
