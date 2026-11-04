@@ -714,11 +714,14 @@ class AppsPage extends Page {
 
     private View appRow(Apps.LinuxApp app) {
         LinearLayout r = Ui.row(shell);
-        r.setPadding(0, Ui.dp(shell, 8), 0, Ui.dp(shell, 8));
-        LinearLayout texts = Ui.column(shell);
-        texts.addView(Ui.text(shell, app.name, 15, Ui.TEXT, false));
-        texts.addView(Ui.text(shell, app.id, 11, Ui.FAINT, false));
-        r.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        r.setPadding(0, Ui.dp(shell, 6), 0, Ui.dp(shell, 6));
+        r.addView(Ui.text(shell, app.name, 15, Ui.TEXT, false),
+                new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        TextView id = Ui.text(shell, app.id, 11, Ui.FAINT, false);
+        id.setSingleLine(true);
+        id.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        id.setPadding(Ui.dp(shell, 10), 0, Ui.dp(shell, 8), 0);
+        r.addView(id, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         TextView open = Ui.text(shell, "打开 ›", 13, Ui.ACCENT, false);
         open.setPadding(Ui.dp(shell, 10), 0, 0, 0);
         open.setOnClickListener(v -> {

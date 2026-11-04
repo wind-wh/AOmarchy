@@ -114,6 +114,10 @@ final class ControlsView {
         box.addView(head);
         SeekBar bar = new SeekBar(ctx);
         bar.setMax(Math.max(1, max));
+        android.content.res.ColorStateList accent = android.content.res.ColorStateList.valueOf(Ui.ACCENT);
+        bar.setProgressTintList(accent);
+        bar.setThumbTintList(accent);
+        bar.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(Ui.LINE));
         int current = audio != null ? audio.getStreamVolume(stream) : 0;
         bar.setProgress(current);
         value.setText(String.valueOf(current));
