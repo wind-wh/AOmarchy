@@ -38,8 +38,10 @@ public final class Installer {
     public static final String ROOTFS_URL =
             "https://github.com/lotfibennour/andromarchy/releases/latest/download/lotfix-rootfs.tar.gz";
 
-    /** Archive plus the extracted tree, with room left for the rest of the device. */
-    public static final long NEEDED_BYTES = 8L << 30;
+    /** Fresh install: the extracted tree plus room to work. */
+    public static final long NEEDED_FRESH = 6L << 30;
+    /** Reinstall: the new tree next to the old one, which is only deleted after the swap. */
+    public static final long NEEDED_REPLACE = 11L << 30;
 
     private static final String LOCAL_NAME = "lotfix-rootfs.tar.gz";
 
@@ -114,8 +116,9 @@ public final class Installer {
         File partial = new File(rootfs.getPath() + ".partial");
         File files = ctx.getFilesDir();
         long available = new StatFs(files.getPath()).getAvailableBytes();
-        if (available < NEEDED_BYTES)
-            throw new IOException("空间不足：需要约 " + (NEEDED_BYTES >> 30) + " GB，当前可用 " + humanSize(available));
+        long needed = replace && rootfs.exists() ? NEEDED_REPLACE : NEEDED_FRESH;
+        if (available < needed)
+            throw new IOException("空间不足：需要约 " + (needed >> 30) + " GB，当前可用 " + humanSize(available));
 
         deleteTree(partial);
         InputStream raw;
@@ -198,17 +201,27 @@ public final class Installer {
         }
 
         cb.progress(1000, "收尾中…");
+        // Replace by renaming: the old system stays on disk (and can be put back) until the new one is in place,
+        // and a slow or failed delete cannot break a finished install.
+        File old = new File(rootfs.getPath() + ".old");
+        boolean movedOld = false;
         if (replace && rootfs.exists()) {
-            if (!deleteTree(rootfs))
+            deleteTree(old);
+            movedOld = rootfs.renameTo(old);
+            if (!movedOld && !deleteTree(rootfs))
                 throw new IOException("删不掉旧的系统（rootfs）");
         }
         if (!partial.renameTo(rootfs)) {
+            if (movedOld)
+                old.renameTo(rootfs); // put the old system back
             if (SessionService.rootfsReady(ctx))
                 throw new IOException("无法把新系统移动到目标位置");
             deleteTree(rootfs);
             if (!partial.renameTo(rootfs))
                 throw new IOException("无法把新系统移动到目标位置");
         }
+        if (movedOld)
+            deleteTree(old); // best effort: the install already succeeded, a leftover tree only costs space
     }
 
     private static void checkCancelled() throws IOException {
@@ -251,11 +264,29 @@ public final class Installer {
         }
     }
 
+    /** Bytes used by a tree (the rootfs is ~100k files, so this runs off the UI thread when needed). */
+    public static long dirSize(File f) {
+        if (f == null || !f.exists())
+            return 0;
+        if (f.isFile())
+            return f.length();
+        long total = 0;
+        File[] children = f.listFiles();
+        if (children != null) {
+            for (File c : children)
+                total += dirSize(c);
+        }
+        return total;
+    }
+
     /** Recursive delete; returns false when something could not be removed. */
     public static boolean deleteTree(File f) {
         if (f == null || !f.exists())
             return true;
         if (f.isDirectory()) {
+            // Extracted trees carry the archive's modes: a read-only directory refuses to lose its children.
+            f.setWritable(true, true);
+            f.setExecutable(true, true);
             File[] children = f.listFiles();
             if (children != null) {
                 for (File c : children) {

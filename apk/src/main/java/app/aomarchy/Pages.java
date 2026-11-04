@@ -253,6 +253,8 @@ class SystemPage extends Page {
 
     private TextView stateValue;
     private TextView size;
+    private long knownSize = -1;
+    private boolean sizing;
     private TextView archiveInfo;
     private TextView progressText;
     private TextView tileOnline;
@@ -533,24 +535,57 @@ class SystemPage extends Page {
                 .show();
     }
 
+    /** Rootfs size: read the cache from the last run, else walk the tree once in the background and cache it. */
+    private void measureRootfs() {
+        if (sizing)
+            return;
+        File rootfs = SessionService.rootfs(shell);
+        File cache = new File(shell.getFilesDir(), ".rootfs-size");
+        try {
+            if (cache.isFile() && cache.lastModified() >= rootfs.lastModified()) {
+                long v = Long.parseLong(new String(java.nio.file.Files.readAllBytes(cache.toPath())).trim());
+                if (v > 0) {
+                    knownSize = v;
+                    refresh();
+                    return;
+                }
+            }
+        } catch (Exception ignored) {
+            // no usable cache: measure below
+        }
+        sizing = true;
+        new Thread(() -> {
+            long bytes = Installer.dirSize(rootfs);
+            try {
+                java.nio.file.Files.write(cache.toPath(), String.valueOf(bytes).getBytes());
+                cache.setLastModified(rootfs.lastModified());
+            } catch (Exception ignored) {
+                // measuring again next time is fine
+            }
+            shell.runOnUiThread(() -> {
+                sizing = false;
+                knownSize = bytes;
+                refresh();
+            });
+        }, "rootfs-size").start();
+    }
+
     @Override
     void refresh() {
         boolean ready = SessionService.rootfsReady(shell);
         stateValue.setText(ready ? "已安装" : "未安装");
         stateValue.setTextColor(ready ? Ui.MINT : Ui.FAINT);
         if (!ready) {
+            knownSize = -1;
             size.setText("—");
             size.setTextColor(Ui.FAINT);
+        } else if (knownSize > 0) {
+            size.setText(Installer.humanSize(knownSize));
+            size.setTextColor(Ui.TEXT);
         } else {
-            try {
-                StatFs fs = new StatFs(SessionService.rootfs(shell).getAbsolutePath());
-                long used = fs.getBlockCountLong() * fs.getBlockSizeLong();
-                size.setText(Installer.humanSize(used));
-                size.setTextColor(Ui.TEXT);
-            } catch (RuntimeException e) {
-                size.setText("读取失败");
-                size.setTextColor(Ui.WARN);
-            }
+            size.setText("统计中…");
+            size.setTextColor(Ui.DIM);
+            measureRootfs();
         }
         if (!installing)
             paintSources();
