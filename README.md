@@ -67,7 +67,22 @@ are untested.
 The [user guide](docs/user-guide.md) explains the touch gestures, the on-screen keyboard, the Android settings to
 change (HyperOS/MIUI take some gestures for themselves), installing apps, and the self-test.
 
+## What's new in 2.8
+
+- **The console sits on your wallpaper.** The device wallpaper is drawn behind the console, blurred and under a heavy
+  brand scrim so the rail, cards and text stay exactly as readable as before.
+- **A power button in the rail.** One tap at the bottom of the rail opens a session power menu: restart the session,
+  stop it, start it again, or quit the app (which leaves a running session alone). The button's colour doubles as a
+  status LED — mint while the session runs, dim when only ready, grey before Linux is installed.
+- **A quick-command panel in the terminal.** The terminal no longer fills the screen: the lower part is a panel of
+  chips that send common commands in one tap (list files, disk/memory, processes, system update, packages, services,
+  network, recent logs, clear, exit). **Edit** turns the chips editable, **+ 新增** adds your own name+command,
+  long-press deletes; the list is saved in the app's settings, so it survives restarts. A **面板 / Panel** switch in
+  the top bar folds it away for a full-height terminal (the pty is resized accordingly).
+- Everything from 2.7 stays: brand icon, home-screen widget, overview suggestions, quick settings tile.
+
 ## What's new in 2.7
+
 
 - **A new app icon.** The launcher icon is now the console's own language — a dark tile with the brand's four-panel
   glyph (three accent tiles, one mint) — instead of the leftover green Omarchy box with the Android robot. Adaptive

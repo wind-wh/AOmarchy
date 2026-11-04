@@ -92,29 +92,28 @@ jobs:
           fail_on_unmatched_files: true
           files: dist/*
           body: |
-            **AOmarchy 2.7** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
+            **AOmarchy 2.8** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
 
             This release was built and signed by GitHub Actions from the repository source.
 
-            ## What is new in 2.7
+            ## What is new in 2.8
 
-            - **A new app icon.** The launcher icon now speaks the console's language: a dark tile with the brand's
-              four-panel glyph (three accent tiles, one mint) — an adaptive icon with a themeable monochrome layer for
-              Android 13 — instead of the leftover green Omarchy box with the Android robot.
-            - **A home-screen widget** (4×2): the session state (未安装 / 就绪 / 运行中 / 终端模式) plus one-tap
-              控制台 and 终端 entries. It refreshes when the session starts or stops and follows the console's
-              language. No background polling.
-            - **Suggestions on the overview.** A new 智能建议 card reads the live numbers and offers the two most
-              useful next actions: install Linux on a fresh device, clean backups when the system disk is nearly full,
-              switch to terminal mode when memory is tight, open the desktop when the session is not running, or
-              manage oversized backup folders. It only redraws when the suggestion changes.
-            - Fixes: ending the session now resets the widget to 就绪 (the service's `started` flag was never cleared),
-              and switching the interface language refreshes the widget immediately.
-            - Everything from 2.6 stays: quick settings tile, backup retention and disk usage, Chinese/English console.
+            - **The console sits on your wallpaper.** The device wallpaper is drawn behind the console — blurred, under
+              a heavy brand scrim — so the rail, cards and text stay as readable as before but the app feels like part
+              of the home screen.
+            - **A power button in the rail.** One tap at the bottom of the rail opens a session power menu: restart the
+              session, stop it, start it, or quit the app (a running session keeps running). Its colour is also a status
+              LED: mint while running, dim when ready, grey before Linux is installed.
+            - **A quick-command panel in the terminal.** The terminal no longer fills the screen: the lower part is a
+              panel of chips that send common commands in one tap (files, disk, memory, processes, system update,
+              packages, services, network, logs, clear, exit). **编辑** makes the chips editable, **+ 新增** adds your
+              own name + command, long-press deletes; the list lives in the app's settings and survives restarts. A
+              **面板 / Panel** switch folds the panel away for a full-height terminal, and the pty is resized to match.
+            - Everything from 2.7 stays: brand icon, home-screen widget, overview suggestions, quick settings tile.
 
             ## Upgrading
 
-            - From **2.6 / 2.5 / 2.4 / 2.3 / 2.2 / 2.1 / 2.0**: install over it, nothing else to do.
+            - From **2.7 / 2.6 / 2.5 / 2.4 / 2.3 / 2.2 / 2.1 / 2.0**: install over it, nothing else to do.
             - From **1.x**: the package is `app.aomarchy`; save what you need from the desktop, uninstall the old app,
               install AOmarchy and set the system up again (a local archive makes that work offline).
 
