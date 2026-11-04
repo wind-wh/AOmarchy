@@ -32,6 +32,9 @@ public class TerminalActivity extends Activity {
         super.onCreate(state);
         Prefs.init(this);
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        // Do not let the editor focus pull up the IME over the terminal: the 键盘 button or a tap shows it.
+        getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
+                | android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
 
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Ui.BG);
@@ -82,6 +85,12 @@ public class TerminalActivity extends Activity {
                     SessionService.ptyCwd(this).getPath());
         }
         terminal.requestFocus();
+        terminal.postDelayed(() -> {
+            android.view.inputmethod.InputMethodManager imm =
+                    (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+            if (imm != null)
+                imm.hideSoftInputFromWindow(terminal.getWindowToken(), 0);
+        }, 300);
         // MIUI can keep its launch animation (a black frame) until the window reports a second frame: nudge it.
         terminal.postDelayed(() -> {
             terminal.invalidate();
