@@ -30,8 +30,8 @@ abstract class Page {
         root.setBackgroundColor(Ui.BG);
         root.setFillViewport(true);
         body = Ui.column(shell);
-        int pad = Ui.dp(shell, 24);
-        body.setPadding(pad, pad, pad, Ui.dp(shell, 24));
+        int pad = Ui.dp(shell, 18);
+        body.setPadding(pad, pad, pad, Ui.dp(shell, 18));
         root.addView(body, new ScrollView.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         build(body);
@@ -109,15 +109,18 @@ class OverviewPage extends Page {
         uptime = Ui.text(shell, "Arch Linux · Hyprland · 整个系统跑在 Android 上，不需要 root 和 proot。",
                 13, Ui.DIM, false);
         hero.addView(uptime);
-        hero.addView(Ui.gap(shell, 16));
+        hero.addView(Ui.gap(shell, 10));
         LinearLayout actions = Ui.row(shell);
         actions.addView(Ui.button(shell, "进入桌面", true, v -> shell.openDesktop()));
         actions.addView(Ui.space(shell, 10));
         actions.addView(Ui.button(shell, "安装 / 重装系统", false, v -> shell.showTab(1)));
+        actions.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
+        actions.addView(Ui.text(shell, "Wayland · Hyprland · Arch Linux ARM", 11, Ui.FAINT, false));
         hero.addView(actions);
         body.addView(hero);
 
-        // CPU with its little history line, then the plain numbers.
+        // CPU with its little history line, then the plain numbers. Every card has the same height so the grid
+        // stays dense and aligned: title, big value, one detail line (CPU also keeps its 24 pt history line).
         LinearLayout cpuCard = card("CPU");
         cpuValue = big("—");
         cpuCard.addView(cpuValue);
@@ -125,60 +128,53 @@ class OverviewPage extends Page {
         cpuCard.addView(cpuSub);
         sparkline = new Sparkline(shell);
         LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(shell, 34));
-        slp.topMargin = Ui.dp(shell, 8);
+                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(shell, 24));
+        slp.topMargin = Ui.dp(shell, 4);
         cpuCard.addView(sparkline, slp);
         LinearLayout row1 = Ui.row(shell);
         row1.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        LinearLayout.LayoutParams l1 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        l1.rightMargin = Ui.dp(shell, 12);
+        LinearLayout.LayoutParams l1 = new LinearLayout.LayoutParams(0, Ui.dp(shell, 116), 1f);
+        l1.rightMargin = Ui.dp(shell, 10);
         row1.addView(cpuCard, l1);
         LinearLayout memCard = card("内存");
         memValue = big("—");
         memCard.addView(memValue);
         memSub = Ui.text(shell, "", 12, Ui.DIM, false);
         memCard.addView(memSub);
-        row1.addView(memCard, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        row1.addView(memCard, new LinearLayout.LayoutParams(0, Ui.dp(shell, 116), 1f));
         body.addView(row1);
-        body.addView(Ui.gap(shell, 12));
+        body.addView(Ui.gap(shell, 9));
 
         LinearLayout row2 = Ui.row(shell);
         row2.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        LinearLayout diskCard = card("磁盘");
+        LinearLayout diskCard = card("磁盘 · 系统");
         diskValue = big("—");
         diskCard.addView(diskValue);
         diskSub = Ui.text(shell, "", 12, Ui.DIM, false);
         diskCard.addView(diskSub);
-        LinearLayout.LayoutParams l2 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        l2.rightMargin = Ui.dp(shell, 12);
+        LinearLayout.LayoutParams l2 = new LinearLayout.LayoutParams(0, Ui.dp(shell, 116), 1f);
+        l2.rightMargin = Ui.dp(shell, 10);
         row2.addView(diskCard, l2);
         LinearLayout batCard = card("电量");
         batteryValue = big("—");
         batCard.addView(batteryValue);
         batterySub = Ui.text(shell, "", 12, Ui.DIM, false);
         batCard.addView(batterySub);
-        row2.addView(batCard, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        row2.addView(batCard, new LinearLayout.LayoutParams(0, Ui.dp(shell, 116), 1f));
         body.addView(row2);
-        body.addView(Ui.gap(shell, 12));
+        body.addView(Ui.gap(shell, 9));
 
-        LinearLayout row3 = Ui.row(shell);
-        row3.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        LinearLayout netCard = card("网络");
-        networkValue = big("—");
-        netCard.addView(networkValue);
-        LinearLayout.LayoutParams l3 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        l3.rightMargin = Ui.dp(shell, 12);
-        row3.addView(netCard, l3);
-        LinearLayout gpuCard = card("GPU");
-        gpuValue = big("—");
-        gpuCard.addView(gpuValue);
-        row3.addView(gpuCard, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        body.addView(row3);
+        // One wide card for the things that are two short lines each: less blank space than two half-empty cards.
+        LinearLayout netGpu = card("网络与图形");
+        networkValue = value("—", Ui.TEXT);
+        netGpu.addView(Ui.kv(shell, "网络", networkValue));
+        gpuValue = value("—", Ui.TEXT);
+        netGpu.addView(Ui.kv(shell, "GPU", gpuValue));
+        netGpu.addView(Ui.text(shell, "网络与 Adreno 驱动都由 Android 侧透传给 Linux 会话。", 11, Ui.FAINT, false));
+        body.addView(netGpu);
     }
-
     private LinearLayout card(String title) {
         LinearLayout card = Ui.card(shell, title);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -223,21 +219,21 @@ class OverviewPage extends Page {
         metrics.read(shell);
         roll(cpuValue, metrics.cpuPercent, lastCpu, "%");
         lastCpu = metrics.cpuPercent;
-        cpuSub.setText("device".equals(metrics.cpuScope) ? "设备整体" : metrics.processCount + " 个进程（会话）");
+        cpuSub.setText("device".equals(metrics.cpuScope) ? "设备整体占用" : metrics.processCount + " 个进程 · 会话整体");
         sparkline.push(metrics.cpuPercent);
         roll(memValue, metrics.memPercent(), lastMem, "%");
         lastMem = metrics.memPercent();
-        memSub.setText(Metrics.gb(metrics.memUsed) + " / " + Metrics.gb(metrics.memTotal));
+        long avail = metrics.memTotal > 0 ? metrics.memTotal - metrics.memUsed : -1;
+        memSub.setText(Metrics.gb(metrics.memUsed) + " 已用 · 可用 " + Metrics.gb(avail));
         roll(diskValue, metrics.diskPercent(), lastDisk, "%");
         lastDisk = metrics.diskPercent();
-        diskSub.setText(Metrics.gb(metrics.diskUsed) + " / " + Metrics.gb(metrics.diskTotal));
+        long diskFree = metrics.diskTotal > 0 ? metrics.diskTotal - metrics.diskUsed : -1;
+        diskSub.setText(Metrics.gb(metrics.diskUsed) + " 已用 · 剩余 " + Metrics.gb(diskFree));
         roll(batteryValue, metrics.batteryPercent, lastBat, "%");
         lastBat = metrics.batteryPercent;
         batterySub.setText(metrics.charging ? "充电中" : "使用电池");
         networkValue.setText(metrics.network);
-        networkValue.setTextSize(18);
         gpuValue.setText(Metrics.gpu());
-        gpuValue.setTextSize(18);
     }
 
     /** Numbers roll to their new value instead of jumping (Kinetik's Stat Card). */
@@ -371,12 +367,20 @@ class SystemPage extends Page {
 
     private View row(String name, long bytes, Runnable onClick) {
         LinearLayout r = Ui.row(shell);
-        r.setPadding(0, Ui.dp(shell, 8), 0, Ui.dp(shell, 8));
+        r.setPadding(0, Ui.dp(shell, 6), 0, Ui.dp(shell, 6));
         r.addView(Ui.text(shell, name, 13, Ui.TEXT, false));
         r.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
-        r.addView(Ui.text(shell, Installer.humanSize(bytes), 12, Ui.DIM, false));
+        r.addView(Ui.text(shell, smallSize(bytes), 12, Ui.DIM, false));
         r.setOnClickListener(v -> onClick.run());
         return r;
+    }
+
+    private static String smallSize(long bytes) {
+        if (bytes < 1024)
+            return bytes + " B";
+        if (bytes < 1024 * 1024)
+            return String.format(java.util.Locale.US, "%.0f KB", bytes / 1024.0);
+        return Installer.humanSize(bytes);
     }
 
     private void paintSources() {
@@ -698,7 +702,7 @@ class AppsPage extends Page {
 
     private View appRow(Apps.LinuxApp app) {
         LinearLayout r = Ui.row(shell);
-        r.setPadding(0, Ui.dp(shell, 10), 0, Ui.dp(shell, 10));
+        r.setPadding(0, Ui.dp(shell, 8), 0, Ui.dp(shell, 8));
         LinearLayout texts = Ui.column(shell);
         texts.addView(Ui.text(shell, app.name, 15, Ui.TEXT, false));
         texts.addView(Ui.text(shell, app.id, 11, Ui.FAINT, false));
@@ -868,7 +872,7 @@ class SettingsPage extends Page {
 
     private LinearLayout row(String label, TextView valueView, Runnable onClick) {
         LinearLayout r = Ui.row(shell);
-        r.setPadding(0, Ui.dp(shell, 10), 0, Ui.dp(shell, 10));
+        r.setPadding(0, Ui.dp(shell, 8), 0, Ui.dp(shell, 8));
         r.addView(Ui.text(shell, label, 15, Ui.TEXT, false));
         r.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
         r.addView(valueView);

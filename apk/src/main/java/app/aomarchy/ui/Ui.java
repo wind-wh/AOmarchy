@@ -111,17 +111,17 @@ public final class Ui {
         CardBackground bg = new CardBackground(c, SURFACE, LINE, 1, 20);
         card.setBackground(bg);
         CardBackground.attach(card, bg);
-        int pad = dp(c, 18);
+        int pad = dp(c, 14);
         card.setPadding(pad, pad, pad, pad);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.bottomMargin = dp(c, 12);
+        lp.bottomMargin = dp(c, 9);
         card.setLayoutParams(lp);
         if (title != null) {
             TextView t = text(c, title, 13, DIM, true);
             LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            tlp.bottomMargin = dp(c, 10);
+            tlp.bottomMargin = dp(c, 8);
             card.addView(t, tlp);
         }
         return card;
@@ -163,7 +163,7 @@ public final class Ui {
         LinearLayout r = row(c);
         r.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        r.setPadding(0, dp(c, 7), 0, dp(c, 7));
+        r.setPadding(0, dp(c, 5), 0, dp(c, 5));
         TextView k = text(c, key, 14, DIM, false);
         r.addView(k, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         View space = new View(c);
