@@ -639,7 +639,7 @@ static void *io_thread_func(void *arg)
  * registers SERVICE_TYPE_CAMERA so the producer can request it. The activity arg
  * is unused (the NDK needs no Context); the CAMERA permission is requested in Java. */
 JNIEXPORT void JNICALL
-Java_andro_marchy_CameraServices_nativeInitCameraService(
+Java_app_aomarchy_CameraServices_nativeInitCameraService(
     JNIEnv *env, jclass clazz, jobject activity)
 {
     (void)env;
@@ -649,7 +649,7 @@ Java_andro_marchy_CameraServices_nativeInitCameraService(
 }
 
 JNIEXPORT void JNICALL
-Java_andro_marchy_CameraServices_nativeDestroyCameraService(
+Java_app_aomarchy_CameraServices_nativeDestroyCameraService(
     JNIEnv *env, jclass clazz)
 {
     (void)env;
