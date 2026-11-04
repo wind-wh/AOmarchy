@@ -2,14 +2,18 @@ package app.aomarchy.i18n;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
+import android.content.res.Resources;
 
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
 /**
- * The console's string table: Chinese and English live in code (the app ships no resource XML), plus the
- * {@code ui_lang} preference that picks between them.
+ * The console's string table: Chinese and English live in code, plus the {@code ui_lang} preference that picks
+ * between them. The handful of Android resource strings (session notification, desktop toasts, orientation labels)
+ * follow the same choice through {@link #wrap(Context)} and {@link #applyLocale(Context)}, so the console and the
+ * resources never speak different languages.
  *
  * <p>Language source: prefs key {@code ui_lang}, one of {@code auto} (follow the system Locale) / {@code zh} /
  * {@code en}; default {@code auto}. A missing key falls back to Chinese, then to the key name itself (so a typo is
@@ -40,7 +44,8 @@ import java.util.Map;
  * </pre>
  *
  * <p>Usage: {@code T.t("tab.overview")}, {@code T.t("toast.exporting", name)}. Call {@link #init(Context)} from an
- * activity before building its views so a saved choice is honoured in a fresh process.
+ * activity before building its views so a saved choice is honoured in a fresh process, and pass the base context
+ * through {@link #wrap(Context)} from {@code Activity.attachBaseContext} so resource strings follow the same Locale.
  */
 public final class T {
     /** Must match {@code app.aomarchy.Prefs.NAME}; the class there is package-private, so it is repeated here. */
@@ -142,6 +147,7 @@ public final class T {
         {"network.cellular", "移动网络", "Mobile data"},
         {"network.ethernet", "有线", "Ethernet"},
         {"network.connected", "已连接", "Connected"},
+        {"network.unknown", "—", "—"},
         {"overview.net_gpu_note", "两者都由 Android 侧透传，Linux 里看到的与系统一致。",
             "Both are passed through from Android, so Linux sees the same as the system."},
         {"overview.tips", "桌面里点左上角「A」回控制台；会话通知里也有「控制」「控制台」。第一次使用：先去「系统」装系统，再到「设置」填身份与键盘。",
@@ -602,6 +608,48 @@ public final class T {
         current = resolve(c);
     }
 
+    /**
+     * Wraps an activity's base Context so the Android resource strings follow the same {@code ui_lang} as
+     * {@link #t(String)}. Call it from every Activity's {@code attachBaseContext}:
+     * {@code super.attachBaseContext(T.wrap(base))}.
+     *
+     * <p>{@code auto} returns {@code base} untouched, so the system Locale applies exactly as before; {@code zh} /
+     * {@code en} override this activity's configuration only, which makes its resource lookups read res/values-zh or
+     * res/values. The system and application Locale are never changed.
+     */
+    public static Context wrap(Context base) {
+        Locale locale = forcedLocale(base);
+        if (locale == null)
+            return base;
+        Configuration cfg = new Configuration(base.getResources().getConfiguration());
+        cfg.setLocale(locale);
+        return base.createConfigurationContext(cfg);
+    }
+
+    /**
+     * Re-applies the saved {@code ui_lang} to a live activity's own resources: {@link #wrap(Context)} only helps a
+     * context created after the switch. {@code ShellActivity} calls this from {@code relanguage()} so the resource
+     * strings of the views it rebuilds match the code strings, without restarting the activity; {@code auto} puts the
+     * system Locale back.
+     */
+    public static void applyLocale(Context context) {
+        Resources res = context.getResources();
+        Configuration cfg = new Configuration(res.getConfiguration());
+        Locale locale = forcedLocale(context);
+        cfg.setLocale(locale != null ? locale : Locale.getDefault());
+        res.updateConfiguration(cfg, res.getDisplayMetrics());
+    }
+
+    /** The Locale {@code ui_lang} asks for, or null for {@code auto} (follow the system). */
+    private static Locale forcedLocale(Context c) {
+        String v = savedLang(c);
+        if (LANG_ZH.equals(v))
+            return Locale.SIMPLIFIED_CHINESE;
+        if (LANG_EN.equals(v))
+            return Locale.ENGLISH;
+        return null;
+    }
+
     /** One string in the current language. Missing English falls back to Chinese, then to the key itself. */
     public static String t(String key) {
         String lang = current != null ? current : systemLang();
@@ -624,19 +672,31 @@ public final class T {
     }
 
     /**
-     * The overview's network value. {@code data/Metrics.java} has no language layer and reports Chinese display text,
-     * so the four values it produces are mapped here; anything else (Wi-Fi, a vendor string) is passed through.
+     * The overview's network value. {@code data/Metrics.java} reports stable codes ({@code wifi}, {@code none}, …)
+     * and has no language layer, so they are mapped here; the old Chinese display strings are still accepted so a
+     * value captured by an older build does not leak through, and anything else (a vendor string) is passed through.
      */
     public static String networkLabel(String value) {
-        if ("无连接".equals(value))
-            return t("network.none");
-        if ("移动网络".equals(value))
-            return t("network.cellular");
-        if ("有线".equals(value))
-            return t("network.ethernet");
-        if ("已连接".equals(value))
-            return t("network.connected");
-        return value;
+        if (value == null || value.isEmpty())
+            return value;
+        switch (value) {
+            case "none":
+            case "无连接":
+                return t("network.none");
+            case "cellular":
+            case "移动网络":
+                return t("network.cellular");
+            case "ethernet":
+            case "有线":
+                return t("network.ethernet");
+            case "connected":
+            case "已连接":
+                return t("network.connected");
+            case "unknown":
+                return t("network.unknown");
+            default:
+                return value; // "wifi" and a Wi-Fi name need no translation
+        }
     }
 
     private static SharedPreferences prefs(Context c) {

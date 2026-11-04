@@ -63,6 +63,12 @@ public class ShellActivity extends Activity {
         }
     };
 
+    /** ui_lang also decides the resource Locale (see {@link T#wrap(Context)}); auto keeps the system Locale. */
+    @Override
+    protected void attachBaseContext(Context base) {
+        super.attachBaseContext(T.wrap(base));
+    }
+
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
@@ -215,6 +221,7 @@ public class ShellActivity extends Activity {
     public void onConfigurationChanged(android.content.res.Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         // The console is laid out for the current orientation (four stat cards in one row in landscape), so rebuild.
+        T.applyLocale(this); // a system config change must not drop the ui_lang resource override
         int tab = Math.max(0, current);
         java.util.Arrays.fill(pages, null);
         build();
@@ -226,6 +233,7 @@ public class ShellActivity extends Activity {
      * language applies immediately and the rail/pages stay on the tab the user was on (no activity restart).
      */
     void relanguage() {
+        T.applyLocale(this); // resource strings of the rebuilt views follow the new ui_lang as well
         T.init(this);
         int tab = Math.max(0, current);
         for (Page page : pages)

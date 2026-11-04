@@ -73,7 +73,7 @@ public final class KeysSettingsView {
         bind.view.setOnClickListener(v -> bindKeyDialog(host, () -> bind.setValue(boundKeyLabel(host))));
         card.addView(bind.view);
 
-        card.addView(Ui.divider(host));
+        card.addView(divider(host));
 
         final boolean floating = prefs(host).getBoolean(KEY_KEYBOARD_FLOATING, true);
         card.addView(toggleRow(host, T.t("label.floating_keyboard"),
@@ -145,9 +145,9 @@ public final class KeysSettingsView {
                     }
                 }));
 
-        card.addView(Ui.divider(host));
-        card.addView(Ui.actionRow(host, T.t("keys.open_accessibility"),
-                T.t("keys.open_accessibility_caption"), null, () -> openAccessibilitySettings(host)));
+        card.addView(divider(host));
+        card.addView(actionRow(host, T.t("keys.open_accessibility"),
+                T.t("keys.open_accessibility_caption"), () -> openAccessibilitySettings(host)));
         return card;
     }
 
@@ -176,7 +176,7 @@ public final class KeysSettingsView {
                     toast(host, T.t("toast.takes_effect_in_session"));
                 }));
 
-        card.addView(Ui.divider(host));
+        card.addView(divider(host));
 
         final boolean autoShow = prefs(host).getBoolean(KEY_AUTO_SHOW_EXTRA_KEYS, true);
         card.addView(toggleRow(host, T.t("keys.follow_ime"),
@@ -185,15 +185,15 @@ public final class KeysSettingsView {
                     toast(host, T.t("toast.takes_effect_in_session"));
                 }));
 
-        card.addView(Ui.divider(host));
+        card.addView(divider(host));
 
         Row layout = row(host, T.t("keys.custom_layout"), T.t("keys.custom_layout_caption"));
         layout.setValue(extraLayoutState(host));
         layout.view.setOnClickListener(v -> editLayoutDialog(host, () -> layout.setValue(extraLayoutState(host))));
         card.addView(layout.view);
 
-        card.addView(Ui.divider(host));
-        card.addView(Ui.actionRow(host, T.t("keys.reset_layout"), T.t("keys.reset_layout_caption"), null,
+        card.addView(divider(host));
+        card.addView(actionRow(host, T.t("keys.reset_layout"), T.t("keys.reset_layout_caption"),
                 () -> resetLayoutDialog(host, () -> layout.setValue(extraLayoutState(host)))));
         return card;
     }
@@ -221,6 +221,7 @@ public final class KeysSettingsView {
                 | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         input.setHorizontallyScrolling(false);
         input.setMinLines(6);
+        input.setContentDescription(T.t("keys.custom_layout"));
 
         LinearLayout box = Ui.column(host);
         box.setPadding(Ui.dp(host, 18), Ui.dp(host, 6), Ui.dp(host, 18), 0);
@@ -344,7 +345,7 @@ public final class KeysSettingsView {
             actionRow.setValue(responseLabel(UserActions.getResponse(prefs(host), key)));
             actionRow.view.setOnClickListener(v -> pickAction(host, label, key, actionRow));
             card.addView(actionRow.view);
-            if (i < actions.length - 1) card.addView(Ui.divider(host));
+            if (i < actions.length - 1) card.addView(divider(host));
         }
         return card;
     }
@@ -416,14 +417,27 @@ public final class KeysSettingsView {
     private static final class Row {
         final LinearLayout view;
         final TextView value;
+        private final String label;
+        private final String caption;
 
-        Row(LinearLayout view, TextView value) {
+        Row(LinearLayout view, TextView value, String label, String caption) {
             this.view = view;
             this.value = value;
+            this.label = label;
+            this.caption = caption;
+            describe();
         }
 
         void setValue(String text) {
             value.setText(text == null ? "" : text);
+            describe();
+        }
+
+        /** The whole row is one TalkBack stop: label + caption + current value (children are hidden). */
+        private void describe() {
+            String base = caption == null || caption.isEmpty() ? label : label + "，" + caption;
+            String current = value.getText() == null ? "" : value.getText().toString().trim();
+            view.setContentDescription(current.isEmpty() ? base : base + "，" + current);
         }
     }
 
@@ -446,8 +460,29 @@ public final class KeysSettingsView {
         right.addView(Ui.text(host, "›", 15, Ui.FAINT, false));
         r.addView(right);
 
+        // TalkBack: one stop per row, 48dp minimum touch height; the description carries label/caption/value.
+        r.setMinimumHeight(Ui.dp(host, 48));
+        texts.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        right.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         r.setClickable(true);
-        return new Row(r, value);
+        return new Row(r, value, label, caption);
+    }
+
+    /** Decorative separator: never a TalkBack stop. */
+    private static View divider(Activity host) {
+        View v = Ui.divider(host);
+        v.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        return v;
+    }
+
+    /** A {@link Ui#actionRow} as one TalkBack stop, with the 48dp minimum touch height. */
+    private static LinearLayout actionRow(Activity host, String label, String caption, Runnable onClick) {
+        LinearLayout r = Ui.actionRow(host, label, caption, null, onClick);
+        r.setMinimumHeight(Ui.dp(host, 48));
+        for (int i = 0; i < r.getChildCount(); i++)
+            r.getChildAt(i).setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        r.setContentDescription(caption == null || caption.isEmpty() ? label : label + "，" + caption);
+        return r;
     }
 
     private static SharedPreferences prefs(Activity host) {
@@ -472,19 +507,31 @@ public final class KeysSettingsView {
         r.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         final boolean[] on = {value};
-        TextView pill = Ui.text(host, on[0] ? T.t("state.on") : T.t("state.off"), 13,
-                on[0] ? Ui.ACCENT : Ui.DIM, true);
+        TextView pill = Ui.text(host, stateLabel(on[0]), 13, on[0] ? Ui.ACCENT : Ui.DIM, true);
         pill.setPadding(Ui.dp(host, 10), Ui.dp(host, 5), Ui.dp(host, 10), Ui.dp(host, 5));
         pill.setBackground(Ui.surface(host, 30));
         r.addView(pill);
+
+        // TalkBack: one stop per row announcing the switch and its state, at least 48dp tall; the visible texts
+        // are decorative because the state lives in the description (and changes with it).
+        final String base = caption == null || caption.isEmpty() ? label : label + "，" + caption;
+        r.setMinimumHeight(Ui.dp(host, 48));
+        texts.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        pill.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        r.setContentDescription(base + "，" + stateLabel(on[0]));
         r.setOnClickListener(v -> {
             on[0] = !on[0];
-            pill.setText(on[0] ? T.t("state.on") : T.t("state.off"));
+            pill.setText(stateLabel(on[0]));
             pill.setTextColor(on[0] ? Ui.ACCENT : Ui.DIM);
+            r.setContentDescription(base + "，" + stateLabel(on[0]));
             onChange.onToggle(on[0]);
         });
         r.setClickable(true);
         return r;
+    }
+
+    private static String stateLabel(boolean on) {
+        return T.t(on ? "state.on" : "state.off");
     }
 
     private static void toast(Activity host, String text) {

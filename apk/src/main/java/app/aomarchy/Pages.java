@@ -62,6 +62,19 @@ abstract class Page {
     void toast(String text) {
         shell.toast(text);
     }
+
+    /** A console button with the 48dp minimum touch target TalkBack needs. */
+    TextView button(String text, boolean primary, View.OnClickListener onClick) {
+        TextView b = Ui.button(shell, text, primary, onClick);
+        b.setMinimumHeight(Ui.dp(shell, 48));
+        return b;
+    }
+
+    /** Decorative separators, spacers and sparklines must not become TalkBack reading stops. */
+    static void decorative(View v) {
+        if (v != null)
+            v.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+    }
 }
 
 /** 概览: is the session up, and the numbers that answer "is it healthy". */
@@ -103,7 +116,9 @@ class OverviewPage extends Page {
         LinearLayout head = Ui.row(shell);
         state = Ui.text(shell, T.t("overview.session"), 18, Ui.TEXT, true);
         head.addView(state);
-        head.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
+        View headSpace = new View(shell);
+        decorative(headSpace);
+        head.addView(headSpace, new LinearLayout.LayoutParams(0, 1, 1f));
         heroChip = Ui.chip(shell, "● " + T.t("status.ready"), Ui.MINT);
         head.addView(heroChip);
         hero.addView(head);
@@ -112,11 +127,13 @@ class OverviewPage extends Page {
         hero.addView(uptime);
         hero.addView(Ui.gap(shell, 10));
         LinearLayout actions = Ui.row(shell);
-        heroEntry = Ui.button(shell, T.t("btn.enter_desktop"), true, v -> shell.openDesktop());
+        heroEntry = button(T.t("btn.enter_desktop"), true, v -> shell.openDesktop());
         actions.addView(heroEntry);
         actions.addView(Ui.space(shell, 10));
-        actions.addView(Ui.button(shell, T.t("btn.install_reinstall"), false, v -> shell.showTab(1)));
-        actions.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
+        actions.addView(button(T.t("btn.install_reinstall"), false, v -> shell.showTab(1)));
+        View actionsSpace = new View(shell);
+        decorative(actionsSpace);
+        actions.addView(actionsSpace, new LinearLayout.LayoutParams(0, 1, 1f));
         actions.addView(Ui.text(shell, "Wayland · Hyprland · Arch Linux ARM", 11, Ui.FAINT, false));
         hero.addView(actions);
         body.addView(hero);
@@ -128,6 +145,7 @@ class OverviewPage extends Page {
         cpuSub = Ui.text(shell, "", 12, Ui.DIM, false);
         cpuCard.addView(cpuSub);
         sparkline = new Sparkline(shell);
+        decorative(sparkline); // the CPU number above already says what the line shows
         LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(shell, 28));
         slp.topMargin = Ui.dp(shell, 3);
@@ -343,10 +361,10 @@ class SystemPage extends Page {
 
         LinearLayout buttons = Ui.row(shell);
         buttons.setPadding(0, Ui.dp(shell, 12), 0, 0);
-        buttons.addView(Ui.button(shell, T.t("btn.pick_local"), false, v -> pickArchive()));
+        buttons.addView(button(T.t("btn.pick_local"), false, v -> pickArchive()));
         buttons.addView(Ui.space(shell, 10));
         startBox = Ui.row(shell);
-        startBox.addView(Ui.button(shell, T.t("btn.begin_install"), true, v -> confirmInstall()));
+        startBox.addView(button(T.t("btn.begin_install"), true, v -> confirmInstall()));
         buttons.addView(startBox);
         install.addView(buttons);
 
@@ -356,12 +374,13 @@ class SystemPage extends Page {
         progressText = Ui.text(shell, "", 12, Ui.DIM, false);
         progressBox.addView(progressText);
         progress = new app.aomarchy.ui.SpringBar(shell);
+        decorative(progress); // the progress text above it already reports the percentage
         LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(shell, 10));
         plp.topMargin = Ui.dp(shell, 8);
         progressBox.addView(progress, plp);
         progressBox.addView(Ui.gap(shell, 8));
-        progressBox.addView(Ui.button(shell, T.t("btn.cancel"), false, v -> Installer.cancel()));
+        progressBox.addView(button(T.t("btn.cancel"), false, v -> Installer.cancel()));
         install.addView(progressBox);
         body.addView(install);
 
@@ -369,10 +388,11 @@ class SystemPage extends Page {
         backup.addView(Ui.text(shell, T.t("system.backup_desc"), 12, Ui.DIM, false));
         backup.addView(Ui.gap(shell, 8));
         LinearLayout backupButtons = Ui.row(shell);
-        backupButtons.addView(Ui.button(shell, T.t("btn.create_backup"), true, v -> startBackup()));
+        backupButtons.addView(button(T.t("btn.create_backup"), true, v -> startBackup()));
         backupButtons.addView(Ui.space(shell, 8));
         TextView importBtn = Ui.text(shell, T.t("btn.import_backup"), 13, Ui.ACCENT, false);
         importBtn.setPadding(Ui.dp(shell, 4), Ui.dp(shell, 10), Ui.dp(shell, 4), Ui.dp(shell, 10));
+        importBtn.setMinimumHeight(Ui.dp(shell, 48));
         importBtn.setOnClickListener(v -> importBackup());
         backupButtons.addView(importBtn);
         backup.addView(backupButtons);
@@ -383,17 +403,20 @@ class SystemPage extends Page {
         backupText = Ui.text(shell, "", 12, Ui.DIM, false);
         backupProgressBox.addView(backupText);
         backupBar = new app.aomarchy.ui.SpringBar(shell);
+        decorative(backupBar); // the backup text above it already reports the percentage
         LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(shell, 10));
         blp.topMargin = Ui.dp(shell, 6);
         backupProgressBox.addView(backupBar, blp);
         backupProgressBox.addView(Ui.gap(shell, 6));
-        backupProgressBox.addView(Ui.text(shell, T.t("btn.cancel"), 13, Ui.ACCENT, false), new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        backupProgressBox.getChildAt(backupProgressBox.getChildCount() - 1).setOnClickListener(v -> {
+        TextView backupCancel = Ui.text(shell, T.t("btn.cancel"), 13, Ui.ACCENT, false);
+        backupCancel.setMinimumHeight(Ui.dp(shell, 48));
+        backupCancel.setOnClickListener(v -> {
             app.aomarchy.data.Backup.cancel();
             v.setEnabled(false);
         });
+        backupProgressBox.addView(backupCancel, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         backup.addView(backupProgressBox);
 
         backupList = Ui.column(shell);
@@ -434,8 +457,15 @@ class SystemPage extends Page {
             LinearLayout r = Ui.row(shell);
             r.setPadding(0, Ui.dp(shell, 6), 0, Ui.dp(shell, 6));
             r.addView(Ui.text(shell, app.aomarchy.data.Backup.stamp(f), 13, Ui.TEXT, false));
-            r.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
+            View space = new View(shell);
+            decorative(space);
+            r.addView(space, new LinearLayout.LayoutParams(0, 1, 1f));
             r.addView(Ui.text(shell, smallSize(f.length()), 12, Ui.DIM, false));
+            // One TalkBack stop per backup ("2026-…，1.2 GB，双击可恢复/导出/删除") at least 48dp tall.
+            r.setMinimumHeight(Ui.dp(shell, 48));
+            for (int c = 0; c < r.getChildCount(); c++)
+                r.getChildAt(c).setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            r.setContentDescription(app.aomarchy.data.Backup.stamp(f) + "，" + smallSize(f.length()));
             r.setOnClickListener(v -> showBackup(f));
             backupList.addView(r);
         }
@@ -606,6 +636,9 @@ class SystemPage extends Page {
     private TextView sourceTile(String title, boolean local) {
         TextView t = Ui.text(shell, title, 12, Ui.DIM, false);
         t.setPadding(Ui.dp(shell, 12), Ui.dp(shell, 10), Ui.dp(shell, 12), Ui.dp(shell, 10));
+        // Two-line tile: one TalkBack stop ("在线下载，从网络获取安装包"), and the selected state comes from setSelected.
+        t.setContentDescription(title.replace('\n', '，'));
+        t.setMinimumHeight(Ui.dp(shell, 48));
         t.setOnClickListener(v -> {
             if (installing)
                 return;
@@ -619,8 +652,15 @@ class SystemPage extends Page {
         LinearLayout r = Ui.row(shell);
         r.setPadding(0, Ui.dp(shell, 6), 0, Ui.dp(shell, 6));
         r.addView(Ui.text(shell, name, 13, Ui.TEXT, false));
-        r.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
+        View space = new View(shell);
+        decorative(space);
+        r.addView(space, new LinearLayout.LayoutParams(0, 1, 1f));
         r.addView(Ui.text(shell, smallSize(bytes), 12, Ui.DIM, false));
+        // One TalkBack stop per log file, with the 48dp minimum touch height.
+        r.setMinimumHeight(Ui.dp(shell, 48));
+        for (int c = 0; c < r.getChildCount(); c++)
+            r.getChildAt(c).setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        r.setContentDescription(name + "，" + smallSize(bytes));
         r.setOnClickListener(v -> onClick.run());
         return r;
     }
@@ -639,6 +679,9 @@ class SystemPage extends Page {
         tileOnline.setTextColor(local ? Ui.DIM : Ui.TEXT);
         tileLocal.setBackground(Ui.surface(shell, 14));
         tileLocal.setTextColor(local ? Ui.TEXT : Ui.DIM);
+        // TalkBack: setSelected makes it announce which install source is the current one.
+        tileOnline.setSelected(!local);
+        tileLocal.setSelected(local);
         File staged = Installer.staged(shell);
         boolean haveLocal = localUri != null || staged != null;
         if (local) {
@@ -900,6 +943,7 @@ class AppsPage extends Page {
         row.addView(status);
         TextView refresh = Ui.text(shell, T.t("btn.refresh"), 13, Ui.ACCENT, false);
         refresh.setPadding(Ui.dp(shell, 12), 0, 0, 0);
+        refresh.setMinimumHeight(Ui.dp(shell, 48));
         refresh.setOnClickListener(v -> load());
         row.addView(refresh);
         head.addView(row);
@@ -977,6 +1021,9 @@ class AppsPage extends Page {
         r.addView(id, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         TextView open = Ui.text(shell, T.t("btn.open"), 13, Ui.ACCENT, false);
         open.setPadding(Ui.dp(shell, 10), 0, 0, 0);
+        open.setMinimumHeight(Ui.dp(shell, 48));
+        // "打开" alone says nothing about which app: name it, with the 48dp touch target raised above.
+        open.setContentDescription(app.name + "，" + T.t("btn.open").replace("›", "").trim());
         open.setOnClickListener(v -> {
             if (!SessionService.rootfsReady(shell)) {
                 toast(T.t("toast.system_missing"));
@@ -1017,6 +1064,7 @@ class AppsPage extends Page {
         cell.setPadding(0, Ui.dp(shell, 4), 0, Ui.dp(shell, 4));
         android.widget.ImageView icon = new android.widget.ImageView(shell);
         icon.setImageDrawable(app.icon);
+        decorative(icon); // the label below names the app
         cell.addView(icon, new LinearLayout.LayoutParams(Ui.dp(shell, 36), Ui.dp(shell, 36)));
         TextView label = Ui.text(shell, app.label, 11, Ui.DIM, false);
         label.setGravity(android.view.Gravity.CENTER);
@@ -1024,6 +1072,9 @@ class AppsPage extends Page {
         label.setEllipsize(android.text.TextUtils.TruncateAt.END);
         label.setPadding(0, Ui.dp(shell, 4), 0, 0);
         cell.addView(label, new LinearLayout.LayoutParams(Ui.dp(shell, 70), ViewGroup.LayoutParams.WRAP_CONTENT));
+        label.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO); // the cell announces the name
+        cell.setContentDescription(app.label);
+        cell.setMinimumHeight(Ui.dp(shell, 48));
         cell.setOnClickListener(v -> {
             Apps.openFloating(shell, app.packageName);
             toast(T.t("toast.floating_open", app.label));
@@ -1071,6 +1122,12 @@ class SettingsPage extends Page {
     private TextView kbValue;
     private TextView modeValue;
     private TextView langValue;
+    /** The rows whose value changes after a pick: their TalkBack description is rebuilt in {@link #refresh()}. */
+    private LinearLayout nameRow;
+    private LinearLayout emailRow;
+    private LinearLayout kbRow;
+    private LinearLayout modeRow;
+    private LinearLayout langRow;
 
     SettingsPage(ShellActivity shell) {
         super(shell);
@@ -1086,23 +1143,27 @@ class SettingsPage extends Page {
         identity.addView(Ui.text(shell, T.t("settings.identity_desc"), 12, Ui.DIM, false));
         identity.addView(Ui.gap(shell, 8));
         nameValue = value("—", Ui.TEXT);
-        identity.addView(row(T.t("label.name"), nameValue, () -> editText(T.t("label.name"), "user_name", nameValue)));
-        identity.addView(Ui.divider(shell));
+        nameRow = row(T.t("label.name"), nameValue, () -> editText(T.t("label.name"), "user_name", nameValue));
+        identity.addView(nameRow);
+        identity.addView(divider());
         emailValue = value("—", Ui.TEXT);
-        identity.addView(row(T.t("label.email"), emailValue, () -> editText(T.t("label.email"), "user_email", emailValue)));
+        emailRow = row(T.t("label.email"), emailValue, () -> editText(T.t("label.email"), "user_email", emailValue));
+        identity.addView(emailRow);
         body.addView(identity);
 
         LinearLayout keyboard = Ui.card(shell, T.t("card.keyboard"));
         keyboard.addView(Ui.text(shell, T.t("settings.keyboard_desc"), 12, Ui.DIM, false));
         keyboard.addView(Ui.gap(shell, 8));
         kbValue = value("—", Ui.TEXT);
-        keyboard.addView(row(T.t("label.kb_layout"), kbValue, this::pickLayout));
+        kbRow = row(T.t("label.kb_layout"), kbValue, this::pickLayout);
+        keyboard.addView(kbRow);
         body.addView(keyboard);
 
         LinearLayout startup = Ui.card(shell, T.t("card.startup"));
         modeValue = value("—", Ui.TEXT);
-        startup.addView(row(T.t("label.startup_mode"), modeValue, this::pickMode));
-        startup.addView(Ui.divider(shell));
+        modeRow = row(T.t("label.startup_mode"), modeValue, this::pickMode);
+        startup.addView(modeRow);
+        startup.addView(divider());
         LinearLayout row = Ui.row(shell);
         row.setPadding(0, Ui.dp(shell, 8), 0, Ui.dp(shell, 8));
         row.addView(Ui.text(shell, T.t("settings.open_desktop_toggle"), 15, Ui.TEXT, false));
@@ -1111,11 +1172,18 @@ class SettingsPage extends Page {
         TextView toggle = Ui.text(shell, on[0] ? T.t("state.on") : T.t("state.off"), 14,
                 on[0] ? Ui.ACCENT : Ui.DIM, true);
         row.addView(toggle);
+        // TalkBack: one stop announcing the startup switch and its state, at least 48dp tall.
+        final String startupLabel = T.t("settings.open_desktop_toggle");
+        row.setMinimumHeight(Ui.dp(shell, 48));
+        for (int i = 0; i < row.getChildCount(); i++)
+            row.getChildAt(i).setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        row.setContentDescription(startupLabel + "，" + T.t(on[0] ? "state.on" : "state.off"));
         row.setOnClickListener(v -> {
             on[0] = !on[0];
             prefs().edit().putBoolean("open_desktop_on_start", on[0]).apply();
             toggle.setText(on[0] ? T.t("state.on") : T.t("state.off"));
             toggle.setTextColor(on[0] ? Ui.ACCENT : Ui.DIM);
+            row.setContentDescription(startupLabel + "，" + T.t(on[0] ? "state.on" : "state.off"));
             toast(on[0] ? T.t("toast.next_launch_desktop") : T.t("toast.next_launch_console"));
         });
         row.setClickable(true);
@@ -1126,7 +1194,8 @@ class SettingsPage extends Page {
         language.addView(Ui.text(shell, T.t("settings.language_desc"), 12, Ui.DIM, false));
         language.addView(Ui.gap(shell, 4));
         langValue = value("—", Ui.TEXT);
-        language.addView(row(T.t("label.ui_lang"), langValue, this::pickLanguage));
+        langRow = row(T.t("label.ui_lang"), langValue, this::pickLanguage);
+        language.addView(langRow);
         body.addView(language);
 
         LinearLayout detailed = Ui.card(shell, T.t("card.detailed"));
@@ -1134,13 +1203,13 @@ class SettingsPage extends Page {
         detailed.addView(Ui.gap(shell, 6));
         detailed.addView(row(T.t("page.keys"), value("›", Ui.FAINT),
                 () -> openPage(T.t("page.keys"), KeysSettingsView.build(shell))));
-        detailed.addView(Ui.divider(shell));
+        detailed.addView(divider());
         detailed.addView(row(T.t("page.input"), value("›", Ui.FAINT),
                 () -> openPage(T.t("page.input"), InputSettingsView.build(shell))));
-        detailed.addView(Ui.divider(shell));
+        detailed.addView(divider());
         detailed.addView(row(T.t("page.display"), value("›", Ui.FAINT),
                 () -> openPage(T.t("page.display"), DisplaySettingsView.build(shell))));
-        detailed.addView(Ui.divider(shell));
+        detailed.addView(divider());
         detailed.addView(row(T.t("page.audio"), value("›", Ui.FAINT),
                 () -> openPage(T.t("page.audio"), AudioSettingsView.build(shell))));
         body.addView(detailed);
@@ -1178,10 +1247,35 @@ class SettingsPage extends Page {
         LinearLayout r = Ui.row(shell);
         r.setPadding(0, Ui.dp(shell, 8), 0, Ui.dp(shell, 8));
         r.addView(Ui.text(shell, label, 15, Ui.TEXT, false));
-        r.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
+        View space = new View(shell);
+        decorative(space);
+        r.addView(space, new LinearLayout.LayoutParams(0, 1, 1f));
         r.addView(valueView);
+        // TalkBack: the whole row is one stop ("姓名，Ada") at least 48dp tall; the label/value texts are hidden.
+        r.setMinimumHeight(Ui.dp(shell, 48));
+        for (int i = 0; i < r.getChildCount(); i++)
+            r.getChildAt(i).setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        r.setContentDescription(describeRow(label, valueView));
         r.setOnClickListener(v -> onClick.run());
         return r;
+    }
+
+    /** "label，value"; a "›" value means the row opens something, so say "打开" instead of reading the chevron. */
+    private static String describeRow(String label, TextView valueView) {
+        CharSequence text = valueView.getText();
+        String value = text == null ? "" : text.toString().trim();
+        if (value.isEmpty())
+            return label;
+        if ("›".equals(value))
+            return label + "，" + T.t("btn.open").replace("›", "").trim();
+        return label + "，" + value;
+    }
+
+    /** Decorative separator: never a TalkBack stop. */
+    private View divider() {
+        View v = Ui.divider(shell);
+        decorative(v);
+        return v;
     }
 
     private void editText(String title, String key, TextView target) {
@@ -1248,9 +1342,12 @@ class SettingsPage extends Page {
         bar.setPadding(Ui.dp(shell, 12), Ui.dp(shell, 10), Ui.dp(shell, 12), Ui.dp(shell, 10));
         TextView back = Ui.text(shell, T.t("btn.back"), 14, Ui.ACCENT, true);
         back.setPadding(Ui.dp(shell, 8), Ui.dp(shell, 4), Ui.dp(shell, 8), Ui.dp(shell, 4));
+        back.setMinimumHeight(Ui.dp(shell, 48));
         back.setOnClickListener(v -> dialog.dismiss());
         bar.addView(back);
-        bar.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
+        View barSpace = new View(shell);
+        decorative(barSpace);
+        bar.addView(barSpace, new LinearLayout.LayoutParams(0, 1, 1f));
         bar.addView(Ui.text(shell, title, 16, Ui.TEXT, true));
         wrap.addView(bar);
 
@@ -1274,14 +1371,25 @@ class SettingsPage extends Page {
     @Override
     void refresh() {
         nameValue.setText(orDash(prefs().getString("user_name", "")));
+        refreshRow(nameRow, T.t("label.name"), nameValue);
         emailValue.setText(orDash(prefs().getString("user_email", "")));
+        refreshRow(emailRow, T.t("label.email"), emailValue);
         String kb = prefs().getString("kb_layouts", "");
         if (kb.isEmpty())
             kb = installedLayout(); // what the installer picked from the device language
         kbValue.setText(orDash(kb));
+        refreshRow(kbRow, T.t("label.kb_layout"), kbValue);
         String mode = prefs().getString("session_mode", "desktop");
         modeValue.setText("terminal".equals(mode) ? T.t("mode.terminal_short") : T.t("mode.desktop"));
+        refreshRow(modeRow, T.t("label.startup_mode"), modeValue);
         langValue.setText(languageLabel(T.savedLang(shell)));
+        refreshRow(langRow, T.t("label.ui_lang"), langValue);
+    }
+
+    /** Keeps the TalkBack description of a value row in step with the value currently on screen. */
+    private static void refreshRow(LinearLayout row, String label, TextView valueView) {
+        if (row != null)
+            row.setContentDescription(describeRow(label, valueView));
     }
 
     /** The label for the stored {@code ui_lang} value. */

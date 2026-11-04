@@ -48,12 +48,17 @@ import android.widget.FrameLayout;
 import android.widget.Toast;
 import android.util.DisplayMetrics;   // ADDED
 
+import app.aomarchy.i18n.T;
+
 import java.nio.charset.StandardCharsets;
 
 
 public class MainActivity extends Activity
         implements SurfaceHolder.Callback, SystemIME.Host {
     private static final String TAG = "Andromarchy";
+
+    /** The {@code ui_lang} this instance was built with: resources are wrapped in attachBaseContext, so a change needs a recreate. */
+    private String mLanguage;
 
     private SurfaceView surfaceView;
     private boolean surfaceReady = false;
@@ -221,6 +226,13 @@ public class MainActivity extends Activity
         }
     }
 
+    /** Rotation and friends are handled in place (no recreate), so re-apply the ui_lang Locale or it would drop. */
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        T.applyLocale(this);
+    }
+
     private void pushRefreshRate() {
         Display d = getDisplay();
         if (d != null)
@@ -332,10 +344,17 @@ public class MainActivity extends Activity
     }
     private android.app.Dialog consoleDialog;
 
+    /** ui_lang also decides the resource Locale (session notification, toasts); auto keeps the system Locale. */
+    @Override
+    protected void attachBaseContext(Context base) {
+        super.attachBaseContext(T.wrap(base));
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Prefs.init(this); // settings defaults + move from the former file name
+        mLanguage = T.savedLang(this); // what attachBaseContext wrapped the resources with
 
         // Andromarchy: this app is also the Linux side. Start the session (daemon, audio, Hyprland) if the Arch
         // rootfs is installed; this activity then connects to the daemon like the Termux version did.
@@ -734,6 +753,15 @@ public class MainActivity extends Activity
         super.onResume();
         mPipTransitionPending = false;
 
+        // ui_lang changed while this desktop instance was in the background (shell -> Settings -> language): the
+        // resources were wrapped at creation, so start over with the new Locale instead of keeping the old strings.
+        String language = T.savedLang(this);
+        if (!language.equals(mLanguage)) {
+            mLanguage = language;
+            recreate();
+            return;
+        }
+
         requestMediaAudioFocus();
 
         String displayCutoutMode = DisplayCutoutMode.get(
@@ -959,6 +987,17 @@ public class MainActivity extends Activity
                 virtualKeyboardView.post(this::positionVirtualKeyboard);
             }
             mVirtualKeyboardVisibleBeforePip = false;
+        }
+
+        // The SurfaceView keeps the producer it had at full size when the window shrinks into picture-in-picture, and
+        // the small window came out black. Dropping and recreating the surface makes surfaceChanged hand the renderer
+        // the PiP size; the same happens on the way back so the desktop is not left at the tiny size.
+        if (surfaceView != null) {
+            surfaceView.setVisibility(View.INVISIBLE);
+            surfaceView.postDelayed(() -> {
+                if (surfaceView != null)
+                    surfaceView.setVisibility(View.VISIBLE);
+            }, 200);
         }
     }
 

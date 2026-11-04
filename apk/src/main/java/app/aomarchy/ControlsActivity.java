@@ -1,6 +1,7 @@
 package app.aomarchy;
 
 import android.app.Activity;
+import android.content.Context;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -19,6 +20,12 @@ import app.aomarchy.ui.Ui;
  * explicit intent). Dimmed background; tapping outside or 关闭 dismisses; the desktop keeps running underneath.
  */
 public class ControlsActivity extends Activity {
+    /** ui_lang also decides the resource Locale (see {@link T#wrap(Context)}); auto keeps the system Locale. */
+    @Override
+    protected void attachBaseContext(Context base) {
+        super.attachBaseContext(T.wrap(base));
+    }
+
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);

@@ -35,6 +35,12 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
     private TerminalView terminal;
     private TextView copyButton, scrollHint;
 
+    /** ui_lang also decides the resource Locale (see {@link T#wrap(Context)}); auto keeps the system Locale. */
+    @Override
+    protected void attachBaseContext(Context base) {
+        super.attachBaseContext(T.wrap(base));
+    }
+
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);

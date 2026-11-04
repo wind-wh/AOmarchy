@@ -45,7 +45,7 @@ final class ControlsView {
             warn.addView(Ui.text(ctx, T.t("controls.warn_notifications"),
                     13, Ui.DIM, false));
             warn.addView(Ui.gap(ctx, 8));
-            warn.addView(Ui.button(ctx, T.t("btn.enable_notifications"), true, v -> {
+            warn.addView(button(T.t("btn.enable_notifications"), true, v -> {
                 android.content.Intent i = new android.content.Intent(
                         android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                         .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, ctx.getPackageName());
@@ -58,12 +58,12 @@ final class ControlsView {
         session.addView(sessionState);
         session.addView(Ui.gap(ctx, 10));
         LinearLayout sessionButtons = Ui.row(ctx);
-        sessionButtons.addView(Ui.button(ctx, T.t("btn.enter_desktop"), true, v -> openDesktop()));
+        sessionButtons.addView(button(T.t("btn.enter_desktop"), true, v -> openDesktop()));
         sessionButtons.addView(Ui.space(ctx, 8));
-        sessionButtons.addView(Ui.button(ctx, T.t("btn.restart_session"), false,
+        sessionButtons.addView(button(T.t("btn.restart_session"), false,
                 v -> confirmPower("reboot", T.t("dialog.restart_session_title"))));
         sessionButtons.addView(Ui.space(ctx, 8));
-        sessionButtons.addView(Ui.button(ctx, T.t("btn.close_desktop"), false,
+        sessionButtons.addView(button(T.t("btn.close_desktop"), false,
                 v -> confirmPower("shutdown", T.t("dialog.shutdown_title"))));
         session.addView(sessionButtons);
         root.addView(session);
@@ -92,6 +92,7 @@ final class ControlsView {
                 T.t("controls.input_caption")));
         TextView displayLink = Ui.text(ctx, T.t("controls.display_link"), 12, Ui.ACCENT, false);
         displayLink.setPadding(0, Ui.dp(ctx, 4), 0, 0);
+        displayLink.setMinimumHeight(Ui.dp(ctx, 48));
         displayLink.setOnClickListener(v -> ctx.startActivity(ShellActivity.intent(ctx, 4)));
         display.addView(displayLink);
         root.addView(display);
@@ -101,9 +102,9 @@ final class ControlsView {
         clip.addView(clipboardState);
         clip.addView(Ui.gap(ctx, 6));
         LinearLayout clipButtons = Ui.row(ctx);
-        clipButtons.addView(Ui.button(ctx, T.t("btn.send_to_desktop"), false, v -> pushClipboard()));
+        clipButtons.addView(button(T.t("btn.send_to_desktop"), false, v -> pushClipboard()));
         clipButtons.addView(Ui.space(ctx, 8));
-        clipButtons.addView(Ui.button(ctx, T.t("btn.fetch_from_desktop"), false, v -> pullClipboard()));
+        clipButtons.addView(button(T.t("btn.fetch_from_desktop"), false, v -> pullClipboard()));
         clip.addView(clipButtons);
         root.addView(clip);
 
@@ -117,6 +118,8 @@ final class ControlsView {
         head.addView(new View(ctx), new LinearLayout.LayoutParams(0, 1, 1f));
         TextView value = Ui.mono(ctx, "—", 14, Ui.DIM);
         head.addView(value);
+        // The bar's contentDescription already carries the label and the current level: one TalkBack stop per slider.
+        head.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         box.addView(head);
         SeekBar bar = new SeekBar(ctx);
         bar.setMax(Math.max(1, max));
@@ -127,10 +130,12 @@ final class ControlsView {
         int current = audio != null ? audio.getStreamVolume(stream) : 0;
         bar.setProgress(current);
         value.setText(String.valueOf(current));
+        bar.setContentDescription(label + "，" + current);
         bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 value.setText(String.valueOf(progress));
+                seekBar.setContentDescription(label + "，" + progress);
                 if (fromUser && audio != null) {
                     try {
                         audio.setStreamVolume(stream, progress, 0);
@@ -152,6 +157,13 @@ final class ControlsView {
                 ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(ctx, 34));
         box.addView(bar, lp);
         return box;
+    }
+
+    /** A console button with the 48dp minimum touch target TalkBack needs. */
+    private TextView button(String label, boolean primary, View.OnClickListener onClick) {
+        TextView b = Ui.button(ctx, label, primary, onClick);
+        b.setMinimumHeight(Ui.dp(ctx, 48));
+        return b;
     }
 
     /** Called when the page/sheet becomes visible. */

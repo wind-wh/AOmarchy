@@ -100,7 +100,7 @@ public final class DisplaySettingsView {
                 Ui.mono(host, refreshRate(host), 14, Ui.TEXT),
                 T.t("display.refresh_rate_caption")));
         live.addView(Ui.gap(host, 6));
-        live.addView(Ui.actionRow(host, T.t("display.adjust"),
+        live.addView(actionRow(host, T.t("display.adjust"),
                 T.t("display.adjust_caption"), T.t("display.adjust_value"),
                 () -> host.startActivity(new Intent(host, ControlsActivity.class))));
         body.addView(live);
@@ -132,6 +132,8 @@ public final class DisplaySettingsView {
     /**
      * The {@code Ui.actionRow} shape, but with a value that follows the picked item: {@code Ui.actionRow} keeps its
      * value TextView private, so a picker that shows the current choice needs its own row.
+     *
+     * <p>TalkBack: the whole row is one stop ("label，caption，current value") and at least 48dp tall.
      */
     private static LinearLayout choiceRow(Activity host, String label, String caption, String[] labels,
             int checked, ChoiceSink onPick) {
@@ -153,6 +155,11 @@ public final class DisplaySettingsView {
         right.addView(Ui.text(host, "›", 15, Ui.FAINT, false));
         row.addView(right);
 
+        row.setMinimumHeight(Ui.dp(host, 48));
+        texts.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        right.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        row.setContentDescription(describe(label, caption, labels[checked]));
+
         final int[] selected = {checked};
         row.setOnClickListener(v -> new AlertDialog.Builder(host)
                 .setTitle(label)
@@ -160,12 +167,34 @@ public final class DisplaySettingsView {
                     selected[0] = which;
                     value.setText(labels[which]);
                     onPick.onPick(which);
+                    row.setContentDescription(describe(label, caption, labels[which]));
                     dialog.dismiss();
                 })
                 .setNegativeButton(T.t("btn.cancel"), null)
                 .show());
         row.setClickable(true);
         return row;
+    }
+
+    /** A {@link Ui#actionRow} as one TalkBack stop, with the 48dp minimum touch height. */
+    private static LinearLayout actionRow(Activity host, String label, String caption, String value,
+            Runnable onClick) {
+        LinearLayout r = Ui.actionRow(host, label, caption, value, onClick);
+        r.setMinimumHeight(Ui.dp(host, 48));
+        for (int i = 0; i < r.getChildCount(); i++)
+            r.getChildAt(i).setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        r.setContentDescription(describe(label, caption, value));
+        return r;
+    }
+
+    /** label + optional caption + current value, joined for one TalkBack announcement. */
+    private static String describe(String label, String caption, String value) {
+        String base = caption == null || caption.isEmpty() ? label : label + "，" + caption;
+        return value == null || value.isEmpty() ? base : base + "，" + value;
+    }
+
+    private static String stateLabel(boolean on) {
+        return T.t(on ? "state.on" : "state.off");
     }
 
     private static int indexOf(String[] values, String target) {
@@ -178,6 +207,8 @@ public final class DisplaySettingsView {
     /**
      * The {@code Ui.toggleRow} shape with a localized On/Off pill: {@code Ui.toggleRow} hardcodes the Chinese
      * 开启/关闭 labels and Ui.java is outside this task's write scope.
+     *
+     * <p>TalkBack: the row is one stop announcing label, caption and the current state; 48dp minimum height.
      */
     private static LinearLayout toggleRow(Activity host, String label, String caption, boolean value,
             Ui.OnToggle onChange) {
@@ -193,15 +224,20 @@ public final class DisplaySettingsView {
         r.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         final boolean[] on = {value};
-        TextView pill = Ui.text(host, on[0] ? T.t("state.on") : T.t("state.off"), 13,
-                on[0] ? Ui.ACCENT : Ui.DIM, true);
+        TextView pill = Ui.text(host, stateLabel(on[0]), 13, on[0] ? Ui.ACCENT : Ui.DIM, true);
         pill.setPadding(Ui.dp(host, 10), Ui.dp(host, 5), Ui.dp(host, 10), Ui.dp(host, 5));
         pill.setBackground(Ui.surface(host, 30));
         r.addView(pill);
+
+        r.setMinimumHeight(Ui.dp(host, 48));
+        texts.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        pill.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        r.setContentDescription(describe(label, caption, stateLabel(on[0])));
         r.setOnClickListener(v -> {
             on[0] = !on[0];
-            pill.setText(on[0] ? T.t("state.on") : T.t("state.off"));
+            pill.setText(stateLabel(on[0]));
             pill.setTextColor(on[0] ? Ui.ACCENT : Ui.DIM);
+            r.setContentDescription(describe(label, caption, stateLabel(on[0])));
             onChange.onToggle(on[0]);
         });
         r.setClickable(true);

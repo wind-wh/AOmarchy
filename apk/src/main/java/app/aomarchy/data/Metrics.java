@@ -31,7 +31,14 @@ public final class Metrics {
     public long diskTotal = -1;
     public int batteryPercent = -1;
     public boolean charging;
-    public String network = "—";
+    public String network = NET_UNKNOWN;
+    /** Stable codes instead of display text: the console maps them through {@code i18n/T.networkLabel}. */
+    public static final String NET_UNKNOWN = "unknown";
+    public static final String NET_NONE = "none";
+    public static final String NET_WIFI = "wifi";
+    public static final String NET_CELLULAR = "cellular";
+    public static final String NET_ETHERNET = "ethernet";
+    public static final String NET_CONNECTED = "connected";
     public String device = "";
 
     public String cpuScope = "session";
@@ -206,15 +213,15 @@ public final class Metrics {
         Network n = cm.getActiveNetwork();
         NetworkCapabilities caps = n == null ? null : cm.getNetworkCapabilities(n);
         if (caps == null) {
-            network = "无连接";
+            network = NET_NONE;
         } else if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-            network = "Wi-Fi";
+            network = NET_WIFI;
         } else if (caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
-            network = "移动网络";
+            network = NET_CELLULAR;
         } else if (caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
-            network = "有线";
+            network = NET_ETHERNET;
         } else {
-            network = "已连接";
+            network = NET_CONNECTED;
         }
     }
 

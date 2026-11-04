@@ -71,7 +71,7 @@ public final class InputSettingsView {
                 T.t("input.touchpad_mode_caption"),
                 prefs.getBoolean(KEY_TOUCHPAD_MODE, false),
                 value -> prefs.edit().putBoolean(KEY_TOUCHPAD_MODE, value).apply()));
-        touchpad.addView(Ui.divider(host));
+        touchpad.addView(divider(host));
         touchpad.addView(floatSlider(host, prefs, T.t("label.mouse_accel"),
                 T.t("input.mouse_accel_caption"),
                 KEY_MOUSE_ACCEL, 0.5f, 10.0f, 0.05f, 1.0f, "%.1fx").box);
@@ -96,7 +96,7 @@ public final class InputSettingsView {
                     prefs.edit().putBoolean(KEY_POINTER_CAPTURE, value).apply();
                     setCaptureExtrasEnabled(transformRow, captureSpeed.bar, value);
                 }));
-        capture.addView(Ui.divider(host));
+        capture.addView(divider(host));
         capture.addView(transformRow);
         capture.addView(captureSpeed.box);
         setCaptureExtrasEnabled(transformRow, captureSpeed.bar, captureOn);
@@ -108,7 +108,7 @@ public final class InputSettingsView {
                 T.t("input.reverse_scroll_caption"),
                 prefs.getBoolean(KEY_SCROLL_REVERSE, false),
                 value -> prefs.edit().putBoolean(KEY_SCROLL_REVERSE, value).apply()));
-        scroll.addView(Ui.divider(host));
+        scroll.addView(divider(host));
         scroll.addView(floatSlider(host, prefs, T.t("label.scroll_speed"),
                 T.t("input.scroll_speed_caption"),
                 KEY_SCROLL_SPEED, 0.05f, 3.0f, 0.05f, Touchpad.DEFAULT_SCROLL_SPEED, "%.2f").box);
@@ -155,11 +155,14 @@ public final class InputSettingsView {
         final TextView value = Ui.mono(host,
                 String.format(Locale.US, format, min + progress * step), 14, Ui.ACCENT);
         SeekBar bar = seekBar(host, maxProgress, progress);
+        // TalkBack: the bar names what it changes and its current value; the headline label/value are hidden from it.
+        bar.setContentDescription(label + "，" + value.getText());
         bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int p, boolean fromUser) {
                 float selected = min + p * step;
                 value.setText(String.format(Locale.US, format, selected));
+                seekBar.setContentDescription(label + "，" + value.getText());
                 if (fromUser)
                     prefs.edit().putFloat(key, selected).apply();
             }
@@ -181,11 +184,13 @@ public final class InputSettingsView {
         int current = Math.max(min, Math.min(max, prefs.getInt(key, fallback)));
         final TextView value = Ui.mono(host, current + "%", 14, Ui.ACCENT);
         SeekBar bar = seekBar(host, max - min, current - min);
+        bar.setContentDescription(label + "，" + value.getText());
         bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int p, boolean fromUser) {
                 int selected = min + p;
                 value.setText(selected + "%");
+                seekBar.setContentDescription(label + "，" + value.getText());
                 if (fromUser)
                     prefs.edit().putInt(key, selected).apply();
             }
@@ -222,6 +227,8 @@ public final class InputSettingsView {
         head.addView(Ui.text(host, label, 14, Ui.TEXT, false));
         head.addView(new View(host), new LinearLayout.LayoutParams(0, 1, 1f));
         head.addView(value);
+        // The bar below carries the label and value in its contentDescription: do not read the headline twice.
+        head.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         box.addView(head);
         box.addView(bar, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(host, 34)));
@@ -239,6 +246,8 @@ public final class InputSettingsView {
     /**
      * The {@code Ui.actionRow} shape, but with a value that follows the picked item: {@code Ui.actionRow} keeps its
      * value TextView private, so a picker that shows the current choice needs its own row.
+     *
+     * <p>TalkBack: the whole row is one stop ("label，caption，current value") and at least 48dp tall.
      */
     private static LinearLayout choiceRow(Activity host, String label, String caption, String[] labels,
             int checked, ChoiceSink onPick) {
@@ -260,6 +269,11 @@ public final class InputSettingsView {
         right.addView(Ui.text(host, "›", 15, Ui.FAINT, false));
         row.addView(right);
 
+        row.setMinimumHeight(Ui.dp(host, 48));
+        texts.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        right.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        row.setContentDescription(describe(label, caption, labels[checked]));
+
         final int[] selected = {checked};
         row.setOnClickListener(v -> new AlertDialog.Builder(host)
                 .setTitle(label)
@@ -267,12 +281,30 @@ public final class InputSettingsView {
                     selected[0] = which;
                     value.setText(labels[which]);
                     onPick.onPick(which);
+                    row.setContentDescription(describe(label, caption, labels[which]));
                     dialog.dismiss();
                 })
                 .setNegativeButton(T.t("btn.cancel"), null)
                 .show());
         row.setClickable(true);
         return row;
+    }
+
+    /** label + optional caption + current value, joined for one TalkBack announcement. */
+    private static String describe(String label, String caption, String value) {
+        String base = caption == null || caption.isEmpty() ? label : label + "，" + caption;
+        return value == null || value.isEmpty() ? base : base + "，" + value;
+    }
+
+    private static String stateLabel(boolean on) {
+        return T.t(on ? "state.on" : "state.off");
+    }
+
+    /** Decorative separator: never a TalkBack stop. */
+    private static View divider(Activity host) {
+        View v = Ui.divider(host);
+        v.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        return v;
     }
 
     /** Capture-only controls are dimmed and inert while the capture switch is off, as in the old page. */
@@ -293,6 +325,8 @@ public final class InputSettingsView {
     /**
      * The {@code Ui.toggleRow} shape with a localized On/Off pill: {@code Ui.toggleRow} hardcodes the Chinese
      * 开启/关闭 labels and Ui.java is outside this task's write scope.
+     *
+     * <p>TalkBack: the row is one stop announcing label, caption and the current state; 48dp minimum height.
      */
     private static LinearLayout toggleRow(Activity host, String label, String caption, boolean value,
             Ui.OnToggle onChange) {
@@ -308,15 +342,20 @@ public final class InputSettingsView {
         r.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         final boolean[] on = {value};
-        TextView pill = Ui.text(host, on[0] ? T.t("state.on") : T.t("state.off"), 13,
-                on[0] ? Ui.ACCENT : Ui.DIM, true);
+        TextView pill = Ui.text(host, stateLabel(on[0]), 13, on[0] ? Ui.ACCENT : Ui.DIM, true);
         pill.setPadding(Ui.dp(host, 10), Ui.dp(host, 5), Ui.dp(host, 10), Ui.dp(host, 5));
         pill.setBackground(Ui.surface(host, 30));
         r.addView(pill);
+
+        r.setMinimumHeight(Ui.dp(host, 48));
+        texts.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        pill.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        r.setContentDescription(describe(label, caption, stateLabel(on[0])));
         r.setOnClickListener(v -> {
             on[0] = !on[0];
-            pill.setText(on[0] ? T.t("state.on") : T.t("state.off"));
+            pill.setText(stateLabel(on[0]));
             pill.setTextColor(on[0] ? Ui.ACCENT : Ui.DIM);
+            r.setContentDescription(describe(label, caption, stateLabel(on[0])));
             onChange.onToggle(on[0]);
         });
         r.setClickable(true);
