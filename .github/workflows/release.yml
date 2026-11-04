@@ -92,28 +92,27 @@ jobs:
           fail_on_unmatched_files: true
           files: dist/*
           body: |
-            **AOmarchy 2.8** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
+            **AOmarchy 2.9** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
 
             This release was built and signed by GitHub Actions from the repository source.
 
-            ## What is new in 2.8
+            ## What is new in 2.9
 
-            - **The console sits on your wallpaper.** The device wallpaper is drawn behind the console — blurred, under
-              a heavy brand scrim — so the rail, cards and text stay as readable as before but the app feels like part
-              of the home screen.
-            - **A power button in the rail.** One tap at the bottom of the rail opens a session power menu: restart the
-              session, stop it, start it, or quit the app (a running session keeps running). Its colour is also a status
-              LED: mint while running, dim when ready, grey before Linux is installed.
-            - **A quick-command panel in the terminal.** The terminal no longer fills the screen: the lower part is a
-              panel of chips that send common commands in one tap (files, disk, memory, processes, system update,
-              packages, services, network, logs, clear, exit). **编辑** makes the chips editable, **+ 新增** adds your
-              own name + command, long-press deletes; the list lives in the app's settings and survives restarts. A
-              **面板 / Panel** switch folds the panel away for a full-height terminal, and the pty is resized to match.
-            - Everything from 2.7 stays: brand icon, home-screen widget, overview suggestions, quick settings tile.
+            - **The power menu speaks plainly.** The rail's power button opens **挂起 / 后台运行 / 重启 / 关机 / 退出 App**,
+              the words Android's own power menu uses, instead of the old "close the session" phrasing. 挂起 sends the app
+              to the background and keeps Linux running; 关机 stops Linux; 重启 restarts it.
+            - **Run in the background.** 后台运行 keeps a persistent notification (控制台 / 停止 actions) so the session is
+              less likely to be reclaimed while you use other apps. 设置 → 后台运行 explains the battery setting, links to
+              it, and shows a copyable ADB command for the Doze allow-list (`dumpsys deviceidle whitelist +app.aomarchy`).
+            - **A console background you can choose.** 设置 → 控制台背景 offers the system wallpaper, an image from your
+              files, or the plain brand colour; pictures are blurred and dimmed under the UI. Android 13 / MIUI refuse
+              `WallpaperManager.getDrawable()`, so the app now falls back through the wallpaper file and finally to a
+              brand gradient instead of a flat colour — the 2.8 console could stay plain because of exactly that.
+            - Everything from 2.8 stays: the wallpaper-backed console and the terminal quick-command panel.
 
             ## Upgrading
 
-            - From **2.7 / 2.6 / 2.5 / 2.4 / 2.3 / 2.2 / 2.1 / 2.0**: install over it, nothing else to do.
+            - From **2.8 and earlier**: install over it, nothing else to do.
             - From **1.x**: the package is `app.aomarchy`; save what you need from the desktop, uninstall the old app,
               install AOmarchy and set the system up again (a local archive makes that work offline).
 

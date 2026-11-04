@@ -67,7 +67,21 @@ are untested.
 The [user guide](docs/user-guide.md) explains the touch gestures, the on-screen keyboard, the Android settings to
 change (HyperOS/MIUI take some gestures for themselves), installing apps, and the self-test.
 
+## What's new in 2.9
+
+- **The power menu speaks plainly now.** The rail's power button opens **挂起 / 后台运行 / 重启 / 关机 / 退出 App**, the words
+  people see in Android's own power menu, instead of the old "close session" wording.
+- **Run in the background.** 后台运行 keeps a persistent notification (with 控制台 and 停止 actions) so the Linux
+  session is less likely to be killed while you use other apps; 设置 → 后台运行 also links to the battery settings and
+  shows a copyable ADB command that allow-lists the app from Doze.
+- **Console background you can choose.** 设置 → 控制台背景 picks the system wallpaper, an image from your files, or
+  the plain brand colour. The image is blurred and dimmed under the console so text stays readable, and when Android
+  refuses to hand over the wallpaper the app now shows the brand gradient instead of a flat colour (2.8 only tried
+  `WallpaperManager.getDrawable()`, which Android 13/MIUI reject).
+- Everything from 2.8 stays: wallpaper-backed console, terminal quick-command panel.
+
 ## What's new in 2.8
+
 
 - **The console sits on your wallpaper.** The device wallpaper is drawn behind the console, blurred and under a heavy
   brand scrim so the rail, cards and text stay exactly as readable as before.
