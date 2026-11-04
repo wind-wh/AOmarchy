@@ -315,6 +315,8 @@ public class MainActivity extends Activity
         lp.leftMargin = (int) (8 * mDensity);
         lp.topMargin = (int) (44 * mDensity);
         root.addView(handle, lp);
+        android.util.Log.i("ConsoleHandle", "added " + handle.getWidth() + "x" + handle.getHeight() + " at " + lp.leftMargin + "," + lp.topMargin);
+        handle.post(() -> android.util.Log.i("ConsoleHandle", "laid out " + handle.getLeft() + "," + handle.getTop() + " " + handle.getWidth() + "x" + handle.getHeight() + " vis=" + handle.getVisibility()));
     }
 
     private View consoleHandle;
