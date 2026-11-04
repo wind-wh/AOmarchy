@@ -37,6 +37,9 @@ public class ShellActivity extends Activity {
         show(0);
         app.aomarchy.data.Installer.cleanupAsync(this); // leftover partial / old system from an interrupted install
         requestNotificationPermission();
+        if (getSharedPreferences(Prefs.NAME, MODE_PRIVATE).getBoolean("open_desktop_on_start", false)
+                && SessionService.rootfsReady(this))
+            openDesktop(); // the startup preference: skip the console and show the desktop
     }
 
     @Override

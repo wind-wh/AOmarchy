@@ -769,46 +769,165 @@ class ControlsPage extends Page {
             controls.refresh();
     }
 }
-/** 设置: low-frequency configuration; the existing SettingsActivity still owns the detailed pages. */
+/** 设置: the setup answers (identity, keyboard), startup behaviour, the detailed pages, and about. */
 class SettingsPage extends Page {
+    private static final String[] LAYOUTS = {"us", "cn", "gb", "fr", "de", "es", "it", "pt", "ru", "ua", "pl", "tr",
+            "nl", "be", "ch", "ca", "jp", "kr", "ara", "gr", "il", "ir", "in"};
+    private static final String[] LAYOUT_NAMES = {"English (US)", "中文", "English (UK)", "Français", "Deutsch",
+            "Español", "Italiano", "Português", "Русский", "Українська", "Polski", "Türkçe", "Nederlands",
+            "Belgique", "Suisse", "Canada (FR)", "日本語", "한국어", "العربية", "Ελληνικά", "עברית", "فارسی", "हिन्दी"};
+
+    private TextView nameValue;
+    private TextView emailValue;
+    private TextView kbValue;
+
     SettingsPage(ShellActivity shell) {
         super(shell);
     }
 
+    private android.content.SharedPreferences prefs() {
+        return shell.getSharedPreferences(Prefs.NAME, android.content.Context.MODE_PRIVATE);
+    }
+
     @Override
     void build(LinearLayout body) {
-        LinearLayout look = Ui.card(shell, "外观");
-        look.addView(Ui.kv(shell, "主题", value("固定品牌深色", Ui.TEXT)));
-        look.addView(Ui.kv(shell, "字体", value("Noto Sans CJK", Ui.DIM)));
-        body.addView(look);
+        LinearLayout identity = Ui.card(shell, "身份 · Linux 用户与 git");
+        identity.addView(Ui.text(shell, "原来在首启表单里填的姓名和邮箱。填了会写进 Linux 的 git 身份与 XCompose，下次进入桌面生效。",
+                13, Ui.DIM, false));
+        identity.addView(Ui.gap(shell, 8));
+        nameValue = value("—", Ui.TEXT);
+        identity.addView(row("姓名", nameValue, () -> editText("姓名", "user_name", nameValue)));
+        identity.addView(Ui.divider(shell));
+        emailValue = value("—", Ui.TEXT);
+        identity.addView(row("邮箱", emailValue, () -> editText("邮箱", "user_email", emailValue)));
+        body.addView(identity);
 
-        LinearLayout session = Ui.card(shell, "会话与输入");
-        session.addView(row("键盘与按键", () -> open(SettingsActivity.class)));
-        session.addView(Ui.divider(shell));
-        session.addView(row("触摸板与鼠标", () -> open(SettingsActivity.class)));
-        session.addView(Ui.divider(shell));
-        session.addView(row("连接、显示与音频", () -> open(SettingsActivity.class)));
-        body.addView(session);
+        LinearLayout keyboard = Ui.card(shell, "键盘");
+        keyboard.addView(Ui.text(shell, "系统键盘布局：第一个是物理键盘，屏幕键盘在其间循环。", 13, Ui.DIM, false));
+        keyboard.addView(Ui.gap(shell, 8));
+        kbValue = value("—", Ui.TEXT);
+        keyboard.addView(row("系统布局", kbValue, this::pickLayout));
+        body.addView(keyboard);
+
+        LinearLayout startup = Ui.card(shell, "启动");
+        LinearLayout row = Ui.row(shell);
+        row.setPadding(0, Ui.dp(shell, 10), 0, Ui.dp(shell, 10));
+        row.addView(Ui.text(shell, "打开 App 后直接进入桌面", 15, Ui.TEXT, false));
+        row.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
+        android.widget.Switch sw = new android.widget.Switch(shell);
+        sw.setChecked(prefs().getBoolean("open_desktop_on_start", false));
+        sw.setOnCheckedChangeListener((v, checked) -> {
+            prefs().edit().putBoolean("open_desktop_on_start", checked).apply();
+            toast(checked ? "下次打开 App 直接进桌面" : "下次打开 App 先进控制台");
+        });
+        row.addView(sw);
+        startup.addView(row);
+        body.addView(startup);
+
+        LinearLayout detailed = Ui.card(shell, "详细设置（旧版页面）");
+        detailed.addView(Ui.text(shell, "键盘按键、触摸板、连接、显示等逐项配置暂时还在旧版设置页里，下一步会搬进控制台。",
+                13, Ui.DIM, false));
+        detailed.addView(Ui.gap(shell, 6));
+        detailed.addView(row("键盘与按键", value("›", Ui.FAINT), () -> openSettings()));
+        detailed.addView(Ui.divider(shell));
+        detailed.addView(row("触摸板与鼠标", value("›", Ui.FAINT), () -> openSettings()));
+        detailed.addView(Ui.divider(shell));
+        detailed.addView(row("连接（socket / root / 音频）", value("›", Ui.FAINT), () -> openSettings()));
+        detailed.addView(Ui.divider(shell));
+        detailed.addView(row("显示（分辨率 / 方向 / 刘海）", value("›", Ui.FAINT), () -> openSettings()));
+        body.addView(detailed);
 
         LinearLayout about = Ui.card(shell, "关于");
         about.addView(Ui.kv(shell, "版本", value(versionName(), Ui.TEXT)));
         about.addView(Ui.kv(shell, "包名", value(shell.getPackageName(), Ui.DIM)));
-        about.addView(Ui.kv(shell, "Android", value(Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")", Ui.DIM)));
+        about.addView(Ui.kv(shell, "Android", value(android.os.Build.VERSION.RELEASE + " (API "
+                + android.os.Build.VERSION.SDK_INT + ")", Ui.DIM)));
         body.addView(about);
     }
 
-    private android.view.View row(String title, Runnable onClick) {
+    private LinearLayout row(String label, TextView valueView, Runnable onClick) {
         LinearLayout r = Ui.row(shell);
-        r.setPadding(0, Ui.dp(shell, 12), 0, Ui.dp(shell, 12));
-        r.addView(Ui.text(shell, title, 15, Ui.TEXT, false));
+        r.setPadding(0, Ui.dp(shell, 10), 0, Ui.dp(shell, 10));
+        r.addView(Ui.text(shell, label, 15, Ui.TEXT, false));
         r.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
-        r.addView(Ui.text(shell, "›", 18, Ui.FAINT, false));
+        r.addView(valueView);
         r.setOnClickListener(v -> onClick.run());
         return r;
     }
 
-    private void open(Class<?> activity) {
-        shell.startActivity(new Intent(shell, activity));
+    private void editText(String title, String key, TextView target) {
+        android.widget.EditText input = new android.widget.EditText(shell);
+        input.setText(prefs().getString(key, ""));
+        input.setSingleLine(true);
+        new android.app.AlertDialog.Builder(shell)
+                .setTitle(title)
+                .setView(input)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("保存", (d, w) -> {
+                    prefs().edit().putString(key, input.getText().toString().trim()).apply();
+                    refresh();
+                    toast("已保存，下次进入桌面生效");
+                })
+                .show();
+    }
+
+    private void pickLayout() {
+        String current = prefs().getString("kb_layouts", "");
+        int checked = 0;
+        for (int i = 0; i < LAYOUTS.length; i++)
+            if (LAYOUTS[i].equals(current))
+                checked = i;
+        String[] names = new String[LAYOUT_NAMES.length];
+        for (int i = 0; i < names.length; i++)
+            names[i] = LAYOUT_NAMES[i] + "  ·  " + LAYOUTS[i];
+        new android.app.AlertDialog.Builder(shell)
+                .setTitle("系统键盘布局")
+                .setSingleChoiceItems(names, checked, (d, which) -> {
+                    prefs().edit().putString("kb_layouts", LAYOUTS[which]).apply();
+                    d.dismiss();
+                    refresh();
+                    toast("已选 " + LAYOUT_NAMES[which] + "，下次进入桌面生效");
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void openSettings() {
+        shell.startActivity(new android.content.Intent(shell, SettingsActivity.class));
+    }
+
+    @Override
+    void refresh() {
+        nameValue.setText(orDash(prefs().getString("user_name", "")));
+        emailValue.setText(orDash(prefs().getString("user_email", "")));
+        String kb = prefs().getString("kb_layouts", "");
+        if (kb.isEmpty())
+            kb = installedLayout(); // what the installer picked from the device language
+        kbValue.setText(orDash(kb));
+    }
+
+    private static String orDash(String s) {
+        return s == null || s.trim().isEmpty() ? "未设置" : s;
+    }
+
+    /** KB_LAYOUTS from the rootfs's setup.conf: the layout the install chose. */
+    private String installedLayout() {
+        try {
+            File f = new File(SessionService.rootfs(shell), "root/.config/andromarchy/setup.conf");
+            if (!f.isFile())
+                return "";
+            for (String line : java.nio.file.Files.readAllLines(f.toPath())) {
+                if (line.startsWith("KB_LAYOUTS=")) {
+                    String v = line.substring("KB_LAYOUTS=".length()).trim();
+                    if (v.startsWith("'") && v.endsWith("'"))
+                        v = v.substring(1, v.length() - 1);
+                    return v;
+                }
+            }
+        } catch (Exception ignored) {
+            // no system installed yet
+        }
+        return "";
     }
 
     private String versionName() {

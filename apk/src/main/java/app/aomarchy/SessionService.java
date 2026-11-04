@@ -261,6 +261,7 @@ public class SessionService extends Service {
     private void startSession() throws IOException {
         installCjkFonts(); // before anything fontconfig-based runs: Chinese text has a font to fall back to
         installSystemdInhibitShim(); // before Omarchy's power menu can be used: shutdown needs a fake inhibitor
+        applySetup(); // name/email/keyboard chosen in the console's Settings, applied to the rootfs
         startedAt = System.currentTimeMillis();
 
         File run = runDir(this);
@@ -384,6 +385,76 @@ public class SessionService extends Service {
         return env;
     }
 
+    /**
+     * Applies the setup answers that used to be asked on first launch: name/email (git identity, XCompose) and the
+     * keyboard layouts (the hyprland input config). Only values the user set are written; an untouched install keeps
+     * what the installer derived from the device language.
+     */
+    private void applySetup() {
+        File rootfs = rootfs(this);
+        android.content.SharedPreferences sp = getSharedPreferences(Prefs.NAME, MODE_PRIVATE);
+        String name = sp.getString("user_name", "").trim();
+        String email = sp.getString("user_email", "").trim();
+        String kb = sp.getString("kb_layouts", "").trim();
+        try {
+            if (!kb.isEmpty()) {
+                File conf = new File(rootfs, "root/.config/andromarchy/setup.conf");
+                conf.getParentFile().mkdirs();
+                writeText(conf, "KB_LAYOUTS=" + kb + " FULL_NAME=" + shellQuote(name) + " EMAIL=" + shellQuote(email) + "\n");
+                File input = new File(rootfs, "root/.config/hypr/input.lua");
+                String text = input.isFile() ? readText(input) : "";
+                StringBuilder kept = new StringBuilder();
+                boolean skipping = false;
+                for (String line : text.split("\n", -1)) {
+                    if (line.startsWith("-- Android/Andromarchy: keyboard layouts")
+                            || line.startsWith("-- Android/AOmarchy: keyboard layouts")) {
+                        skipping = true;
+                        continue;
+                    }
+                    if (skipping) {
+                        if (line.contains("kb_layout = "))
+                            skipping = false;
+                        continue;
+                    }
+                    kept.append(line).append('\n');
+                }
+                kept.append("-- Android/AOmarchy: keyboard layouts (settings; the first one is the physical keyboard's, the\n")
+                        .append("-- on-screen keyboard cycles through all)\n")
+                        .append("hl.config({ input = { kb_layout = \"").append(kb).append("\" } })\n");
+                input.getParentFile().mkdirs();
+                writeText(input, kept.toString());
+                Log.i(TAG, "applied keyboard layouts: " + kb);
+            }
+            if (!name.isEmpty() || !email.isEmpty()) {
+                File gitconfig = new File(rootfs, "root/.gitconfig");
+                String existing = gitconfig.isFile() ? readText(gitconfig) : "";
+                if (!existing.contains("[user]")) {
+                    writeText(gitconfig, existing
+                            + "\n[user]\n\tname = " + name + "\n\temail = " + email + "\n");
+                }
+                File xcompose = new File(rootfs, "root/.XCompose");
+                writeText(xcompose, "include \"/usr/share/omarchy/default/xcompose\"\n"
+                        + "<Multi_key> <space> <n> : \"" + name + "\"\n"
+                        + "<Multi_key> <space> <e> : \"" + email + "\"\n");
+                Log.i(TAG, "applied identity: " + name);
+            }
+        } catch (IOException e) {
+            Log.w(TAG, "applySetup failed", e);
+        }
+    }
+
+    private static String shellQuote(String s) {
+        return "'" + s.replace("'", "'\\''") + "'";
+    }
+
+    private static String readText(File f) throws IOException {
+        return new String(java.nio.file.Files.readAllBytes(f.toPath()), java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    private static void writeText(File f, String text) throws IOException {
+        f.getParentFile().mkdirs();
+        java.nio.file.Files.write(f.toPath(), text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
     /** Runs one shell command inside the rootfs with the session environment: the console launching a Linux app. */
     public static void runInSession(Context ctx, String command) {
         String launcher = ctx.getApplicationInfo().nativeLibraryDir + "/liblotfixrun.so";

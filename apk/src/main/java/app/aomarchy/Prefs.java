@@ -30,6 +30,11 @@ final class Prefs {
         {"notification_tap_action", "open preferences"},
         {"notification_first_button_action", "open preferences"},
         {"notification_second_button_action", "exit"},
+        // Setup answers that used to live in the first-launch form: applied to the rootfs on every session start.
+        {"user_name", ""},
+        {"user_email", ""},
+        {"kb_layouts", ""}, // empty: keep whatever the installer chose from the device language
+        {"open_desktop_on_start", false},
     };
 
     private static boolean done;
