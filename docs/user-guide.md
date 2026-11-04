@@ -142,7 +142,7 @@ with a "shutdown failed" notification and leave the desktop running.)
 Open a terminal and run:
 
 ```sh
-AOmarchy-selftest
+andromarchy-selftest
 ```
 
 It checks the GPU, sound, cameras, keyboard, clipboard, system services and app store, and prints one line per

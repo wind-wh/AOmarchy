@@ -55,9 +55,9 @@ android {
         }
     }
 
-    // The release key stays out of the repo: AOmarchy_SIGNING names a properties file (storePath, storePassword,
+    // The release key stays out of the repo: AOMARCHY_SIGNING names a properties file (storePath, storePassword,
     // keyAlias, keyPassword). Without it, Android's default debug key. Debug builds use it too, to update in place.
-    def signingFile = System.getenv("AOmarchy_SIGNING")
+    def signingFile = System.getenv("AOMARCHY_SIGNING")
     if (signingFile) {
         def sp = new Properties()
         file(signingFile).withInputStream { sp.load(it) }
@@ -74,10 +74,10 @@ android {
     buildTypes {
         release {
             minifyEnabled = false
-            if (signingFile) signingConfig = signingConfigs.AOmarchy
+            if (signingFile) signingConfig = signingConfigs.aomarchy
         }
         debug {
-            if (signingFile) signingConfig = signingConfigs.AOmarchy
+            if (signingFile) signingConfig = signingConfigs.aomarchy
         }
     }
 
@@ -93,7 +93,7 @@ android {
 // 16 KB-aligned segments for Android 15+ devices with 16 KB pages.
 def jniOut = file("src/main/jniLibs/arm64-v8a")
 def executables = [
-    "libAOmarchy.so"   : ["native/AOmarchy/AOmarchy.c", "native/AOmarchy/common/socket_utils.c"],
+    "libandromarchy.so"   : ["native/andromarchy/andromarchy.c", "native/andromarchy/common/socket_utils.c"],
     "liblotfixrun.so": ["../native/launcher/lotfix-run.c"],
     // termux-va (lfdevs, GPL-3.0): MediaCodec hardware video for the VA-API of Mesa's termuxva bridge
     "libtermuxva.so" : ["../third_party/termux-va/daemon/termux-va.c", "-std=c11",
