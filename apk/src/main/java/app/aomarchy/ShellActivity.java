@@ -36,6 +36,7 @@ public class ShellActivity extends Activity {
         build();
         show(0);
         app.aomarchy.data.Installer.cleanupAsync(this); // leftover partial / old system from an interrupted install
+        requestNotificationPermission();
     }
 
     @Override
@@ -43,6 +44,15 @@ public class ShellActivity extends Activity {
         super.onResume();
         updateStatus();
         if (pages[current] != null) pages[current].refresh();
+    }
+
+    /** The session notification (with its 控制 action) only shows once notifications are allowed (Android 13+). */
+    private void requestNotificationPermission() {
+        if (android.os.Build.VERSION.SDK_INT < 33)
+            return;
+        String permission = "android.permission.POST_NOTIFICATIONS";
+        if (checkSelfPermission(permission) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+            requestPermissions(new String[] {permission}, 11);
     }
 
     private void build() {
