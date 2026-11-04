@@ -269,7 +269,7 @@ public class SessionService extends Service {
         try {
             ProcessBuilder pb = new ProcessBuilder(launcher, "/opt/lotfix/first-boot.sh");
             pb.environment().clear();
-            pb.environment().putAll(archEnv(run, sock));
+            pb.environment().putAll(archEnv(this, run, sock));
             Process fb = pb.redirectErrorStream(true)
                     .redirectOutput(new File(run, "first-boot.log")).start();
             fb.getOutputStream().close();
@@ -285,30 +285,30 @@ public class SessionService extends Service {
         //    apps need it; archEnv() gives every program its address.
         new File(run, "bus").delete();
         spawn("dbus", List.of(launcher, "-c", "exec dbus-daemon --session --nofork --nopidfile --address=unix:path="
-                + new File(run, "bus").getPath()), archEnv(run, sock));
+                + new File(run, "bus").getPath()), archEnv(this, run, sock));
 
         // 2b. A "system" bus of our own (there is none for apps), for the services standing in for hardware ones.
         new File(run, "system_bus").delete();
         spawn("system-dbus", List.of(launcher, "-c", "exec dbus-daemon --config-file=/opt/lotfix/system-bus.conf"
-                + " --nofork --nopidfile --address=unix:path=" + new File(run, "system_bus").getPath()), archEnv(run, sock));
+                + " --nofork --nopidfile --address=unix:path=" + new File(run, "system_bus").getPath()), archEnv(this, run, sock));
         spawn("android-nm", List.of(launcher, "-c", "for i in $(seq 50); do [ -S \"$XDG_RUNTIME_DIR/system_bus\" ]"
-                + " && break; sleep 0.1; done; exec android-nm"), archEnv(run, sock));
+                + " && break; sleep 0.1; done; exec android-nm"), archEnv(this, run, sock));
         spawn("android-upower", List.of(launcher, "-c", "for i in $(seq 50); do [ -S \"$XDG_RUNTIME_DIR/system_bus\" ]"
-                + " && break; sleep 0.1; done; exec android-upower"), archEnv(run, sock));
+                + " && break; sleep 0.1; done; exec android-upower"), archEnv(this, run, sock));
         // The other system services a desktop expects (login1, hostname1, timedate1, locale1, PolicyKit, power
         // profiles, Accounts, RealtimeKit, GeoClue), as stand-ins: native/android-system-services.py.
         spawn("android-system-services", List.of(launcher, "-c", "for i in $(seq 50); do [ -S \"$XDG_RUNTIME_DIR/"
-                + "system_bus\" ] && break; sleep 0.1; done; exec android-system-services"), archEnv(run, sock));
+                + "system_bus\" ] && break; sleep 0.1; done; exec android-system-services"), archEnv(this, run, sock));
         // Session side: ScreenSaver inhibit and FileManager1 (native/android-session-services.py), and the secrets
         // keyring (passwords for browsers, VS Code, git). No login screen unlocks a keyring here: a password-less
         // "login" keyring is created once (gnome-keyring's plain format) and made the default.
         spawn("android-session-services", List.of(launcher, "-c", "for i in $(seq 50); do [ -S \"$XDG_RUNTIME_DIR/"
-                + "bus\" ] && break; sleep 0.1; done; exec android-session-services"), archEnv(run, sock));
+                + "bus\" ] && break; sleep 0.1; done; exec android-session-services"), archEnv(this, run, sock));
         spawn("gnome-keyring", List.of(launcher, "-c", "for i in $(seq 50); do [ -S \"$XDG_RUNTIME_DIR/bus\" ] && break;"
                 + " sleep 0.1; done; K=$HOME/.local/share/keyrings; mkdir -p $K && chmod 700 $K;"
                 + " [ -f $K/login.keyring ] || printf '[keyring]\\ndisplay-name=Login\\nctime=0\\nmtime=0\\n"
                 + "lock-on-idle=false\\nlock-after=false\\n' > $K/login.keyring; [ -f $K/default ] || printf login > $K/default;"
-                + " exec gnome-keyring-daemon --foreground --components=secrets < /dev/null"), archEnv(run, sock));
+                + " exec gnome-keyring-daemon --foreground --components=secrets < /dev/null"), archEnv(this, run, sock));
 
         // 2c. Hardware video (termux-va, third_party/): decodes and encodes with MediaCodec for the VA-API bridge.
         spawn("termux-va", List.of(libDir + "/libtermuxva.so", "--sock", new File(run, "termux-va.sock").getPath()),
@@ -317,13 +317,13 @@ public class SessionService extends Service {
         // 3. Sound: Hyprland's Andromarchy backend creates PipeWire nodes, so the stack must exist (it reconnects anyway).
         //    wireplumber and pipewire-pulse give up when PipeWire is not up yet (a cold first start): they wait for its
         //    socket.
-        spawn("pipewire", List.of(launcher, "-c", "exec pipewire"), archEnv(run, sock));
+        spawn("pipewire", List.of(launcher, "-c", "exec pipewire"), archEnv(this, run, sock));
         for (String p : new String[] {"wireplumber", "pipewire-pulse"})
             spawn(p, List.of(launcher, "-c", "for i in $(seq 100); do [ -S \"$XDG_RUNTIME_DIR/pipewire-0\" ] && break;"
-                    + " sleep 0.1; done; exec " + p), archEnv(run, sock));
+                    + " sleep 0.1; done; exec " + p), archEnv(this, run, sock));
 
         // 4. Hyprland with Omarchy. It waits for this app's display to connect (MainActivity).
-        Map<String, String> env = archEnv(run, sock);
+        Map<String, String> env = archEnv(this, run, sock);
         env.put("EGL_PLATFORM", "surfaceless");
         env.put("OMARCHY_PATH", "/usr/share/omarchy");
         spawn("hyprland", List.of(launcher, "-c", "export PATH=/usr/share/omarchy/bin:$PATH; exec /usr/bin/Hyprland"), env);
@@ -331,7 +331,7 @@ public class SessionService extends Service {
         // 5. desktop-ready (ends the splash, SplashScreen): Omarchy's shell runs, plus a second to draw the bar.
         spawn("desktop-ready", List.of(launcher, "-c", "for i in $(seq 600); do pgrep -x quickshell >/dev/null"
                 + " || pgrep -x qs >/dev/null && break; sleep 0.2; done; sleep 1; touch \"$XDG_RUNTIME_DIR/desktop-ready\""),
-                archEnv(run, sock));
+                archEnv(this, run, sock));
     }
 
     /** Android's language as a glibc locale name (fr_FR.UTF-8); C.UTF-8 when it has no country. */
@@ -341,19 +341,19 @@ public class SessionService extends Service {
     }
 
     /** Environment for programs of the rootfs; lotfix-run sets the rest (loader, fakechroot, GPU...). */
-    private Map<String, String> archEnv(File run, File sock) {
+    private static Map<String, String> archEnv(Context app, File run, File sock) {
         Map<String, String> env = new java.util.HashMap<>(System.getenv());
-        env.put("ARCH_ROOTFS", rootfs(this).getPath());
+        env.put("ARCH_ROOTFS", rootfs(app).getPath());
         env.put("ARCH_EXCLUDE_EXTRA", run.getPath()); // sockets: real paths, not rewritten into the rootfs
         env.put("XDG_RUNTIME_DIR", run.getPath());
         env.put("TZ", java.util.TimeZone.getDefault().getID()); // glibc only knows /etc/localtime otherwise: UTC
-        env.put("LANG", androidLocale(this)); // Android's language (first-boot.sh compiles its locale)
+        env.put("LANG", androidLocale(app)); // Android's language (first-boot.sh compiles its locale)
         env.put("ANDROMARCHY_UID", String.valueOf(android.os.Process.myUid()));
         env.put("ANDROMARCHY_GID", String.valueOf(android.os.Process.myUid()));
         env.put("ANDROMARCHY_SOCKET", sock.getPath());
         // The display's physical size (landscape, mm) for the compositor's output: clients size themselves from it
         android.util.DisplayMetrics dm = new android.util.DisplayMetrics();
-        ((android.view.WindowManager) getSystemService(WINDOW_SERVICE)).getDefaultDisplay().getRealMetrics(dm);
+        ((android.view.WindowManager) app.getSystemService(WINDOW_SERVICE)).getDefaultDisplay().getRealMetrics(dm);
         int wmm = Math.round(Math.max(dm.widthPixels / dm.xdpi, dm.heightPixels / dm.ydpi) * 25.4f);
         int hmm = Math.round(Math.min(dm.widthPixels / dm.xdpi, dm.heightPixels / dm.ydpi) * 25.4f);
         env.put("ANDROMARCHY_PHYSICAL_MM", wmm + "x" + hmm);
@@ -367,7 +367,7 @@ public class SessionService extends Service {
         env.put("DBUS_SYSTEM_BUS_ADDRESS", "unix:path=" + new File(run, "system_bus").getPath());
         // Hardware video: VA-API through Mesa's termuxva bridge to the termux-va daemon (MediaCodec), when the
         // rootfs's Mesa has the bridge.
-        if (new File(rootfs(this), "usr/lib/dri/termuxva_drv_video.so").exists()) {
+        if (new File(rootfs(app), "usr/lib/dri/termuxva_drv_video.so").exists()) {
             env.put("LIBVA_DRIVER_NAME", "termuxva");
             env.put("TERMUX_VA_BRIDGE", "1");
             env.put("TERMUX_VA_GPU_BACKEND", "kgsl");
@@ -378,6 +378,22 @@ public class SessionService extends Service {
         return env;
     }
 
+    /** Runs one command inside the rootfs with the session environment: the console launching a Linux app. */
+    public static void runInSession(Context ctx, String... command) {
+        String launcher = ctx.getApplicationInfo().nativeLibraryDir + "/liblotfixrun.so";
+        java.util.List<String> full = new java.util.ArrayList<>();
+        full.add(launcher);
+        full.addAll(java.util.Arrays.asList(command));
+        ProcessBuilder pb = new ProcessBuilder(full);
+        pb.environment().clear();
+        pb.environment().putAll(archEnv(ctx, runDir(ctx), daemonSocket(ctx)));
+        pb.redirectErrorStream(true).redirectOutput(new File(runDir(ctx), "ui-run.log"));
+        try {
+            pb.start();
+        } catch (IOException e) {
+            Log.w(TAG, "runInSession failed", e);
+        }
+    }
     /** Android's default network -> run/network ("wifi <strength> <ssid>" | "wired" | "none"), read by android-nm. */
     private AndroidRequests requests;
     private AndroidApps apps;

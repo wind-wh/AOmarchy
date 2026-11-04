@@ -12,6 +12,7 @@ import android.widget.Toast;
 
 import java.io.File;
 
+import app.aomarchy.data.Apps;
 import app.aomarchy.data.Installer;
 import app.aomarchy.data.Metrics;
 import app.aomarchy.ui.Sparkline;
@@ -591,28 +592,158 @@ class SystemPage extends Page {
             paintSources();
     }
 }
-/** 应用: flatpak sandboxes (M3), Android apps in floating windows, Omarchy entries. */
+/** 应用: Flatpak sandboxes, the desktop's own apps, and Android apps in floating windows. */
 class AppsPage extends Page {
+    private LinearLayout flatBox;
+    private LinearLayout linuxBox;
+    private LinearLayout androidBox;
+    private TextView status;
+    private boolean loaded;
+
     AppsPage(ShellActivity shell) {
         super(shell);
     }
 
     @Override
     void build(LinearLayout body) {
-        LinearLayout flat = Ui.card(shell, "Flatpak 应用");
-        flat.addView(Ui.text(shell, "已安装的 Flatpak 应用、运行时和沙箱权限（M3）。", 13, Ui.DIM, false));
-        body.addView(flat);
+        LinearLayout head = Ui.card(shell, "应用");
+        status = Ui.text(shell, "读取中…", 13, Ui.DIM, false);
+        head.addView(status);
+        head.addView(Ui.gap(shell, 10));
+        LinearLayout buttons = Ui.row(shell);
+        buttons.addView(Ui.button(shell, "刷新", false, v -> load()));
+        buttons.addView(Ui.space(shell, 10));
+        buttons.addView(Ui.button(shell, "进入桌面", true, v -> shell.openDesktop()));
+        head.addView(buttons);
+        body.addView(head);
 
-        LinearLayout android = Ui.card(shell, "Android 应用");
-        android.addView(Ui.text(shell, "把 Android 应用以浮动窗口打开、钉到控制面板（M3）。", 13, Ui.DIM, false));
-        body.addView(android);
+        flatBox = Ui.card(shell, "Flatpak 沙箱");
+        body.addView(flatBox);
 
-        LinearLayout omarchy = Ui.card(shell, "Omarchy 应用");
-        omarchy.addView(Ui.text(shell, "Linux 桌面里的 .desktop 入口（M3）。", 13, Ui.DIM, false));
-        body.addView(omarchy);
+        linuxBox = Ui.card(shell, "Omarchy 应用");
+        body.addView(linuxBox);
+
+        androidBox = Ui.card(shell, "Android 应用（浮动窗口）");
+        body.addView(androidBox);
+    }
+
+    @Override
+    void onShown() {
+        if (!loaded)
+            load();
+    }
+
+    private void load() {
+        loaded = true;
+        status.setText("读取中…");
+        new Thread(() -> {
+            java.util.List<Apps.LinuxApp> flat;
+            java.util.List<Apps.LinuxApp> linux;
+            java.util.List<Apps.AndroidApp> android;
+            try {
+                flat = Apps.flatpak(shell);
+                linux = Apps.nativeApps(shell);
+                android = Apps.android(shell);
+            } catch (RuntimeException e) {
+                shell.runOnUiThread(() -> status.setText("读取失败：" + e.getMessage()));
+                return;
+            }
+            shell.runOnUiThread(() -> {
+                fillFlatpak(flat);
+                fillLinux(linux);
+                fillAndroid(android);
+                status.setText("Flatpak " + flat.size() + " 个 · 桌面应用 " + linux.size() + " 个 · Android 应用 " + android.size() + " 个");
+            });
+        }, "apps-list").start();
+    }
+
+    private void fillFlatpak(java.util.List<Apps.LinuxApp> apps) {
+        flatBox.removeAllViews();
+        flatBox.addView(Ui.text(shell, "已安装的 Flatpak 应用（点名称在桌面里打开）。", 13, Ui.DIM, false));
+        flatBox.addView(Ui.gap(shell, 6));
+        if (apps.isEmpty()) {
+            flatBox.addView(Ui.text(shell, "还没有 Flatpak 应用。到桌面里用「软件」商店安装。", 13, Ui.FAINT, false));
+            return;
+        }
+        for (int i = 0; i < Math.min(apps.size(), 24); i++)
+            flatBox.addView(appRow(apps.get(i)));
+    }
+
+    private void fillLinux(java.util.List<Apps.LinuxApp> apps) {
+        linuxBox.removeAllViews();
+        linuxBox.addView(Ui.text(shell, "桌面自带的应用（Omarchy、终端、文件等）。", 13, Ui.DIM, false));
+        linuxBox.addView(Ui.gap(shell, 6));
+        for (int i = 0; i < Math.min(apps.size(), 24); i++)
+            linuxBox.addView(appRow(apps.get(i)));
+        if (apps.isEmpty())
+            linuxBox.addView(Ui.text(shell, "系统未安装或没有桌面入口。", 13, Ui.FAINT, false));
+    }
+
+    private View appRow(Apps.LinuxApp app) {
+        LinearLayout r = Ui.row(shell);
+        r.setPadding(0, Ui.dp(shell, 10), 0, Ui.dp(shell, 10));
+        LinearLayout texts = Ui.column(shell);
+        texts.addView(Ui.text(shell, app.name, 15, Ui.TEXT, false));
+        texts.addView(Ui.text(shell, app.id, 11, Ui.FAINT, false));
+        r.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView open = Ui.text(shell, "打开 ›", 13, Ui.ACCENT, false);
+        open.setPadding(Ui.dp(shell, 10), 0, 0, 0);
+        open.setOnClickListener(v -> {
+            if (!SessionService.rootfsReady(shell)) {
+                toast("系统还没装好");
+            } else if (!SessionService.started) {
+                toast("先进桌面启动会话");
+            } else {
+                Apps.launchLinux(shell, app);
+                toast("已在桌面打开 " + app.name);
+            }
+        });
+        r.addView(open);
+        return r;
+    }
+
+    private void fillAndroid(java.util.List<Apps.AndroidApp> apps) {
+        androidBox.removeAllViews();
+        androidBox.addView(Ui.text(shell, "点一个应用，它以浮动窗口打开，和桌面并排使用。", 13, Ui.DIM, false));
+        androidBox.addView(Ui.gap(shell, 8));
+        if (apps.isEmpty()) {
+            androidBox.addView(Ui.text(shell, "没有可启动的 Android 应用。", 13, Ui.FAINT, false));
+            return;
+        }
+        LinearLayout row = null;
+        int perRow = 4;
+        for (int i = 0; i < Math.min(apps.size(), 32); i++) {
+            if (i % perRow == 0) {
+                row = Ui.row(shell);
+                row.setPadding(0, Ui.dp(shell, 4), 0, Ui.dp(shell, 4));
+                androidBox.addView(row);
+            }
+            row.addView(androidTile(apps.get(i)));
+        }
+    }
+
+    private View androidTile(Apps.AndroidApp app) {
+        LinearLayout cell = Ui.column(shell);
+        cell.setGravity(android.view.Gravity.CENTER);
+        cell.setPadding(0, Ui.dp(shell, 6), 0, Ui.dp(shell, 6));
+        android.widget.ImageView icon = new android.widget.ImageView(shell);
+        icon.setImageDrawable(app.icon);
+        cell.addView(icon, new LinearLayout.LayoutParams(Ui.dp(shell, 40), Ui.dp(shell, 40)));
+        TextView label = Ui.text(shell, app.label, 11, Ui.DIM, false);
+        label.setGravity(android.view.Gravity.CENTER);
+        label.setMaxLines(1);
+        label.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        label.setPadding(0, Ui.dp(shell, 4), 0, 0);
+        cell.addView(label, new LinearLayout.LayoutParams(Ui.dp(shell, 70), ViewGroup.LayoutParams.WRAP_CONTENT));
+        cell.setOnClickListener(v -> {
+            Apps.openFloating(shell, app.packageName);
+            toast("浮动打开 " + app.label);
+        });
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        cell.setLayoutParams(lp);
+        return cell;
     }
 }
-
 /** 控制: high-frequency switches — display, input, sound, power (M4). */
 class ControlsPage extends Page {
     private TextView resolution;
