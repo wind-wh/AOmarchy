@@ -1603,6 +1603,7 @@ class SettingsPage extends Page {
                 .setTitle(T.t("label.startup_mode"))
                 .setSingleChoiceItems(names, checked, (d, which) -> {
                     prefs().edit().putString("session_mode", which == 1 ? "terminal" : "desktop").apply();
+                    SessionWidget.refresh(shell); // the widget's state text follows the startup mode
                     d.dismiss();
                     refresh();
                     toast(which == 1 ? T.t("toast.next_terminal_mode") : T.t("toast.next_desktop_mode"));

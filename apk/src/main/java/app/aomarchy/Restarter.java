@@ -26,6 +26,10 @@ public class Restarter extends Activity {
             Thread.sleep(2000);
         } catch (InterruptedException ignored) {
         }
+        // The shutdown path below kills this process 500 ms after stopping the service: too fast for the service's
+        // onDestroy to refresh the home-screen widget. Publish "就绪" from here, before the session is torn down.
+        SessionService.started = false;
+        SessionWidget.refresh(ctx);
         ctx.stopService(new Intent(ctx, SessionService.class)); // ends Hyprland and every session process
         if (action.equals("reboot") || action.equals("logout"))
             ctx.startActivity(new Intent(ctx, Restarter.class).putExtra(EXTRA_PID, Process.myPid())
