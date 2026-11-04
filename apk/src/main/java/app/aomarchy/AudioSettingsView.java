@@ -4,9 +4,11 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import app.aomarchy.i18n.T;
 import app.aomarchy.ui.Ui;
 
 /**
@@ -27,22 +29,21 @@ public final class AudioSettingsView {
 
         LinearLayout body = Ui.column(host);
 
-        LinearLayout keepalive = Ui.card(host, "音频保活");
-        keepalive.addView(Ui.text(host, "桌面会话在后台时不让音频通道休眠，外放和麦克风不会每次重新起振。",
-                12, Ui.DIM, false));
+        LinearLayout keepalive = Ui.card(host, T.t("card.audio_keepalive"));
+        keepalive.addView(Ui.text(host, T.t("audio.keepalive_desc"), 12, Ui.DIM, false));
         keepalive.addView(Ui.gap(host, 4));
-        keepalive.addView(Ui.toggleRow(host, "保持音频通道",
-                "关闭可省一点电；通话或录音时建议开启",
+        keepalive.addView(toggleRow(host, T.t("audio.keepalive_toggle"),
+                T.t("audio.keepalive_caption"),
                 prefs.getBoolean(MainActivity.KEY_AUDIO_KEEPALIVE, false),
                 on -> prefs.edit().putBoolean(MainActivity.KEY_AUDIO_KEEPALIVE, on).apply()));
         body.addView(keepalive);
 
-        LinearLayout latency = Ui.card(host, "音频延迟");
-        latency.addView(Ui.text(host, "越低越跟手，太高会明显对不上画面；改完下次进桌面生效。", 12, Ui.DIM, false));
+        LinearLayout latency = Ui.card(host, T.t("card.audio_latency"));
+        latency.addView(Ui.text(host, T.t("audio.latency_desc"), 12, Ui.DIM, false));
         latency.addView(Ui.gap(host, 4));
-        latency.addView(latencyRow(host, prefs, "扬声器", MainActivity.KEY_SPEAKER_LATENCY_MS));
+        latency.addView(latencyRow(host, prefs, T.t("label.speaker"), MainActivity.KEY_SPEAKER_LATENCY_MS));
         latency.addView(Ui.divider(host));
-        latency.addView(latencyRow(host, prefs, "麦克风", MainActivity.KEY_MIC_LATENCY_MS));
+        latency.addView(latencyRow(host, prefs, T.t("label.microphone"), MainActivity.KEY_MIC_LATENCY_MS));
         body.addView(latency);
 
         return body;
@@ -55,7 +56,7 @@ public final class AudioSettingsView {
         row.setPadding(0, Ui.dp(host, 7), 0, Ui.dp(host, 7));
         LinearLayout texts = Ui.column(host);
         texts.addView(Ui.text(host, label, 14, Ui.TEXT, false));
-        texts.addView(Ui.text(host, "毫秒；0 = 系统默认", 11, Ui.FAINT, false));
+        texts.addView(Ui.text(host, T.t("audio.latency_unit"), 11, Ui.FAINT, false));
         row.addView(texts, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         row.addView(value);
         row.addView(Ui.space(host, 6));
@@ -69,13 +70,13 @@ public final class AudioSettingsView {
                     checked = i;
             }
             new android.app.AlertDialog.Builder(host)
-                    .setTitle(label + "延迟")
+                    .setTitle(T.t("audio.latency_title", label))
                     .setSingleChoiceItems(names, checked, (d, which) -> {
                         prefs.edit().putInt(key, LATENCY_MS[which]).apply();
                         value.setText(latencyLabel(LATENCY_MS[which]));
                         d.dismiss();
                     })
-                    .setNegativeButton("取消", null)
+                    .setNegativeButton(T.t("btn.cancel"), null)
                     .show();
         });
         row.setClickable(true);
@@ -83,6 +84,39 @@ public final class AudioSettingsView {
     }
 
     private static String latencyLabel(int ms) {
-        return ms == 0 ? "系统默认" : ms + " ms";
+        return ms == 0 ? T.t("audio.system_default") : ms + " ms";
+    }
+
+    /**
+     * The {@code Ui.toggleRow} shape with a localized On/Off pill: {@code Ui.toggleRow} hardcodes the Chinese
+     * 开启/关闭 labels and Ui.java is outside this task's write scope.
+     */
+    private static LinearLayout toggleRow(Activity host, String label, String caption, boolean value,
+            Ui.OnToggle onChange) {
+        LinearLayout r = Ui.row(host);
+        r.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        r.setPadding(0, Ui.dp(host, 7), 0, Ui.dp(host, 7));
+
+        LinearLayout texts = Ui.column(host);
+        texts.addView(Ui.text(host, label, 14, Ui.TEXT, false));
+        if (caption != null && !caption.isEmpty())
+            texts.addView(Ui.text(host, caption, 11, Ui.FAINT, false));
+        r.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        final boolean[] on = {value};
+        TextView pill = Ui.text(host, on[0] ? T.t("state.on") : T.t("state.off"), 13,
+                on[0] ? Ui.ACCENT : Ui.DIM, true);
+        pill.setPadding(Ui.dp(host, 10), Ui.dp(host, 5), Ui.dp(host, 10), Ui.dp(host, 5));
+        pill.setBackground(Ui.surface(host, 30));
+        r.addView(pill);
+        r.setOnClickListener(v -> {
+            on[0] = !on[0];
+            pill.setText(on[0] ? T.t("state.on") : T.t("state.off"));
+            pill.setTextColor(on[0] ? Ui.ACCENT : Ui.DIM);
+            onChange.onToggle(on[0]);
+        });
+        r.setClickable(true);
+        return r;
     }
 }

@@ -11,6 +11,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import app.aomarchy.i18n.T;
 import app.aomarchy.ui.Ui;
 
 /**
@@ -21,6 +22,7 @@ public class ControlsActivity extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        T.init(this); // the sheet's header follows the console's ui_lang
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(0xB3000000);
         root.setOnClickListener(v -> finish());
@@ -36,9 +38,9 @@ public class ControlsActivity extends Activity {
 
         LinearLayout head = Ui.row(this);
         head.setPadding(Ui.dp(this, 20), Ui.dp(this, 16), Ui.dp(this, 20), Ui.dp(this, 4));
-        head.addView(Ui.text(this, "控制", 18, Ui.TEXT, true));
+        head.addView(Ui.text(this, T.t("tab.controls"), 18, Ui.TEXT, true));
         head.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
-        TextView close = Ui.text(this, "关闭", 14, Ui.ACCENT, false);
+        TextView close = Ui.text(this, T.t("btn.close"), 14, Ui.ACCENT, false);
         close.setOnClickListener(v -> finish());
         head.addView(close);
         sheet.addView(head);

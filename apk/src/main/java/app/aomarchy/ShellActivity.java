@@ -14,6 +14,7 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import app.aomarchy.i18n.T;
 import app.aomarchy.ui.Ui;
 
 /**
@@ -21,12 +22,13 @@ import app.aomarchy.ui.Ui;
  * desktop. The desktop itself is still {@link MainActivity}: this class only decides when to show it.
  */
 public class ShellActivity extends Activity {
-    private static final String[] TITLES = {"概览", "系统", "应用", "控制", "设置"};
+    /** Rail tab labels, by i18n key (see {@link T}): resolved per language when the rail is built. */
+    private static final String[] TITLES = {
+            "tab.overview", "tab.system", "tab.apps", "tab.controls", "tab.settings"};
     /** MainActivity asks for this when it was opened without an installed system: the console installs it now. */
     static final String EXTRA_NEED_SYSTEM = "app.aomarchy.NEED_SYSTEM";
     /** Which page to land on (0-based, see TITLES): the desktop's settings links use 4. */
     static final String EXTRA_TAB = "app.aomarchy.TAB";
-    private static final String NEED_SYSTEM_HINT = "系统还没安装，先在「系统」页安装 Linux";
 
     /** Intent that opens the console on one page, from the desktop's settings entries. */
     static Intent intent(Context c, int tab) {
@@ -61,6 +63,7 @@ public class ShellActivity extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        T.init(this); // the saved ui_lang, before any view asks for a string
         build();
         int startTab = getIntent() != null ? getIntent().getIntExtra(EXTRA_TAB, -1) : -1;
         if (SessionService.rootfsReady(this)) {
@@ -87,7 +90,7 @@ public class ShellActivity extends Activity {
     /** Shows the 系统 page and says why: there is no Linux system to open yet, and that page installs it. */
     private void promptInstall() {
         showTab(1);
-        toast(NEED_SYSTEM_HINT);
+        toast(T.t("shell.need_system"));
     }
 
     @Override
@@ -133,7 +136,7 @@ public class ShellActivity extends Activity {
             RailIcon icon = new RailIcon(this, i);
             LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(Ui.dp(this, 24), Ui.dp(this, 24));
             tab.addView(icon, ilp);
-            TextView label = Ui.text(this, TITLES[i], 11, Ui.DIM, false);
+            TextView label = Ui.text(this, T.t(TITLES[i]), 11, Ui.DIM, false);
             label.setGravity(Gravity.CENTER);
             label.setPadding(0, Ui.dp(this, 4), 0, 0);
             tab.addView(label);
@@ -173,15 +176,15 @@ public class ShellActivity extends Activity {
         top.addView(name);
         View spacer = new View(this);
         top.addView(spacer, new LinearLayout.LayoutParams(0, 1, 1f));
-        status = Ui.chip(this, "○ 未安装", Ui.DIM);
+        status = Ui.chip(this, "○ " + T.t("status.not_installed"), Ui.DIM);
         top.addView(status);
         top.addView(Ui.space(this, 10));
-        entryButton = Ui.button(this, "进入桌面", true, v -> openDesktop());
+        entryButton = Ui.button(this, T.t("btn.enter_desktop"), true, v -> openDesktop());
         top.addView(entryButton);
         content.addView(top);
 
         // While there is no system, a warning line above the page points at the install card (tapping opens it).
-        installHint = Ui.text(this, NEED_SYSTEM_HINT, 12, Ui.WARN, false);
+        installHint = Ui.text(this, T.t("shell.need_system"), 12, Ui.WARN, false);
         installHint.setPadding(Ui.dp(this, 24), 0, Ui.dp(this, 24), Ui.dp(this, 8));
         installHint.setOnClickListener(v -> showTab(1));
         installHint.setVisibility(View.GONE);
@@ -201,6 +204,21 @@ public class ShellActivity extends Activity {
         super.onConfigurationChanged(newConfig);
         // The console is laid out for the current orientation (four stat cards in one row in landscape), so rebuild.
         int tab = Math.max(0, current);
+        java.util.Arrays.fill(pages, null);
+        build();
+        show(tab);
+    }
+
+    /**
+     * Rebuilds the whole console after the Settings page changed {@code ui_lang}: every page is recreated, so the new
+     * language applies immediately and the rail/pages stay on the tab the user was on (no activity restart).
+     */
+    void relanguage() {
+        T.init(this);
+        int tab = Math.max(0, current);
+        for (Page page : pages)
+            if (page != null)
+                page.onHidden(); // stop the pollers of the pages that are about to be discarded
         java.util.Arrays.fill(pages, null);
         build();
         show(tab);
@@ -298,12 +316,12 @@ public class ShellActivity extends Activity {
         if (entryButton == null)
             return;
         if (!SessionService.rootfsReady(this)) {
-            entryButton.setText("安装系统");
+            entryButton.setText(T.t("btn.install_system"));
             return;
         }
         boolean terminal = "terminal".equals(getSharedPreferences(Prefs.NAME, MODE_PRIVATE)
                 .getString("session_mode", "desktop"));
-        entryButton.setText(terminal ? "进入终端" : "进入桌面");
+        entryButton.setText(T.t(terminal ? "btn.enter_terminal" : "btn.enter_desktop"));
     }
 
     /** Jump to a page by rail index (0 概览 … 4 设置). */
@@ -319,7 +337,8 @@ public class ShellActivity extends Activity {
     private void updateStatus() {
         boolean ready = SessionService.rootfsReady(this);
         boolean running = SessionService.started;
-        String text = !ready ? "○ 未安装" : running ? "● 运行中" : "● 就绪";
+        String text = !ready ? "○ " + T.t("status.not_installed")
+                : running ? "● " + T.t("status.running") : "● " + T.t("status.ready");
         status.setText(text);
         status.setTextColor(!ready ? Ui.FAINT : running ? Ui.MINT : Ui.ACCENT);
         if (installHint != null)

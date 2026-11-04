@@ -11,6 +11,7 @@ import android.widget.TextView;
 
 import java.util.Locale;
 
+import app.aomarchy.i18n.T;
 import app.aomarchy.ui.Ui;
 
 /**
@@ -34,14 +35,20 @@ public final class DisplaySettingsView {
     private static final String[] ORIENTATION_VALUES = {
             "auto", "portrait", "landscape", "reverse portrait", "reverse landscape"
     };
-    private static final String[] ORIENTATION_LABELS = {
-            "自动旋转", "竖屏", "横屏", "反向竖屏", "反向横屏"
-    };
+    /** Resolved per build: the language is decided by the activity, never by a class-load-time static. */
+    private static String[] orientationLabels() {
+        return new String[] {
+                T.t("orient.auto"), T.t("orient.portrait"), T.t("orient.landscape"),
+                T.t("orient.reverse_portrait"), T.t("orient.reverse_landscape")
+        };
+    }
 
     // Parallel to DisplayCutoutMode.VALUES: hide_all / rounded_corners_only / cutout_only / none.
-    private static final String[] CUTOUT_LABELS = {
-            "画到所有刘海与圆角下", "只画到圆角下", "只画到刘海下", "全部避开"
-    };
+    private static String[] cutoutLabels() {
+        return new String[] {
+                T.t("cutout.all"), T.t("cutout.rounded"), T.t("cutout.cutout"), T.t("cutout.none")
+        };
+    }
 
     private DisplaySettingsView() {
     }
@@ -52,10 +59,10 @@ public final class DisplaySettingsView {
         LinearLayout body = Ui.column(host);
 
         // ===== 屏幕方向 =====
-        LinearLayout orientation = Ui.card(host, "屏幕方向");
-        orientation.addView(choiceRow(host, "窗口方向",
-                "对桌面窗口生效，返回桌面时应用",
-                ORIENTATION_LABELS,
+        LinearLayout orientation = Ui.card(host, T.t("card.orientation"));
+        orientation.addView(choiceRow(host, T.t("label.window_orientation"),
+                T.t("display.window_orientation_caption"),
+                orientationLabels(),
                 indexOf(ORIENTATION_VALUES,
                         prefs.getString(KEY_SCREEN_ORIENTATION, ORIENTATION_VALUES[0])),
                 which -> prefs.edit()
@@ -63,44 +70,43 @@ public final class DisplaySettingsView {
         body.addView(orientation);
 
         // ===== 刘海与圆角 =====
-        LinearLayout cutout = Ui.card(host, "刘海与圆角");
-        cutout.addView(choiceRow(host, "显示区域",
-                "决定窗口能否画到刘海和圆角下面，返回桌面时应用",
-                CUTOUT_LABELS,
+        LinearLayout cutout = Ui.card(host, T.t("card.cutout"));
+        cutout.addView(choiceRow(host, T.t("label.display_area"),
+                T.t("display.display_area_caption"),
+                cutoutLabels(),
                 indexOf(DisplayCutoutMode.VALUES, DisplayCutoutMode.get(prefs)),
                 which -> prefs.edit()
                         .putString(DisplayCutoutMode.KEY, DisplayCutoutMode.VALUES[which]).apply()));
         body.addView(cutout);
 
         // ===== 画中画 =====
-        LinearLayout pip = Ui.card(host, "画中画");
-        pip.addView(Ui.toggleRow(host, "PIP 小窗",
-                "按 Home / 最近任务时缩成小窗；可能让桌面拿到奇怪的尺寸，谨慎开启",
+        LinearLayout pip = Ui.card(host, T.t("card.pip"));
+        pip.addView(toggleRow(host, T.t("display.pip_toggle"),
+                T.t("display.pip_caption"),
                 prefs.getBoolean(KEY_PIP_MODE, false),
                 value -> prefs.edit().putBoolean(KEY_PIP_MODE, value).apply()));
         body.addView(pip);
 
         // ===== 显示参数：只读现状 + 跳转，不重复实现 =====
-        LinearLayout live = Ui.card(host, "显示参数");
+        LinearLayout live = Ui.card(host, T.t("card.display_params"));
         android.util.DisplayMetrics dm = host.getResources().getDisplayMetrics();
-        live.addView(Ui.kv2(host, "分辨率",
+        live.addView(Ui.kv2(host, T.t("label.resolution"),
                 Ui.mono(host, dm.widthPixels + " × " + dm.heightPixels, 14, Ui.TEXT),
-                "面板当前像素"));
-        live.addView(Ui.kv2(host, "密度",
+                T.t("display.resolution_caption")));
+        live.addView(Ui.kv2(host, T.t("label.density"),
                 Ui.mono(host, dm.densityDpi + " dpi", 14, Ui.TEXT),
-                "逻辑密度，界面缩放按它算"));
-        live.addView(Ui.kv2(host, "刷新率",
+                T.t("display.density_caption")));
+        live.addView(Ui.kv2(host, T.t("label.refresh_rate"),
                 Ui.mono(host, refreshRate(host), 14, Ui.TEXT),
-                "面板当前刷新率"));
+                T.t("display.refresh_rate_caption")));
         live.addView(Ui.gap(host, 6));
-        live.addView(Ui.actionRow(host, "显示参数调节",
-                "分辨率、密度、刷新率的调节入口在「控制」页，本页不重复实现", "控制页",
+        live.addView(Ui.actionRow(host, T.t("display.adjust"),
+                T.t("display.adjust_caption"), T.t("display.adjust_value"),
                 () -> host.startActivity(new Intent(host, ControlsActivity.class))));
         body.addView(live);
 
-        LinearLayout note = Ui.card(host, "说明");
-        note.addView(Ui.text(host, "分辨率、密度、刷新率属于实时显示参数，入口在「控制」页；方向、刘海与 PIP 是窗口级设置，桌面会话启动或返回时读取。",
-                11, Ui.FAINT, false));
+        LinearLayout note = Ui.card(host, T.t("card.notes"));
+        note.addView(Ui.text(host, T.t("display.notes_text"), 11, Ui.FAINT, false));
         body.addView(note);
 
         return body;
@@ -156,7 +162,7 @@ public final class DisplaySettingsView {
                     onPick.onPick(which);
                     dialog.dismiss();
                 })
-                .setNegativeButton("取消", null)
+                .setNegativeButton(T.t("btn.cancel"), null)
                 .show());
         row.setClickable(true);
         return row;
@@ -167,5 +173,38 @@ public final class DisplaySettingsView {
             if (values[i].equals(target))
                 return i;
         return 0;
+    }
+
+    /**
+     * The {@code Ui.toggleRow} shape with a localized On/Off pill: {@code Ui.toggleRow} hardcodes the Chinese
+     * 开启/关闭 labels and Ui.java is outside this task's write scope.
+     */
+    private static LinearLayout toggleRow(Activity host, String label, String caption, boolean value,
+            Ui.OnToggle onChange) {
+        LinearLayout r = Ui.row(host);
+        r.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        r.setPadding(0, Ui.dp(host, 7), 0, Ui.dp(host, 7));
+
+        LinearLayout texts = Ui.column(host);
+        texts.addView(Ui.text(host, label, 14, Ui.TEXT, false));
+        if (caption != null && !caption.isEmpty())
+            texts.addView(Ui.text(host, caption, 11, Ui.FAINT, false));
+        r.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        final boolean[] on = {value};
+        TextView pill = Ui.text(host, on[0] ? T.t("state.on") : T.t("state.off"), 13,
+                on[0] ? Ui.ACCENT : Ui.DIM, true);
+        pill.setPadding(Ui.dp(host, 10), Ui.dp(host, 5), Ui.dp(host, 10), Ui.dp(host, 5));
+        pill.setBackground(Ui.surface(host, 30));
+        r.addView(pill);
+        r.setOnClickListener(v -> {
+            on[0] = !on[0];
+            pill.setText(on[0] ? T.t("state.on") : T.t("state.off"));
+            pill.setTextColor(on[0] ? Ui.ACCENT : Ui.DIM);
+            onChange.onToggle(on[0]);
+        });
+        r.setClickable(true);
+        return r;
     }
 }

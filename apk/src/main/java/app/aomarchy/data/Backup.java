@@ -20,6 +20,7 @@ import java.util.zip.GZIPOutputStream;
 import app.aomarchy.SessionService;
 import app.aomarchy.TarExtractor;
 import app.aomarchy.TarWriter;
+import app.aomarchy.i18n.T;
 
 /**
  * System backups: the whole rootfs as one tar.gz in the app's external files dir, restorable in place, exportable
@@ -87,7 +88,7 @@ public final class Backup {
 
     public static void create(Context ctx, Callback cb) {
         if (running) {
-            cb.failed("已有任务在进行");
+            cb.failed(T.t("toast.busy"));
             return;
         }
         running = true;
@@ -97,15 +98,15 @@ public final class Backup {
             try {
                 File rootfs = SessionService.rootfs(ctx);
                 if (!SessionService.rootfsReady(ctx))
-                    throw new IOException("系统还没安装");
+                    throw new IOException(T.t("backup.no_system"));
                 long total = TarWriter.totalBytes(rootfs);
                 if (total <= 0)
-                    throw new IOException("系统目录是空的");
+                    throw new IOException(T.t("backup.empty_system"));
                 long available = available(dir(ctx));
                 if (available < total / 2)
-                    throw new IOException("空间不足：备份约需要 " + Installer.humanSize(total / 2)
-                            + "，当前可用 " + Installer.humanSize(available));
-                cb.progress(0, "准备备份…");
+                    throw new IOException(T.t("backup.not_enough_space",
+                            Installer.humanSize(total / 2), Installer.humanSize(available)));
+                cb.progress(0, T.t("system.preparing_backup"));
                 long[] shown = {-1};
                 try (FileOutputStream fos = new FileOutputStream(tmp);
                         BufferedOutputStream bos = new BufferedOutputStream(fos, 1 << 20);
@@ -117,31 +118,31 @@ public final class Backup {
                         int bucket = permille / 25; // report at most 40 times a second-ish
                         if (bucket != shown[0]) {
                             shown[0] = bucket;
-                            cb.progress(permille, "备份 " + (permille / 10) + "% · "
-                                    + Installer.humanSize(done) + " / " + Installer.humanSize(tot));
+                            cb.progress(permille, T.t("backup.progress", permille / 10,
+                                    Installer.humanSize(done), Installer.humanSize(tot)));
                         }
                         return true;
                     });
                 }
                 if (cancelled) {
                     tmp.delete();
-                    cb.failed("已取消");
+                    cb.failed(T.t("backup.cancelled"));
                     return;
                 }
                 File out = new File(dir(ctx), name(System.currentTimeMillis()));
                 if (!tmp.renameTo(out)) {
                     tmp.delete();
-                    throw new IOException("无法保存备份文件");
+                    throw new IOException(T.t("backup.cannot_save"));
                 }
-                cb.progress(1000, "备份完成");
-                cb.done("已创建 " + out.getName() + "（" + Installer.humanSize(out.length()) + "）");
+                cb.progress(1000, T.t("backup.done"));
+                cb.done(T.t("backup.created", out.getName(), Installer.humanSize(out.length())));
             } catch (TarWriter.Cancelled e) {
                 tmp.delete();
-                cb.failed("已取消");
+                cb.failed(T.t("backup.cancelled"));
             } catch (IOException e) {
                 android.util.Log.e("AOmarchyBackup", "backup failed", e);
                 tmp.delete();
-                cb.failed(e.getMessage() == null ? "备份失败" : e.getMessage());
+                cb.failed(e.getMessage() == null ? T.t("backup.failed") : e.getMessage());
             } catch (Exception e) {
                 tmp.delete();
                 cb.failed(String.valueOf(e));
@@ -154,7 +155,7 @@ public final class Backup {
 
     public static void restore(Context ctx, File archive, Callback cb) {
         if (running) {
-            cb.failed("已有任务在进行");
+            cb.failed(T.t("toast.busy"));
             return;
         }
         running = true;
@@ -164,14 +165,14 @@ public final class Backup {
             File partial = new File(rootfs.getPath() + ".restore");
             try {
                 if (!archive.isFile())
-                    throw new IOException("备份文件不见了");
+                    throw new IOException(T.t("backup.missing_archive"));
                 long estimated = Math.max(archive.length() * 3, 1L << 30);
                 long available = available(rootfs.getParentFile());
                 if (available < estimated)
-                    throw new IOException("空间不足：恢复约需要 " + Installer.humanSize(estimated)
-                            + "，当前可用 " + Installer.humanSize(available));
+                    throw new IOException(T.t("backup.restore_not_enough_space",
+                            Installer.humanSize(estimated), Installer.humanSize(available)));
                 Installer.deleteTree(partial);
-                cb.progress(0, "解包备份…");
+                cb.progress(0, T.t("system.unpacking_backup"));
                 try (InputStream in = new GZIPInputStream(new FileInputStream(archive), 1 << 20)) {
                     TarExtractor.extract(in, partial, name -> {
                         // the extractor has no byte progress; the bar stays at 0 until the swap
@@ -179,31 +180,31 @@ public final class Backup {
                 }
                 if (cancelled) {
                     Installer.deleteTree(partial);
-                    cb.failed("已取消");
+                    cb.failed(T.t("backup.cancelled"));
                     return;
                 }
                 if (!new File(partial, "opt/lotfix/arch-glibc/ld-linux-aarch64.so.1").exists()) {
                     Installer.deleteTree(partial);
-                    throw new IOException("这个备份不是 AOmarchy 的系统镜像");
+                    throw new IOException(T.t("backup.not_aomarchy_image"));
                 }
-                cb.progress(500, "替换系统…");
+                cb.progress(500, T.t("backup.swapping"));
                 File old = new File(rootfs.getPath() + ".old");
                 Installer.deleteTree(old);
                 boolean movedOld = rootfs.renameTo(old);
                 if (!movedOld && !Installer.deleteTree(rootfs))
-                    throw new IOException("删不掉当前的系统（rootfs）");
+                    throw new IOException(T.t("backup.cannot_delete_current"));
                 if (!partial.renameTo(rootfs)) {
                     if (movedOld)
                         old.renameTo(rootfs);
-                    throw new IOException("无法把恢复的系统移动到目标位置");
+                    throw new IOException(T.t("backup.cannot_move"));
                 }
-                cb.progress(1000, "已恢复");
-                cb.done("系统已恢复到 " + stamp(archive) + " 的状态。进入桌面即用这份系统。");
+                cb.progress(1000, T.t("backup.restored"));
+                cb.done(T.t("backup.restored_message", stamp(archive)));
                 Installer.deleteTree(old); // best effort, the restore already succeeded
             } catch (IOException e) {
                 android.util.Log.e("AOmarchyBackup", "restore failed", e);
                 Installer.deleteTree(partial);
-                cb.failed(e.getMessage() == null ? "恢复失败" : e.getMessage());
+                cb.failed(e.getMessage() == null ? T.t("backup.restore_failed") : e.getMessage());
             } catch (Exception e) {
                 android.util.Log.e("AOmarchyBackup", "restore failed", e);
                 Installer.deleteTree(partial);

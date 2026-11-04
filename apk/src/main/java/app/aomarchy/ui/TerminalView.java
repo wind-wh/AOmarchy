@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
+import app.aomarchy.i18n.T;
+
 /**
  * A small terminal emulator for terminal mode: the pty's bytes go through a VT100/ANSI parser into a character grid,
  * drawn character by character. It covers what a shell and full-screen programs (vim, top, less) need: cursor motion,
@@ -107,6 +109,7 @@ public class TerminalView extends View {
 
     public TerminalView(Context c) {
         super(c);
+        T.lang(c); // the terminal's own notices follow the console's ui_lang (the activity may not have called init)
         setFocusable(true);
         setFocusableInTouchMode(true);
         setBackgroundColor(DEFAULT_BG);
@@ -144,14 +147,14 @@ public class TerminalView extends View {
         applyTextMetrics(cellPixels(fontSp));
         applyDimensions(getWidth(), getHeight());
         if (getHeight() > 0 && pid > 0)
-            writeLocal("\r\n[字号 " + (int) Math.round(valueSp) + "sp]\r\n");
+            writeLocal("\r\n" + T.t("term.font_size", (int) Math.round(valueSp)) + "\r\n");
     }
 
     /** Starts the pty: argv is the rootfs launcher, env the session environment. */
     public void start(String[] argv, String[] env, String cwd) {
         long packed = app.aomarchy.Native.nativePtyStart(argv, env, cwd, cols, rows);
         if (packed < 0) {
-            writeLocal("\r\n[无法启动终端]\r\n");
+            writeLocal("\r\n" + T.t("term.start_failed") + "\r\n");
             return;
         }
         pid = (int) (packed >> 32);
@@ -161,7 +164,7 @@ public class TerminalView extends View {
             in = new FileInputStream(master.getFileDescriptor());
             out = new FileOutputStream(master.getFileDescriptor());
         } catch (RuntimeException e) {
-            writeLocal("\r\n[无法连接 pty: " + e.getMessage() + "]\r\n");
+            writeLocal("\r\n" + T.t("term.pty_failed", e.getMessage()) + "\r\n");
             return;
         }
         running = true;
@@ -181,7 +184,7 @@ public class TerminalView extends View {
             // fd closed
         } finally {
             running = false;
-            post(() -> writeLocal("\r\n[会话已结束]\r\n"));
+            post(() -> writeLocal("\r\n" + T.t("term.session_ended") + "\r\n"));
         }
     }
 

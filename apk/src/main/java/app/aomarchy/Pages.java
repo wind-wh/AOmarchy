@@ -15,6 +15,7 @@ import java.io.File;
 import app.aomarchy.data.Apps;
 import app.aomarchy.data.Installer;
 import app.aomarchy.data.Metrics;
+import app.aomarchy.i18n.T;
 import app.aomarchy.ui.Sparkline;
 import app.aomarchy.ui.Ui;
 
@@ -100,22 +101,21 @@ class OverviewPage extends Page {
     void build(LinearLayout body) {
         LinearLayout hero = Ui.card(shell, null);
         LinearLayout head = Ui.row(shell);
-        state = Ui.text(shell, "会话", 18, Ui.TEXT, true);
+        state = Ui.text(shell, T.t("overview.session"), 18, Ui.TEXT, true);
         head.addView(state);
         head.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
-        heroChip = Ui.chip(shell, "● 就绪", Ui.MINT);
+        heroChip = Ui.chip(shell, "● " + T.t("status.ready"), Ui.MINT);
         head.addView(heroChip);
         hero.addView(head);
         hero.addView(Ui.gap(shell, 6));
-        uptime = Ui.text(shell, "Arch Linux · Hyprland · 整个系统跑在 Android 上，不需要 root 和 proot。",
-                13, Ui.DIM, false);
+        uptime = Ui.text(shell, T.t("overview.tagline"), 13, Ui.DIM, false);
         hero.addView(uptime);
         hero.addView(Ui.gap(shell, 10));
         LinearLayout actions = Ui.row(shell);
-        heroEntry = Ui.button(shell, "进入桌面", true, v -> shell.openDesktop());
+        heroEntry = Ui.button(shell, T.t("btn.enter_desktop"), true, v -> shell.openDesktop());
         actions.addView(heroEntry);
         actions.addView(Ui.space(shell, 10));
-        actions.addView(Ui.button(shell, "安装 / 重装系统", false, v -> shell.showTab(1)));
+        actions.addView(Ui.button(shell, T.t("btn.install_reinstall"), false, v -> shell.showTab(1)));
         actions.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
         actions.addView(Ui.text(shell, "Wayland · Hyprland · Arch Linux ARM", 11, Ui.FAINT, false));
         hero.addView(actions);
@@ -133,19 +133,19 @@ class OverviewPage extends Page {
         slp.topMargin = Ui.dp(shell, 3);
         cpuCard.addView(sparkline, slp);
 
-        LinearLayout memCard = card("内存");
+        LinearLayout memCard = card(T.t("card.memory"));
         memValue = big("—");
         memCard.addView(memValue);
         memSub = Ui.text(shell, "", 12, Ui.DIM, false);
         memCard.addView(memSub);
 
-        LinearLayout diskCard = card("磁盘 · 系统");
+        LinearLayout diskCard = card(T.t("card.disk_system"));
         diskValue = big("—");
         diskCard.addView(diskValue);
         diskSub = Ui.text(shell, "", 12, Ui.DIM, false);
         diskCard.addView(diskSub);
 
-        LinearLayout batCard = card("电量");
+        LinearLayout batCard = card(T.t("card.battery"));
         batteryValue = big("—");
         batCard.addView(batteryValue);
         batterySub = Ui.text(shell, "", 12, Ui.DIM, false);
@@ -176,17 +176,16 @@ class OverviewPage extends Page {
         }
 
         // One wide card for the things that are two short lines each: less blank space than two half-empty cards.
-        LinearLayout netGpu = card("网络与图形");
+        LinearLayout netGpu = card(T.t("card.net_gpu"));
         networkValue = value("—", Ui.TEXT);
-        netGpu.addView(Ui.kv2(shell, "网络", networkValue, "Android 网络栈提供"));
+        netGpu.addView(Ui.kv2(shell, T.t("label.network"), networkValue, T.t("overview.net_caption")));
         gpuValue = value("—", Ui.TEXT);
         netGpu.addView(Ui.kv2(shell, "GPU", gpuValue, "Mesa KGSL · Adreno"));
-        netGpu.addView(Ui.text(shell, "两者都由 Android 侧透传，Linux 里看到的与系统一致。", 11, Ui.FAINT, false));
+        netGpu.addView(Ui.text(shell, T.t("overview.net_gpu_note"), 11, Ui.FAINT, false));
         body.addView(netGpu);
 
-        LinearLayout tips = Ui.card(shell, "提示");
-        tips.addView(Ui.text(shell, "桌面里点左上角「A」回控制台；会话通知里也有「控制」「控制台」。第一次使用：先去「系统」装系统，再到「设置」填身份与键盘。",
-                12, Ui.DIM, false));
+        LinearLayout tips = Ui.card(shell, T.t("card.tips"));
+        tips.addView(Ui.text(shell, T.t("overview.tips"), 12, Ui.DIM, false));
         body.addView(tips);
     }
     private LinearLayout card(String title) {
@@ -219,16 +218,20 @@ class OverviewPage extends Page {
         boolean ready = SessionService.rootfsReady(shell);
         boolean terminal = "terminal".equals(shell.getSharedPreferences(Prefs.NAME,
                 android.content.Context.MODE_PRIVATE).getString("session_mode", "desktop"));
-        state.setText(!ready ? "尚未安装系统" : terminal ? "终端模式" : (SessionService.started ? "会话运行中" : "会话已就绪"));
+        state.setText(!ready ? T.t("status.not_installed")
+                : terminal ? T.t("status.terminal_mode") : (SessionService.started ? T.t("status.running") : T.t("status.ready")));
         state.setTextColor(ready ? Ui.TEXT : Ui.DIM);
-        heroChip.setText(!ready ? "○ 未安装" : terminal ? "● 终端模式" : (SessionService.started ? "● 运行中" : "● 就绪"));
+        heroChip.setText(!ready ? "○ " + T.t("status.not_installed")
+                : terminal ? "● " + T.t("status.terminal_mode")
+                : (SessionService.started ? "● " + T.t("status.running") : "● " + T.t("status.ready")));
         heroChip.setTextColor(ready ? Ui.MINT : Ui.FAINT);
         if (heroEntry != null)
-            heroEntry.setText(terminal ? "进入终端" : "进入桌面");
-        uptime.setText(!ready ? "Arch Linux · Hyprland · 整个系统跑在 Android 上，不需要 root 和 proot。"
-                : terminal ? "终端模式：只跑一个 shell，不启动 Hyprland，实测比完整桌面省约 700 MB。"
-                : SessionService.started ? "已运行 " + duration(System.currentTimeMillis() - SessionService.startedAt)
-                : "Arch Linux · Hyprland · 整个系统跑在 Android 上，不需要 root 和 proot。");
+            heroEntry.setText(T.t(terminal ? "btn.enter_terminal" : "btn.enter_desktop"));
+        uptime.setText(!ready ? T.t("overview.tagline")
+                : terminal ? T.t("overview.tagline_terminal")
+                : SessionService.started
+                        ? T.t("overview.running_for", duration(System.currentTimeMillis() - SessionService.startedAt))
+                        : T.t("overview.tagline"));
         poll();
     }
 
@@ -238,20 +241,21 @@ class OverviewPage extends Page {
         metrics.read(shell);
         roll(cpuValue, metrics.cpuPercent, lastCpu, "%");
         lastCpu = metrics.cpuPercent;
-        cpuSub.setText("device".equals(metrics.cpuScope) ? "设备整体占用" : metrics.processCount + " 个进程 · 会话整体");
+        cpuSub.setText("device".equals(metrics.cpuScope) ? T.t("overview.cpu_device_scope")
+                : T.t("overview.cpu_process_scope", metrics.processCount));
         sparkline.push(metrics.cpuPercent);
         roll(memValue, metrics.memPercent(), lastMem, "%");
         lastMem = metrics.memPercent();
         long avail = metrics.memTotal > 0 ? metrics.memTotal - metrics.memUsed : -1;
-        memSub.setText(Metrics.gb(metrics.memUsed) + " 已用 · 可用 " + Metrics.gb(avail));
+        memSub.setText(T.t("overview.mem_used_avail", Metrics.gb(metrics.memUsed), Metrics.gb(avail)));
         roll(diskValue, metrics.diskPercent(), lastDisk, "%");
         lastDisk = metrics.diskPercent();
         long diskFree = metrics.diskTotal > 0 ? metrics.diskTotal - metrics.diskUsed : -1;
-        diskSub.setText(Metrics.gb(metrics.diskUsed) + " 已用 · 剩余 " + Metrics.gb(diskFree));
+        diskSub.setText(T.t("overview.disk_used_free", Metrics.gb(metrics.diskUsed), Metrics.gb(diskFree)));
         roll(batteryValue, metrics.batteryPercent, lastBat, "%");
         lastBat = metrics.batteryPercent;
-        batterySub.setText(metrics.charging ? "充电中" : "使用电池");
-        networkValue.setText(metrics.network);
+        batterySub.setText(metrics.charging ? T.t("overview.charging") : T.t("overview.on_battery"));
+        networkValue.setText(T.networkLabel(metrics.network));
         gpuValue.setText(Metrics.gpu());
     }
 
@@ -273,8 +277,8 @@ class OverviewPage extends Page {
         long s = ms / 1000;
         long h = s / 3600, m = (s % 3600) / 60;
         if (h > 0)
-            return h + " 小时 " + m + " 分";
-        return m + " 分 " + (s % 60) + " 秒";
+            return T.t("time.hours_minutes", h, m);
+        return T.t("time.minutes_seconds", m, s % 60);
     }
 }
 
@@ -311,21 +315,20 @@ class SystemPage extends Page {
 
     @Override
     void build(LinearLayout body) {
-        LinearLayout sys = Ui.card(shell, "当前系统");
+        LinearLayout sys = Ui.card(shell, T.t("card.current_system"));
         stateValue = value("—", Ui.DIM);
-        sys.addView(Ui.kv(shell, "状态", stateValue));
+        sys.addView(Ui.kv(shell, T.t("label.status"), stateValue));
         size = value("—", Ui.TEXT);
-        sys.addView(Ui.kv(shell, "占用", size));
-        sys.addView(Ui.kv(shell, "路径", value("files/rootfs", Ui.DIM)));
+        sys.addView(Ui.kv(shell, T.t("label.usage"), size));
+        sys.addView(Ui.kv(shell, T.t("label.path"), value("files/rootfs", Ui.DIM)));
         body.addView(sys);
 
-        LinearLayout install = Ui.card(shell, "安装系统");
-        install.addView(Ui.text(shell, "首次安装或重装 Linux 系统。安装包来自 GitHub Release 的在线下载，或设备上的 lotfix-rootfs.tar.gz。",
-                13, Ui.DIM, false));
+        LinearLayout install = Ui.card(shell, T.t("card.install_system"));
+        install.addView(Ui.text(shell, T.t("system.install_desc"), 13, Ui.DIM, false));
         install.addView(Ui.gap(shell, 12));
 
-        tileOnline = sourceTile("在线下载", "GitHub Release · 约 1.9 GB");
-        tileLocal = sourceTile("本地归档", "设备上的 lotfix-rootfs.tar.gz");
+        tileOnline = sourceTile(T.t("source.online") + "\n" + T.t("source.online_sub"), false);
+        tileLocal = sourceTile(T.t("source.local") + "\n" + T.t("source.local_sub"), true);
         LinearLayout srcRow = Ui.row(shell);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         lp.rightMargin = Ui.dp(shell, 10);
@@ -340,10 +343,10 @@ class SystemPage extends Page {
 
         LinearLayout buttons = Ui.row(shell);
         buttons.setPadding(0, Ui.dp(shell, 12), 0, 0);
-        buttons.addView(Ui.button(shell, "选择本地文件", false, v -> pickArchive()));
+        buttons.addView(Ui.button(shell, T.t("btn.pick_local"), false, v -> pickArchive()));
         buttons.addView(Ui.space(shell, 10));
         startBox = Ui.row(shell);
-        startBox.addView(Ui.button(shell, "开始安装", true, v -> confirmInstall()));
+        startBox.addView(Ui.button(shell, T.t("btn.begin_install"), true, v -> confirmInstall()));
         buttons.addView(startBox);
         install.addView(buttons);
 
@@ -358,18 +361,17 @@ class SystemPage extends Page {
         plp.topMargin = Ui.dp(shell, 8);
         progressBox.addView(progress, plp);
         progressBox.addView(Ui.gap(shell, 8));
-        progressBox.addView(Ui.button(shell, "取消", false, v -> Installer.cancel()));
+        progressBox.addView(Ui.button(shell, T.t("btn.cancel"), false, v -> Installer.cancel()));
         install.addView(progressBox);
         body.addView(install);
 
-        LinearLayout backup = Ui.card(shell, "备份与回滚");
-        backup.addView(Ui.text(shell, "把整个系统打包成一个 tar.gz（约 1.6 GB），恢复时整树换入。备份存在本机 Android/data/app.aomarchy/files/backups，也可以导出到别处。",
-                12, Ui.DIM, false));
+        LinearLayout backup = Ui.card(shell, T.t("card.backup"));
+        backup.addView(Ui.text(shell, T.t("system.backup_desc"), 12, Ui.DIM, false));
         backup.addView(Ui.gap(shell, 8));
         LinearLayout backupButtons = Ui.row(shell);
-        backupButtons.addView(Ui.button(shell, "创建备份", true, v -> startBackup()));
+        backupButtons.addView(Ui.button(shell, T.t("btn.create_backup"), true, v -> startBackup()));
         backupButtons.addView(Ui.space(shell, 8));
-        TextView importBtn = Ui.text(shell, "导入备份…", 13, Ui.ACCENT, false);
+        TextView importBtn = Ui.text(shell, T.t("btn.import_backup"), 13, Ui.ACCENT, false);
         importBtn.setPadding(Ui.dp(shell, 4), Ui.dp(shell, 10), Ui.dp(shell, 4), Ui.dp(shell, 10));
         importBtn.setOnClickListener(v -> importBackup());
         backupButtons.addView(importBtn);
@@ -386,7 +388,7 @@ class SystemPage extends Page {
         blp.topMargin = Ui.dp(shell, 6);
         backupProgressBox.addView(backupBar, blp);
         backupProgressBox.addView(Ui.gap(shell, 6));
-        backupProgressBox.addView(Ui.text(shell, "取消", 13, Ui.ACCENT, false), new LinearLayout.LayoutParams(
+        backupProgressBox.addView(Ui.text(shell, T.t("btn.cancel"), 13, Ui.ACCENT, false), new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         backupProgressBox.getChildAt(backupProgressBox.getChildCount() - 1).setOnClickListener(v -> {
             app.aomarchy.data.Backup.cancel();
@@ -398,12 +400,12 @@ class SystemPage extends Page {
         backup.addView(backupList);
         body.addView(backup);
         paintBackups();
-        LinearLayout logs = Ui.card(shell, "日志");
-        logs.addView(Ui.text(shell, "会话日志在 files/run/ 下，点开看最后几行。", 13, Ui.DIM, false));
+        LinearLayout logs = Ui.card(shell, T.t("card.logs"));
+        logs.addView(Ui.text(shell, T.t("system.logs_desc"), 13, Ui.DIM, false));
         logs.addView(Ui.gap(shell, 6));
         File[] files = SessionService.runDir(shell).listFiles((d, n) -> n.endsWith(".log"));
         if (files == null || files.length == 0) {
-            logs.addView(Ui.text(shell, "还没有日志（系统未启动过）", 13, Ui.FAINT, false));
+            logs.addView(Ui.text(shell, T.t("system.no_logs"), 13, Ui.FAINT, false));
         } else {
             java.util.Arrays.sort(files, (x, y) -> Long.compare(y.lastModified(), x.lastModified()));
             for (int i = 0; i < Math.min(6, files.length); i++) {
@@ -423,7 +425,7 @@ class SystemPage extends Page {
         backupList.removeAllViews();
         java.util.List<File> backups = app.aomarchy.data.Backup.list(shell);
         if (backups.isEmpty()) {
-            backupList.addView(Ui.text(shell, "还没有备份", 12, Ui.FAINT, false));
+            backupList.addView(Ui.text(shell, T.t("system.no_backups"), 12, Ui.FAINT, false));
             return;
         }
         backupList.addView(Ui.gap(shell, 4));
@@ -440,7 +442,7 @@ class SystemPage extends Page {
     }
 
     private void showBackup(File backup) {
-        String[] actions = {"恢复到这个备份", "导出到…", "删除"};
+        String[] actions = {T.t("backup.restore"), T.t("backup.export"), T.t("btn.delete")};
         new android.app.AlertDialog.Builder(shell)
                 .setTitle(app.aomarchy.data.Backup.stamp(backup) + " · " + smallSize(backup.length()))
                 .setItems(actions, (d, which) -> {
@@ -451,20 +453,20 @@ class SystemPage extends Page {
                     else
                         confirmDelete(backup);
                 })
-                .setNegativeButton("关闭", null)
+                .setNegativeButton(T.t("btn.close"), null)
                 .show();
     }
 
     private void startBackup() {
         if (app.aomarchy.data.Backup.running() || installing) {
-            toast("已有任务在进行");
+            toast(T.t("toast.busy"));
             return;
         }
         backupProgressBox.setVisibility(View.VISIBLE);
         backupList.setVisibility(View.GONE);
         backupBar.setProgress(0);
         backupBar.setRunning(true);
-        backupText.setText("准备备份…");
+        backupText.setText(T.t("system.preparing_backup"));
         app.aomarchy.data.Backup.create(shell, backupCallback());
     }
 
@@ -511,15 +513,15 @@ class SystemPage extends Page {
 
     private void confirmRestore(File backup) {
         new android.app.AlertDialog.Builder(shell)
-                .setTitle("恢复系统？")
-                .setMessage("当前的系统会被这份备份整体替换（换装失败会自动换回）。桌面若在运行，恢复后请重启会话。")
-                .setNegativeButton("取消", null)
-                .setPositiveButton("恢复", (d, w) -> {
+                .setTitle(T.t("dialog.restore_title"))
+                .setMessage(T.t("dialog.restore_message"))
+                .setNegativeButton(T.t("btn.cancel"), null)
+                .setPositiveButton(T.t("btn.restore"), (d, w) -> {
                     backupProgressBox.setVisibility(View.VISIBLE);
                     backupList.setVisibility(View.GONE);
                     backupBar.setProgress(0);
                     backupBar.setRunning(true);
-                    backupText.setText("解包备份…");
+                    backupText.setText(T.t("system.unpacking_backup"));
                     app.aomarchy.data.Backup.restore(shell, backup, backupCallback());
                 })
                 .show();
@@ -539,19 +541,19 @@ class SystemPage extends Page {
         pendingExport = null;
         if (src == null)
             return;
-        toast("正在导出 " + src.getName() + "…");
+        toast(T.t("toast.exporting", src.getName()));
         new Thread(() -> {
             try (java.io.InputStream in = new java.io.FileInputStream(src);
                     java.io.OutputStream out = shell.getContentResolver().openOutputStream(target)) {
                 if (out == null)
-                    throw new java.io.IOException("无法写入目标文件");
+                    throw new java.io.IOException(T.t("error.cannot_write_target"));
                 byte[] buf = new byte[1 << 16];
                 int n;
                 while ((n = in.read(buf)) > 0)
                     out.write(buf, 0, n);
-                shell.runOnUiThread(() -> toast("已导出"));
+                shell.runOnUiThread(() -> toast(T.t("toast.exported")));
             } catch (Exception e) {
-                shell.runOnUiThread(() -> toast("导出失败：" + e.getMessage()));
+                shell.runOnUiThread(() -> toast(T.t("toast.export_failed", String.valueOf(e.getMessage()))));
             }
         }, "backup-export").start();
     }
@@ -569,44 +571,45 @@ class SystemPage extends Page {
     private void importFrom(android.net.Uri source) {
         importing = false;
         File dest = new File(shell.getCacheDir(), "import-backup.tar.gz");
-        toast("正在读取备份…");
+        toast(T.t("toast.reading_backup"));
         new Thread(() -> {
             try (java.io.InputStream in = shell.getContentResolver().openInputStream(source);
                     java.io.OutputStream out = new java.io.FileOutputStream(dest)) {
                 if (in == null)
-                    throw new java.io.IOException("无法读取文件");
+                    throw new java.io.IOException(T.t("error.cannot_read_file"));
                 byte[] buf = new byte[1 << 16];
                 int n;
                 while ((n = in.read(buf)) > 0)
                     out.write(buf, 0, n);
                 shell.runOnUiThread(() -> confirmRestore(dest));
             } catch (Exception e) {
-                shell.runOnUiThread(() -> toast("读取失败：" + e.getMessage()));
+                shell.runOnUiThread(() -> toast(T.t("toast.read_failed", String.valueOf(e.getMessage()))));
             }
         }, "backup-import").start();
     }
     private void confirmDelete(File backup) {
         new android.app.AlertDialog.Builder(shell)
-                .setTitle("删除备份？")
-                .setMessage(app.aomarchy.data.Backup.stamp(backup) + " 会被删除。")
-                .setNegativeButton("取消", null)
-                .setPositiveButton("删除", (d, w) -> {
+                .setTitle(T.t("dialog.delete_backup_title"))
+                .setMessage(T.t("dialog.delete_backup_message", app.aomarchy.data.Backup.stamp(backup)))
+                .setNegativeButton(T.t("btn.cancel"), null)
+                .setPositiveButton(T.t("btn.delete"), (d, w) -> {
                     if (backup.delete()) {
                         paintBackups();
-                        toast("已删除");
+                        toast(T.t("toast.deleted"));
                     } else {
-                        toast("删不掉这个备份");
+                        toast(T.t("toast.delete_failed"));
                     }
                 })
                 .show();
     }
-    private TextView sourceTile(String title, String sub) {
-        TextView t = Ui.text(shell, title + "\n" + sub, 12, Ui.DIM, false);
+    /** One of the two install sources; {@code local} is the selection flag (never derived from the label text). */
+    private TextView sourceTile(String title, boolean local) {
+        TextView t = Ui.text(shell, title, 12, Ui.DIM, false);
         t.setPadding(Ui.dp(shell, 12), Ui.dp(shell, 10), Ui.dp(shell, 12), Ui.dp(shell, 10));
         t.setOnClickListener(v -> {
             if (installing)
                 return;
-            sourceLocal = title.startsWith("本地");
+            sourceLocal = local;
             paintSources();
         });
         return t;
@@ -640,14 +643,16 @@ class SystemPage extends Page {
         boolean haveLocal = localUri != null || staged != null;
         if (local) {
             if (localUri != null) {
-                archiveInfo.setText("已选择：" + localName + (localBytes > 0 ? " · " + Installer.humanSize(localBytes) : ""));
+                archiveInfo.setText(localBytes > 0
+                        ? T.t("system.selected_sized", localName, Installer.humanSize(localBytes))
+                        : T.t("system.selected", localName));
             } else if (staged != null) {
-                archiveInfo.setText("已发现设备上的归档：" + staged.getName() + " · " + Installer.humanSize(staged.length()));
+                archiveInfo.setText(T.t("system.found_archive", staged.getName(), Installer.humanSize(staged.length())));
             } else {
-                archiveInfo.setText("还没有选择本地归档，点「选择本地文件」。");
+                archiveInfo.setText(T.t("system.no_archive"));
             }
         } else {
-            archiveInfo.setText("从 GitHub Release 下载（需要联网，约 1.9 GB）。");
+            archiveInfo.setText(T.t("system.online_note"));
         }
         archiveInfo.setTextColor(haveLocal || !local ? Ui.DIM : Ui.WARN);
     }
@@ -666,7 +671,7 @@ class SystemPage extends Page {
         if (request == EXPORT_BACKUP || request == IMPORT_BACKUP) {
             android.net.Uri uri = result == android.app.Activity.RESULT_OK && data != null ? data.getData() : null;
             if (uri == null) {
-                toast("没有选择文件");
+                toast(T.t("toast.no_file"));
                 pendingExport = null;
                 return;
             }
@@ -680,7 +685,7 @@ class SystemPage extends Page {
             return;
         android.net.Uri picked = result == android.app.Activity.RESULT_OK && data != null ? data.getData() : null;
         if (picked == null) {
-            toast("没有选择文件");
+            toast(T.t("toast.no_file"));
             return;
         }
         try {
@@ -723,12 +728,12 @@ class SystemPage extends Page {
             return;
         boolean replace = SessionService.rootfsReady(shell);
         android.app.AlertDialog.Builder b = new android.app.AlertDialog.Builder(shell);
-        b.setTitle(replace ? "重装并删除现有系统？" : "开始安装系统？");
+        b.setTitle(replace ? T.t("dialog.reinstall_title") : T.t("dialog.install_title"));
         b.setMessage(replace
-                ? "现有的 Linux 系统（约 5 GB）会被删除后重新安装。数据会丢失，确定继续？"
-                : (sourceLocal ? "从本地归档安装，可能需要几分钟。" : "在线下载约 1.9 GB，然后解压，可能需要几分钟。"));
-        b.setNegativeButton("取消", null);
-        b.setPositiveButton(replace ? "删除并重装" : "开始", (d, w) -> startInstall(replace));
+                ? T.t("dialog.reinstall_message")
+                : (sourceLocal ? T.t("dialog.install_local_message") : T.t("dialog.install_online_message")));
+        b.setNegativeButton(T.t("btn.cancel"), null);
+        b.setPositiveButton(replace ? T.t("btn.delete_reinstall") : T.t("btn.start"), (d, w) -> startInstall(replace));
         b.show();
     }
 
@@ -741,12 +746,12 @@ class SystemPage extends Page {
             } else if ((staged = Installer.staged(shell)) != null) {
                 uri = android.net.Uri.fromFile(staged);
             } else {
-                toast("先选择一个本地归档，或改用在线下载");
+                toast(T.t("toast.pick_archive_first"));
                 return;
             }
         }
         if (uri != null && "file".equals(uri.getScheme()) && !new File(uri.getPath()).canRead()) {
-            toast("读不到这个文件");
+            toast(T.t("toast.cannot_read_file"));
             return;
         }
         installing = true;
@@ -754,7 +759,7 @@ class SystemPage extends Page {
         startBox.setVisibility(View.GONE);
         progress.setProgress(0);
         progress.setRunning(true);
-        progressText.setText("准备中…");
+        progressText.setText(T.t("system.preparing"));
         Installer.install(shell, uri, replace, new Installer.Callback() {
             @Override
             public void progress(int permille, String text) {
@@ -773,7 +778,7 @@ class SystemPage extends Page {
                     progressBox.setVisibility(View.GONE);
                     startBox.setVisibility(View.VISIBLE);
                     refresh();
-                    toast("系统安装完成");
+                    toast(T.t("toast.installed"));
                 });
             }
 
@@ -787,9 +792,9 @@ class SystemPage extends Page {
                     progressText.setText("");
                     refresh();
                     new android.app.AlertDialog.Builder(shell)
-                            .setTitle("安装失败")
+                            .setTitle(T.t("dialog.install_failed"))
                             .setMessage(message)
-                            .setPositiveButton("知道了", null)
+                            .setPositiveButton(T.t("btn.ok"), null)
                             .show();
                 });
             }
@@ -808,12 +813,12 @@ class SystemPage extends Page {
             for (String line : tail)
                 sb.append(line).append('\n');
         } catch (java.io.IOException e) {
-            sb.append("读不到这个日志：").append(e);
+            sb.append(T.t("system.log_read_error", String.valueOf(e)));
         }
         new android.app.AlertDialog.Builder(shell)
                 .setTitle(f.getName())
-                .setMessage(sb.length() == 0 ? "(空)" : sb.toString())
-                .setPositiveButton("关闭", null)
+                .setMessage(sb.length() == 0 ? T.t("system.empty") : sb.toString())
+                .setPositiveButton(T.t("btn.close"), null)
                 .show();
     }
 
@@ -855,7 +860,7 @@ class SystemPage extends Page {
     @Override
     void refresh() {
         boolean ready = SessionService.rootfsReady(shell);
-        stateValue.setText(ready ? "已安装" : "未安装");
+        stateValue.setText(ready ? T.t("state.installed") : T.t("status.not_installed"));
         stateValue.setTextColor(ready ? Ui.MINT : Ui.FAINT);
         if (!ready) {
             knownSize = -1;
@@ -865,7 +870,7 @@ class SystemPage extends Page {
             size.setText(Installer.humanSize(knownSize));
             size.setTextColor(Ui.TEXT);
         } else {
-            size.setText("统计中…");
+            size.setText(T.t("state.measuring"));
             size.setTextColor(Ui.DIM);
             measureRootfs();
         }
@@ -889,24 +894,24 @@ class AppsPage extends Page {
     void build(LinearLayout body) {
         LinearLayout head = Ui.card(shell, null);
         LinearLayout row = Ui.row(shell);
-        row.addView(Ui.text(shell, "应用", 15, Ui.TEXT, true));
+        row.addView(Ui.text(shell, T.t("tab.apps"), 15, Ui.TEXT, true));
         row.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
-        status = Ui.text(shell, "读取中…", 12, Ui.DIM, false);
+        status = Ui.text(shell, T.t("apps.loading"), 12, Ui.DIM, false);
         row.addView(status);
-        TextView refresh = Ui.text(shell, "刷新", 13, Ui.ACCENT, false);
+        TextView refresh = Ui.text(shell, T.t("btn.refresh"), 13, Ui.ACCENT, false);
         refresh.setPadding(Ui.dp(shell, 12), 0, 0, 0);
         refresh.setOnClickListener(v -> load());
         row.addView(refresh);
         head.addView(row);
         body.addView(head);
 
-        flatBox = Ui.card(shell, "Flatpak 沙箱");
+        flatBox = Ui.card(shell, T.t("card.flatpak"));
         body.addView(flatBox);
 
-        linuxBox = Ui.card(shell, "Omarchy 应用");
+        linuxBox = Ui.card(shell, T.t("card.omarchy_apps"));
         body.addView(linuxBox);
 
-        androidBox = Ui.card(shell, "Android 应用（浮动窗口）");
+        androidBox = Ui.card(shell, T.t("card.android_apps"));
         body.addView(androidBox);
     }
 
@@ -918,7 +923,7 @@ class AppsPage extends Page {
 
     private void load() {
         loaded = true;
-        status.setText("读取中…");
+        status.setText(T.t("apps.loading"));
         new Thread(() -> {
             java.util.List<Apps.LinuxApp> flat;
             java.util.List<Apps.LinuxApp> linux;
@@ -928,23 +933,23 @@ class AppsPage extends Page {
                 linux = Apps.nativeApps(shell);
                 android = Apps.android(shell);
             } catch (RuntimeException e) {
-                shell.runOnUiThread(() -> status.setText("读取失败：" + e.getMessage()));
+                shell.runOnUiThread(() -> status.setText(T.t("apps.load_failed", String.valueOf(e.getMessage()))));
                 return;
             }
             shell.runOnUiThread(() -> {
                 fillFlatpak(flat);
                 fillLinux(linux);
                 fillAndroid(android);
-                status.setText("Flatpak " + flat.size() + " 个 · 桌面应用 " + linux.size() + " 个 · Android 应用 " + android.size() + " 个");
+                status.setText(T.t("apps.counts_summary", flat.size(), linux.size(), android.size()));
             });
         }, "apps-list").start();
     }
 
     private void fillFlatpak(java.util.List<Apps.LinuxApp> apps) {
         flatBox.removeAllViews();
-        flatBox.addView(Ui.text(shell, "已安装的 Flatpak（点名称在桌面打开）", 12, Ui.DIM, false));
+        flatBox.addView(Ui.text(shell, T.t("apps.flatpak_hint"), 12, Ui.DIM, false));
         if (apps.isEmpty()) {
-            flatBox.addView(Ui.text(shell, "还没有 Flatpak 应用。到桌面里用「软件」商店安装。", 13, Ui.FAINT, false));
+            flatBox.addView(Ui.text(shell, T.t("apps.no_flatpak"), 13, Ui.FAINT, false));
             return;
         }
         for (int i = 0; i < Math.min(apps.size(), 24); i++)
@@ -953,11 +958,11 @@ class AppsPage extends Page {
 
     private void fillLinux(java.util.List<Apps.LinuxApp> apps) {
         linuxBox.removeAllViews();
-        linuxBox.addView(Ui.text(shell, "桌面自带（Omarchy、终端、文件等）", 12, Ui.DIM, false));
+        linuxBox.addView(Ui.text(shell, T.t("apps.linux_hint"), 12, Ui.DIM, false));
         for (int i = 0; i < Math.min(apps.size(), 24); i++)
             linuxBox.addView(appRow(apps.get(i)));
         if (apps.isEmpty())
-            linuxBox.addView(Ui.text(shell, "系统未安装或没有桌面入口。", 13, Ui.FAINT, false));
+            linuxBox.addView(Ui.text(shell, T.t("apps.no_linux"), 13, Ui.FAINT, false));
     }
 
     private View appRow(Apps.LinuxApp app) {
@@ -970,16 +975,16 @@ class AppsPage extends Page {
         id.setEllipsize(android.text.TextUtils.TruncateAt.END);
         id.setPadding(Ui.dp(shell, 10), 0, Ui.dp(shell, 8), 0);
         r.addView(id, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        TextView open = Ui.text(shell, "打开 ›", 13, Ui.ACCENT, false);
+        TextView open = Ui.text(shell, T.t("btn.open"), 13, Ui.ACCENT, false);
         open.setPadding(Ui.dp(shell, 10), 0, 0, 0);
         open.setOnClickListener(v -> {
             if (!SessionService.rootfsReady(shell)) {
-                toast("系统还没装好");
+                toast(T.t("toast.system_missing"));
             } else if (!SessionService.started) {
-                toast("先进桌面启动会话");
+                toast(T.t("toast.start_session_first"));
             } else {
                 Apps.launchLinux(shell, app);
-                toast("已在桌面打开 " + app.name);
+                toast(T.t("toast.opened_on_desktop", app.name));
             }
         });
         r.addView(open);
@@ -988,9 +993,9 @@ class AppsPage extends Page {
 
     private void fillAndroid(java.util.List<Apps.AndroidApp> apps) {
         androidBox.removeAllViews();
-        androidBox.addView(Ui.text(shell, "点按以浮动窗口打开，和桌面并排", 12, Ui.DIM, false));
+        androidBox.addView(Ui.text(shell, T.t("apps.android_hint"), 12, Ui.DIM, false));
         if (apps.isEmpty()) {
-            androidBox.addView(Ui.text(shell, "没有可启动的 Android 应用。", 13, Ui.FAINT, false));
+            androidBox.addView(Ui.text(shell, T.t("apps.no_android"), 13, Ui.FAINT, false));
             return;
         }
         LinearLayout row = null;
@@ -1021,7 +1026,7 @@ class AppsPage extends Page {
         cell.addView(label, new LinearLayout.LayoutParams(Ui.dp(shell, 70), ViewGroup.LayoutParams.WRAP_CONTENT));
         cell.setOnClickListener(v -> {
             Apps.openFloating(shell, app.packageName);
-            toast("浮动打开 " + app.label);
+            toast(T.t("toast.floating_open", app.label));
         });
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         cell.setLayoutParams(lp);
@@ -1065,6 +1070,7 @@ class SettingsPage extends Page {
     private TextView emailValue;
     private TextView kbValue;
     private TextView modeValue;
+    private TextView langValue;
 
     SettingsPage(ShellActivity shell) {
         super(shell);
@@ -1076,67 +1082,96 @@ class SettingsPage extends Page {
 
     @Override
     void build(LinearLayout body) {
-        LinearLayout identity = Ui.card(shell, "身份 · Linux 用户与 git");
-        identity.addView(Ui.text(shell, "写入 Linux 的 git 身份与 XCompose，下次进桌面生效。", 12, Ui.DIM, false));
+        LinearLayout identity = Ui.card(shell, T.t("card.identity"));
+        identity.addView(Ui.text(shell, T.t("settings.identity_desc"), 12, Ui.DIM, false));
         identity.addView(Ui.gap(shell, 8));
         nameValue = value("—", Ui.TEXT);
-        identity.addView(row("姓名", nameValue, () -> editText("姓名", "user_name", nameValue)));
+        identity.addView(row(T.t("label.name"), nameValue, () -> editText(T.t("label.name"), "user_name", nameValue)));
         identity.addView(Ui.divider(shell));
         emailValue = value("—", Ui.TEXT);
-        identity.addView(row("邮箱", emailValue, () -> editText("邮箱", "user_email", emailValue)));
+        identity.addView(row(T.t("label.email"), emailValue, () -> editText(T.t("label.email"), "user_email", emailValue)));
         body.addView(identity);
 
-        LinearLayout keyboard = Ui.card(shell, "键盘");
-        keyboard.addView(Ui.text(shell, "第一个是物理键盘，屏幕键盘在其间循环。", 12, Ui.DIM, false));
+        LinearLayout keyboard = Ui.card(shell, T.t("card.keyboard"));
+        keyboard.addView(Ui.text(shell, T.t("settings.keyboard_desc"), 12, Ui.DIM, false));
         keyboard.addView(Ui.gap(shell, 8));
         kbValue = value("—", Ui.TEXT);
-        keyboard.addView(row("系统布局", kbValue, this::pickLayout));
+        keyboard.addView(row(T.t("label.kb_layout"), kbValue, this::pickLayout));
         body.addView(keyboard);
 
-        LinearLayout startup = Ui.card(shell, "启动");
+        LinearLayout startup = Ui.card(shell, T.t("card.startup"));
         modeValue = value("—", Ui.TEXT);
-        startup.addView(row("启动方式", modeValue, this::pickMode));
+        startup.addView(row(T.t("label.startup_mode"), modeValue, this::pickMode));
         startup.addView(Ui.divider(shell));
         LinearLayout row = Ui.row(shell);
         row.setPadding(0, Ui.dp(shell, 8), 0, Ui.dp(shell, 8));
-        row.addView(Ui.text(shell, "打开 App 后直接进入桌面", 15, Ui.TEXT, false));
+        row.addView(Ui.text(shell, T.t("settings.open_desktop_toggle"), 15, Ui.TEXT, false));
         row.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
         final boolean[] on = {prefs().getBoolean("open_desktop_on_start", false)};
-        TextView toggle = Ui.text(shell, on[0] ? "开启" : "关闭", 14, on[0] ? Ui.ACCENT : Ui.DIM, true);
+        TextView toggle = Ui.text(shell, on[0] ? T.t("state.on") : T.t("state.off"), 14,
+                on[0] ? Ui.ACCENT : Ui.DIM, true);
         row.addView(toggle);
         row.setOnClickListener(v -> {
             on[0] = !on[0];
             prefs().edit().putBoolean("open_desktop_on_start", on[0]).apply();
-            toggle.setText(on[0] ? "开启" : "关闭");
+            toggle.setText(on[0] ? T.t("state.on") : T.t("state.off"));
             toggle.setTextColor(on[0] ? Ui.ACCENT : Ui.DIM);
-            toast(on[0] ? "下次打开 App 直接进桌面" : "下次打开 App 先进控制台");
+            toast(on[0] ? T.t("toast.next_launch_desktop") : T.t("toast.next_launch_console"));
         });
         row.setClickable(true);
         startup.addView(row);
         body.addView(startup);
 
-        LinearLayout detailed = Ui.card(shell, "详细设置");
-        detailed.addView(Ui.text(shell, "这些页已按控制台风格重做，改动立即生效。", 12, Ui.DIM, false));
+        LinearLayout language = Ui.card(shell, T.t("card.language"));
+        language.addView(Ui.text(shell, T.t("settings.language_desc"), 12, Ui.DIM, false));
+        language.addView(Ui.gap(shell, 4));
+        langValue = value("—", Ui.TEXT);
+        language.addView(row(T.t("label.ui_lang"), langValue, this::pickLanguage));
+        body.addView(language);
+
+        LinearLayout detailed = Ui.card(shell, T.t("card.detailed"));
+        detailed.addView(Ui.text(shell, T.t("settings.detailed_desc"), 12, Ui.DIM, false));
         detailed.addView(Ui.gap(shell, 6));
-        detailed.addView(row("键盘与按键", value("›", Ui.FAINT),
-                () -> openPage("键盘与按键", KeysSettingsView.build(shell))));
+        detailed.addView(row(T.t("page.keys"), value("›", Ui.FAINT),
+                () -> openPage(T.t("page.keys"), KeysSettingsView.build(shell))));
         detailed.addView(Ui.divider(shell));
-        detailed.addView(row("触摸板与鼠标", value("›", Ui.FAINT),
-                () -> openPage("触摸板与鼠标", InputSettingsView.build(shell))));
+        detailed.addView(row(T.t("page.input"), value("›", Ui.FAINT),
+                () -> openPage(T.t("page.input"), InputSettingsView.build(shell))));
         detailed.addView(Ui.divider(shell));
-        detailed.addView(row("显示", value("›", Ui.FAINT),
-                () -> openPage("显示", DisplaySettingsView.build(shell))));
+        detailed.addView(row(T.t("page.display"), value("›", Ui.FAINT),
+                () -> openPage(T.t("page.display"), DisplaySettingsView.build(shell))));
         detailed.addView(Ui.divider(shell));
-        detailed.addView(row("音频", value("›", Ui.FAINT),
-                () -> openPage("音频", AudioSettingsView.build(shell))));
+        detailed.addView(row(T.t("page.audio"), value("›", Ui.FAINT),
+                () -> openPage(T.t("page.audio"), AudioSettingsView.build(shell))));
         body.addView(detailed);
 
-        LinearLayout about = Ui.card(shell, "关于");
-        about.addView(Ui.kv(shell, "版本", value(versionName(), Ui.TEXT)));
-        about.addView(Ui.kv(shell, "包名", value(shell.getPackageName(), Ui.DIM)));
+        LinearLayout about = Ui.card(shell, T.t("card.about"));
+        about.addView(Ui.kv(shell, T.t("label.version"), value(versionName(), Ui.TEXT)));
+        about.addView(Ui.kv(shell, T.t("label.package"), value(shell.getPackageName(), Ui.DIM)));
         about.addView(Ui.kv(shell, "Android", value(android.os.Build.VERSION.RELEASE + " (API "
                 + android.os.Build.VERSION.SDK_INT + ")", Ui.DIM)));
         body.addView(about);
+    }
+
+    /** 界面语言: one of 跟随系统 / 中文 / English, saved as {@code ui_lang}, then the shell rebuilds itself. */
+    private void pickLanguage() {
+        final String[] values = {T.LANG_AUTO, T.LANG_ZH, T.LANG_EN};
+        String saved = T.savedLang(shell);
+        String[] labels = {T.t("lang.auto"), T.t("lang.zh"), T.t("lang.en")};
+        int checked = 0;
+        for (int i = 0; i < values.length; i++)
+            if (values[i].equals(saved))
+                checked = i;
+        new android.app.AlertDialog.Builder(shell)
+                .setTitle(T.t("label.ui_lang"))
+                .setSingleChoiceItems(labels, checked, (d, which) -> {
+                    T.setLang(shell, values[which]);
+                    d.dismiss();
+                    shell.relanguage(); // rebuild every page in place, staying on the Settings tab
+                    toast(T.t("toast.language_changed"));
+                })
+                .setNegativeButton(T.t("btn.cancel"), null)
+                .show();
     }
 
     private LinearLayout row(String label, TextView valueView, Runnable onClick) {
@@ -1156,28 +1191,28 @@ class SettingsPage extends Page {
         new android.app.AlertDialog.Builder(shell)
                 .setTitle(title)
                 .setView(input)
-                .setNegativeButton("取消", null)
-                .setPositiveButton("保存", (d, w) -> {
+                .setNegativeButton(T.t("btn.cancel"), null)
+                .setPositiveButton(T.t("btn.save"), (d, w) -> {
                     prefs().edit().putString(key, input.getText().toString().trim()).apply();
                     refresh();
-                    toast("已保存，下次进入桌面生效");
+                    toast(T.t("toast.saved_next_desktop"));
                 })
                 .show();
     }
 
     private void pickMode() {
-        String[] names = {"完整桌面（Hyprland）", "终端（省资源：不启动桌面）"};
+        String[] names = {T.t("mode.desktop_full"), T.t("mode.terminal")};
         int checked = "terminal".equals(prefs().getString("session_mode", "desktop")) ? 1 : 0;
         new android.app.AlertDialog.Builder(shell)
-                .setTitle("启动方式")
+                .setTitle(T.t("label.startup_mode"))
                 .setSingleChoiceItems(names, checked, (d, which) -> {
                     prefs().edit().putString("session_mode", which == 1 ? "terminal" : "desktop").apply();
                     d.dismiss();
                     refresh();
-                    toast(which == 1 ? "下次进入终端：不起桌面，实测省约 700 MB" : "下次进入完整桌面");
+                    toast(which == 1 ? T.t("toast.next_terminal_mode") : T.t("toast.next_desktop_mode"));
                     shell.updateEntryLabel();
                 })
-                .setNegativeButton("取消", null)
+                .setNegativeButton(T.t("btn.cancel"), null)
                 .show();
     }
     private void pickLayout() {
@@ -1190,14 +1225,14 @@ class SettingsPage extends Page {
         for (int i = 0; i < names.length; i++)
             names[i] = LAYOUT_NAMES[i] + "  ·  " + LAYOUTS[i];
         new android.app.AlertDialog.Builder(shell)
-                .setTitle("系统键盘布局")
+                .setTitle(T.t("dialog.kb_layout_title"))
                 .setSingleChoiceItems(names, checked, (d, which) -> {
                     prefs().edit().putString("kb_layouts", LAYOUTS[which]).apply();
                     d.dismiss();
                     refresh();
-                    toast("已选 " + LAYOUT_NAMES[which] + "，下次进入桌面生效");
+                    toast(T.t("toast.layout_saved", LAYOUT_NAMES[which]));
                 })
-                .setNegativeButton("取消", null)
+                .setNegativeButton(T.t("btn.cancel"), null)
                 .show();
     }
 
@@ -1211,7 +1246,7 @@ class SettingsPage extends Page {
 
         LinearLayout bar = Ui.row(shell);
         bar.setPadding(Ui.dp(shell, 12), Ui.dp(shell, 10), Ui.dp(shell, 12), Ui.dp(shell, 10));
-        TextView back = Ui.text(shell, "‹ 返回", 14, Ui.ACCENT, true);
+        TextView back = Ui.text(shell, T.t("btn.back"), 14, Ui.ACCENT, true);
         back.setPadding(Ui.dp(shell, 8), Ui.dp(shell, 4), Ui.dp(shell, 8), Ui.dp(shell, 4));
         back.setOnClickListener(v -> dialog.dismiss());
         bar.addView(back);
@@ -1245,11 +1280,21 @@ class SettingsPage extends Page {
             kb = installedLayout(); // what the installer picked from the device language
         kbValue.setText(orDash(kb));
         String mode = prefs().getString("session_mode", "desktop");
-        modeValue.setText("terminal".equals(mode) ? "终端（省资源）" : "完整桌面");
+        modeValue.setText("terminal".equals(mode) ? T.t("mode.terminal_short") : T.t("mode.desktop"));
+        langValue.setText(languageLabel(T.savedLang(shell)));
+    }
+
+    /** The label for the stored {@code ui_lang} value. */
+    private static String languageLabel(String value) {
+        if (T.LANG_ZH.equals(value))
+            return T.t("lang.zh");
+        if (T.LANG_EN.equals(value))
+            return T.t("lang.en");
+        return T.t("lang.auto");
     }
 
     private static String orDash(String s) {
-        return s == null || s.trim().isEmpty() ? "未设置" : s;
+        return s == null || s.trim().isEmpty() ? T.t("state.not_set") : s;
     }
 
     /** KB_LAYOUTS from the rootfs's setup.conf: the layout the install chose. */

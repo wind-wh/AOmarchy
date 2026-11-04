@@ -18,6 +18,7 @@ import java.util.zip.GZIPInputStream;
 
 import app.aomarchy.SessionService;
 import app.aomarchy.TarExtractor;
+import app.aomarchy.i18n.T;
 
 /**
  * Installs the Linux system: fetches the archive (release download or a file on the device), unpacks it with
@@ -74,7 +75,7 @@ public final class Installer {
 
     public static String humanSize(long bytes) {
         if (bytes < 0)
-            return "大小未知";
+            return T.t("install.size_unknown");
         if (bytes >= 1L << 30)
             return String.format(Locale.US, "%.2f GB", bytes / 1073741824.0);
         return String.format(Locale.US, "%.0f MB", bytes / 1048576.0);
@@ -95,7 +96,7 @@ public final class Installer {
                 perform(app, local, replace, cb);
                 cb.done();
             } catch (Cancelled e) {
-                cb.failed("已取消安装");
+                cb.failed(T.t("install.cancelled"));
             } catch (Throwable t) {
                 cb.failed(String.valueOf(t.getMessage()));
             } finally {
@@ -118,17 +119,17 @@ public final class Installer {
         long available = new StatFs(files.getPath()).getAvailableBytes();
         long needed = replace && rootfs.exists() ? NEEDED_REPLACE : NEEDED_FRESH;
         if (available < needed)
-            throw new IOException("空间不足：需要约 " + (needed >> 30) + " GB，当前可用 " + humanSize(available));
+            throw new IOException(T.t("install.not_enough_space", needed >> 30, humanSize(available)));
 
         deleteTree(partial);
         if (partial.exists())
-            throw new IOException("上次安装的临时目录清理不掉（权限），请重启应用后重试");
+            throw new IOException(T.t("install.stale_partial"));
         InputStream raw;
         long size;
         if (local != null) {
             raw = ctx.getContentResolver().openInputStream(local);
             if (raw == null)
-                throw new IOException("打不开这个文件");
+                throw new IOException(T.t("install.cannot_open_file"));
             size = -1;
             try {
                 size = new File(local.getPath() == null ? "" : local.getPath()).length();
@@ -142,14 +143,14 @@ public final class Installer {
             c.setReadTimeout(60000);
             c.connect();
             if (c.getResponseCode() != 200)
-                throw new IOException("下载失败：HTTP " + c.getResponseCode());
+                throw new IOException(T.t("install.download_failed", c.getResponseCode()));
             raw = c.getInputStream();
             size = c.getContentLengthLong();
         }
 
         long[] read = {0};
         long[] shown = {0};
-        final String mode = local != null ? "安装中" : "下载并安装中";
+        final String mode = local != null ? T.t("install.mode_local") : T.t("install.mode_download");
         final long totalSize = size;
         try (InputStream stream = raw) { // closed even when the gzip header turns out to be corrupt
             InputStream counting = new FilterInputStream(new BufferedInputStream(stream, 1 << 20)) {
@@ -171,8 +172,9 @@ public final class Installer {
                         return;
                     shown[0] = now;
                     cb.progress(totalSize > 0 ? (int) (read[0] * 1000 / totalSize) : -1,
-                            mode + "（" + (read[0] >> 20) + (totalSize > 0 ? " / " + (totalSize >> 20) : "")
-                                    + " MB）\n" + entry);
+                            totalSize > 0
+                                    ? T.t("install.progress_known", mode, read[0] >> 20, totalSize >> 20, entry)
+                                    : T.t("install.progress_unknown", mode, read[0] >> 20, entry));
                 });
             }
         } catch (IOException e) {
@@ -190,19 +192,19 @@ public final class Installer {
         // Any .tar.gz can be picked: only an Andromarchy rootfs has the loader rootfsReady() looks for.
         if (!new File(partial, "opt/lotfix/arch-glibc/ld-linux-aarch64.so.1").exists()) {
             deleteTree(partial);
-            throw new IOException("这个归档不是 AOmarchy 的系统镜像");
+            throw new IOException(T.t("install.not_aomarchy_image"));
         }
         File setup = new File(partial, "root/.config/andromarchy/setup.conf");
         setup.getParentFile().mkdirs();
         if (!setup.getCanonicalPath().startsWith(partial.getCanonicalPath() + File.separator)) {
             deleteTree(partial);
-            throw new IOException("归档里的 setup 路径越出了 rootfs");
+            throw new IOException(T.t("install.setup_path_escape"));
         }
         try (FileWriter w = new FileWriter(setup)) {
             w.write("KB_LAYOUTS=" + defaultLayout() + " FULL_NAME= EMAIL=\n");
         }
 
-        cb.progress(1000, "收尾中…");
+        cb.progress(1000, T.t("install.finishing"));
         // Replace by renaming: the old system stays on disk (and can be put back) until the new one is in place,
         // and a slow or failed delete cannot break a finished install.
         File old = new File(rootfs.getPath() + ".old");
@@ -211,16 +213,16 @@ public final class Installer {
             deleteTree(old);
             movedOld = rootfs.renameTo(old);
             if (!movedOld && !deleteTree(rootfs))
-                throw new IOException("删不掉旧的系统（rootfs）");
+                throw new IOException(T.t("install.cannot_delete_old"));
         }
         if (!partial.renameTo(rootfs)) {
             if (movedOld)
                 old.renameTo(rootfs); // put the old system back
             if (SessionService.rootfsReady(ctx))
-                throw new IOException("无法把新系统移动到目标位置");
+                throw new IOException(T.t("install.cannot_move"));
             deleteTree(rootfs);
             if (!partial.renameTo(rootfs))
-                throw new IOException("无法把新系统移动到目标位置");
+                throw new IOException(T.t("install.cannot_move"));
         }
         if (movedOld)
             deleteTree(old); // best effort: the install already succeeded, a leftover tree only costs space

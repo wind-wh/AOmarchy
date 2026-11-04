@@ -12,6 +12,7 @@ import android.widget.TextView;
 
 import java.util.Locale;
 
+import app.aomarchy.i18n.T;
 import app.aomarchy.ui.Ui;
 
 /**
@@ -48,9 +49,13 @@ public final class InputSettingsView {
     private static final String KEY_GESTURE_SCALE = "touchpad_gesture_scale";
 
     private static final String[] TRANSFORM_VALUES = {"no", "c", "cc", "ud", "at"};
-    private static final String[] TRANSFORM_LABELS = {
-            "不旋转", "顺时针 90°", "逆时针 90°", "翻转 180°", "自动（跟随屏幕旋转）"
-    };
+    /** Resolved per build: the language is decided by the activity, never by a class-load-time static. */
+    private static String[] transformLabels() {
+        return new String[] {
+                T.t("transform.none"), T.t("transform.cw"), T.t("transform.ccw"), T.t("transform.flip"),
+                T.t("transform.auto")
+        };
+    }
 
     private InputSettingsView() {
     }
@@ -61,32 +66,32 @@ public final class InputSettingsView {
         LinearLayout body = Ui.column(host);
 
         // ===== 触摸板模式与光标灵敏度 =====
-        LinearLayout touchpad = Ui.card(host, "触摸板");
-        touchpad.addView(Ui.toggleRow(host, "触摸板模式",
-                "开启：手指滑动移动光标（相对）；关闭：触摸直接落到屏幕（绝对）",
+        LinearLayout touchpad = Ui.card(host, T.t("card.touchpad"));
+        touchpad.addView(toggleRow(host, T.t("input.touchpad_mode"),
+                T.t("input.touchpad_mode_caption"),
                 prefs.getBoolean(KEY_TOUCHPAD_MODE, false),
                 value -> prefs.edit().putBoolean(KEY_TOUCHPAD_MODE, value).apply()));
         touchpad.addView(Ui.divider(host));
-        touchpad.addView(floatSlider(host, prefs, "鼠标灵敏度",
-                "屏幕触摸板的光标加速度，越大同样的滑动走得越远",
+        touchpad.addView(floatSlider(host, prefs, T.t("label.mouse_accel"),
+                T.t("input.mouse_accel_caption"),
                 KEY_MOUSE_ACCEL, 0.5f, 10.0f, 0.05f, 1.0f, "%.1fx").box);
         body.addView(touchpad);
 
         // ===== 指针捕获（硬件鼠标 / 触摸板）=====
-        LinearLayout capture = Ui.card(host, "指针捕获");
+        LinearLayout capture = Ui.card(host, T.t("card.capture"));
         final boolean captureOn = prefs.getBoolean(KEY_POINTER_CAPTURE, false);
-        final LinearLayout transformRow = choiceRow(host, "指针方向变换",
-                "捕获到的指针位移按这个方向旋转；触摸板装反或方向不对时选「自动」",
-                TRANSFORM_LABELS,
+        final LinearLayout transformRow = choiceRow(host, T.t("label.transform"),
+                T.t("input.transform_caption"),
+                transformLabels(),
                 indexOf(TRANSFORM_VALUES,
                         prefs.getString(KEY_TRANSFORM_CAPTURED_POINTER, TRANSFORM_VALUES[0])),
                 which -> prefs.edit()
                         .putString(KEY_TRANSFORM_CAPTURED_POINTER, TRANSFORM_VALUES[which]).apply());
-        final SliderBox captureSpeed = intSlider(host, prefs, "捕获指针速度",
-                "相对默认速度的百分比，只在指针捕获生效时使用",
+        final SliderBox captureSpeed = intSlider(host, prefs, T.t("label.capture_speed"),
+                T.t("input.capture_speed_caption"),
                 KEY_CAPTURED_POINTER_SPEED_FACTOR, 1, 300, 100);
-        capture.addView(Ui.toggleRow(host, "捕获外部指针",
-                "点按桌面后接管硬件鼠标与触摸板；按 Esc 交还 Android",
+        capture.addView(toggleRow(host, T.t("input.capture_toggle"),
+                T.t("input.capture_toggle_caption"),
                 captureOn, value -> {
                     prefs.edit().putBoolean(KEY_POINTER_CAPTURE, value).apply();
                     setCaptureExtrasEnabled(transformRow, captureSpeed.bar, value);
@@ -98,29 +103,29 @@ public final class InputSettingsView {
         body.addView(capture);
 
         // ===== 滚动方向与速度 =====
-        LinearLayout scroll = Ui.card(host, "滚动");
-        scroll.addView(Ui.toggleRow(host, "反向滚动",
-                "开启后内容跟随手指（自然滚动），只作用于捕获到的硬件触摸板",
+        LinearLayout scroll = Ui.card(host, T.t("card.scroll"));
+        scroll.addView(toggleRow(host, T.t("input.reverse_scroll"),
+                T.t("input.reverse_scroll_caption"),
                 prefs.getBoolean(KEY_SCROLL_REVERSE, false),
                 value -> prefs.edit().putBoolean(KEY_SCROLL_REVERSE, value).apply()));
         scroll.addView(Ui.divider(host));
-        scroll.addView(floatSlider(host, prefs, "双指滚动速度",
-                "每像素手指位移对应的滚动量，越大滚动越快",
+        scroll.addView(floatSlider(host, prefs, T.t("label.scroll_speed"),
+                T.t("input.scroll_speed_caption"),
                 KEY_SCROLL_SPEED, 0.05f, 3.0f, 0.05f, Touchpad.DEFAULT_SCROLL_SPEED, "%.2f").box);
         body.addView(scroll);
 
         // ===== 硬件触摸板手势阈值 =====
-        LinearLayout gestures = Ui.card(host, "手势与阈值");
-        gestures.addView(floatSlider(host, prefs, "滚动识别阈值",
-                "手指移动多远才算滚动；捏合被误判成滚动时调低",
+        LinearLayout gestures = Ui.card(host, T.t("card.gestures"));
+        gestures.addView(floatSlider(host, prefs, T.t("label.scroll_threshold"),
+                T.t("input.scroll_threshold_caption"),
                 KEY_SCROLL_THRESHOLD, 0.05f, 3.0f, 0.05f,
                 Touchpad.DEFAULT_SCROLL_THRESHOLD_FACTOR, "%.2f×").box);
-        gestures.addView(floatSlider(host, prefs, "手势判定阈值",
-                "两指手势变成滚动前，主导手指要移动的距离；滚动迟迟不触发时调低",
+        gestures.addView(floatSlider(host, prefs, T.t("label.move_threshold"),
+                T.t("input.move_threshold_caption"),
                 KEY_MOVE_THRESHOLD, 0.1f, 8.0f, 0.05f,
                 Touchpad.DEFAULT_MOVE_THRESHOLD_FACTOR, "%.2f×").box);
-        gestures.addView(floatSlider(host, prefs, "手势幅度",
-                "捏合等手势转发为触摸时，映射到光标周围方块的边长，越大手势越夸张",
+        gestures.addView(floatSlider(host, prefs, T.t("label.gesture_scale"),
+                T.t("input.gesture_scale_caption"),
                 KEY_GESTURE_SCALE, 100f, 3000f, 20f,
                 Touchpad.DEFAULT_GESTURE_SCALE, "%.0f px").box);
         body.addView(gestures);
@@ -264,7 +269,7 @@ public final class InputSettingsView {
                     onPick.onPick(which);
                     dialog.dismiss();
                 })
-                .setNegativeButton("取消", null)
+                .setNegativeButton(T.t("btn.cancel"), null)
                 .show());
         row.setClickable(true);
         return row;
@@ -283,5 +288,38 @@ public final class InputSettingsView {
             if (values[i].equals(target))
                 return i;
         return 0;
+    }
+
+    /**
+     * The {@code Ui.toggleRow} shape with a localized On/Off pill: {@code Ui.toggleRow} hardcodes the Chinese
+     * 开启/关闭 labels and Ui.java is outside this task's write scope.
+     */
+    private static LinearLayout toggleRow(Activity host, String label, String caption, boolean value,
+            Ui.OnToggle onChange) {
+        LinearLayout r = Ui.row(host);
+        r.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        r.setPadding(0, Ui.dp(host, 7), 0, Ui.dp(host, 7));
+
+        LinearLayout texts = Ui.column(host);
+        texts.addView(Ui.text(host, label, 14, Ui.TEXT, false));
+        if (caption != null && !caption.isEmpty())
+            texts.addView(Ui.text(host, caption, 11, Ui.FAINT, false));
+        r.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        final boolean[] on = {value};
+        TextView pill = Ui.text(host, on[0] ? T.t("state.on") : T.t("state.off"), 13,
+                on[0] ? Ui.ACCENT : Ui.DIM, true);
+        pill.setPadding(Ui.dp(host, 10), Ui.dp(host, 5), Ui.dp(host, 10), Ui.dp(host, 5));
+        pill.setBackground(Ui.surface(host, 30));
+        r.addView(pill);
+        r.setOnClickListener(v -> {
+            on[0] = !on[0];
+            pill.setText(on[0] ? T.t("state.on") : T.t("state.off"));
+            pill.setTextColor(on[0] ? Ui.ACCENT : Ui.DIM);
+            onChange.onToggle(on[0]);
+        });
+        r.setClickable(true);
+        return r;
     }
 }

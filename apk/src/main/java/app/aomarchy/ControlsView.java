@@ -16,6 +16,7 @@ import android.widget.Toast;
 import java.io.File;
 import java.nio.file.Files;
 
+import app.aomarchy.i18n.T;
 import app.aomarchy.ui.Ui;
 
 /**
@@ -32,6 +33,7 @@ final class ControlsView {
 
     ControlsView(Context ctx) {
         this.ctx = ctx;
+        T.init(ctx); // this view also opens standalone over the desktop (ControlsActivity), so resolve ui_lang here
         this.audio = (AudioManager) ctx.getSystemService(Context.AUDIO_SERVICE);
         root = Ui.column(ctx);
         root.setPadding(Ui.dp(ctx, 2), 0, Ui.dp(ctx, 2), 0);
@@ -39,11 +41,11 @@ final class ControlsView {
         if (android.os.Build.VERSION.SDK_INT >= 33
                 && ctx.checkSelfPermission("android.permission.POST_NOTIFICATIONS")
                 != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            LinearLayout warn = Ui.card(ctx, "通知未开启");
-            warn.addView(Ui.text(ctx, "桌面运行时靠会话通知里的「控制」回到这里；通知权限没开就看不到它。",
+            LinearLayout warn = Ui.card(ctx, T.t("card.notifications_off"));
+            warn.addView(Ui.text(ctx, T.t("controls.warn_notifications"),
                     13, Ui.DIM, false));
             warn.addView(Ui.gap(ctx, 8));
-            warn.addView(Ui.button(ctx, "去开启通知", true, v -> {
+            warn.addView(Ui.button(ctx, T.t("btn.enable_notifications"), true, v -> {
                 android.content.Intent i = new android.content.Intent(
                         android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                         .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, ctx.getPackageName());
@@ -51,28 +53,30 @@ final class ControlsView {
             }));
             root.addView(warn);
         }
-        LinearLayout session = Ui.card(ctx, "会话");
+        LinearLayout session = Ui.card(ctx, T.t("card.session"));
         sessionState = Ui.text(ctx, "—", 13, Ui.DIM, false);
         session.addView(sessionState);
         session.addView(Ui.gap(ctx, 10));
         LinearLayout sessionButtons = Ui.row(ctx);
-        sessionButtons.addView(Ui.button(ctx, "进入桌面", true, v -> openDesktop()));
+        sessionButtons.addView(Ui.button(ctx, T.t("btn.enter_desktop"), true, v -> openDesktop()));
         sessionButtons.addView(Ui.space(ctx, 8));
-        sessionButtons.addView(Ui.button(ctx, "重启会话", false, v -> confirmPower("reboot", "重启会话？")));
+        sessionButtons.addView(Ui.button(ctx, T.t("btn.restart_session"), false,
+                v -> confirmPower("reboot", T.t("dialog.restart_session_title"))));
         sessionButtons.addView(Ui.space(ctx, 8));
-        sessionButtons.addView(Ui.button(ctx, "关闭桌面", false, v -> confirmPower("shutdown", "关闭桌面并回到 Android？")));
+        sessionButtons.addView(Ui.button(ctx, T.t("btn.close_desktop"), false,
+                v -> confirmPower("shutdown", T.t("dialog.shutdown_title"))));
         session.addView(sessionButtons);
         root.addView(session);
 
-        LinearLayout sound = Ui.card(ctx, "声音");
+        LinearLayout sound = Ui.card(ctx, T.t("card.sound"));
         int max = audio != null ? audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC) : 15;
-        sound.addView(slider("媒体音量", AudioManager.STREAM_MUSIC, max));
+        sound.addView(slider(T.t("label.media_volume"), AudioManager.STREAM_MUSIC, max));
         sound.addView(Ui.gap(ctx, 6));
-        sound.addView(slider("通话音量", AudioManager.STREAM_VOICE_CALL,
+        sound.addView(slider(T.t("label.call_volume"), AudioManager.STREAM_VOICE_CALL,
                 audio != null ? audio.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL) : 7));
         root.addView(sound);
 
-        LinearLayout display = Ui.card(ctx, "显示与输入");
+        LinearLayout display = Ui.card(ctx, T.t("card.display_input"));
         android.util.DisplayMetrics dm = ctx.getResources().getDisplayMetrics();
         String screen = dm.widthPixels + " × " + dm.heightPixels + " · " + dm.densityDpi + " dpi";
         try {
@@ -82,22 +86,24 @@ final class ControlsView {
         } catch (RuntimeException ignored) {
             // refresh rate is device-specific
         }
-        display.addView(Ui.kv2(ctx, "屏幕", Ui.mono(ctx, screen, 14, Ui.TEXT), "Android 显示"));
-        display.addView(Ui.kv2(ctx, "输入", Ui.mono(ctx, "触摸板 · 虚拟键盘", 14, Ui.TEXT), "按键映射在设置里"));
-        TextView displayLink = Ui.text(ctx, "显示、方向与刘海设置 ›", 12, Ui.ACCENT, false);
+        display.addView(Ui.kv2(ctx, T.t("label.screen"), Ui.mono(ctx, screen, 14, Ui.TEXT),
+                T.t("controls.screen_caption")));
+        display.addView(Ui.kv2(ctx, T.t("label.input"), Ui.mono(ctx, T.t("controls.input_value"), 14, Ui.TEXT),
+                T.t("controls.input_caption")));
+        TextView displayLink = Ui.text(ctx, T.t("controls.display_link"), 12, Ui.ACCENT, false);
         displayLink.setPadding(0, Ui.dp(ctx, 4), 0, 0);
         displayLink.setOnClickListener(v -> ctx.startActivity(ShellActivity.intent(ctx, 4)));
         display.addView(displayLink);
         root.addView(display);
 
-        LinearLayout clip = Ui.card(ctx, "剪贴板");
-        clipboardState = Ui.text(ctx, "Android ↔ 桌面双向同步", 12, Ui.DIM, false);
+        LinearLayout clip = Ui.card(ctx, T.t("card.clipboard"));
+        clipboardState = Ui.text(ctx, T.t("controls.clipboard_sync"), 12, Ui.DIM, false);
         clip.addView(clipboardState);
         clip.addView(Ui.gap(ctx, 6));
         LinearLayout clipButtons = Ui.row(ctx);
-        clipButtons.addView(Ui.button(ctx, "发送到桌面", false, v -> pushClipboard()));
+        clipButtons.addView(Ui.button(ctx, T.t("btn.send_to_desktop"), false, v -> pushClipboard()));
         clipButtons.addView(Ui.space(ctx, 8));
-        clipButtons.addView(Ui.button(ctx, "从桌面取回", false, v -> pullClipboard()));
+        clipButtons.addView(Ui.button(ctx, T.t("btn.fetch_from_desktop"), false, v -> pullClipboard()));
         clip.addView(clipButtons);
         root.addView(clip);
 
@@ -152,14 +158,14 @@ final class ControlsView {
     void refresh() {
         boolean ready = SessionService.rootfsReady(ctx);
         sessionState.setText(ready
-                ? (SessionService.started ? "会话运行中 · 点「进入桌面」回到 Linux" : "系统已安装，尚未启动")
-                : "还没有安装系统（到「系统」页安装）");
+                ? (SessionService.started ? T.t("controls.session_running") : T.t("controls.session_ready"))
+                : T.t("controls.no_system"));
         sessionState.setTextColor(ready ? Ui.DIM : Ui.FAINT);
     }
 
     private void openDesktop() {
         if (!SessionService.rootfsReady(ctx)) {
-            toast("系统还没装好");
+            toast(T.t("toast.system_missing"));
             return;
         }
         if (ctx instanceof android.app.Activity)
@@ -175,13 +181,13 @@ final class ControlsView {
 
     private void confirmPower(String action, String title) {
         if (!SessionService.rootfsReady(ctx)) {
-            toast("系统还没装好");
+            toast(T.t("toast.system_missing"));
             return;
         }
         new android.app.AlertDialog.Builder(ctx)
                 .setTitle(title)
-                .setNegativeButton("取消", null)
-                .setPositiveButton("确定", (d, w) -> Restarter.power(ctx, action))
+                .setNegativeButton(T.t("btn.cancel"), null)
+                .setPositiveButton(T.t("btn.confirm"), (d, w) -> Restarter.power(ctx, action))
                 .show();
     }
 
@@ -190,11 +196,11 @@ final class ControlsView {
         ClipData clip = cm == null ? null : cm.getPrimaryClip();
         CharSequence text = clip == null || clip.getItemCount() == 0 ? null : clip.getItemAt(0).coerceToText(ctx);
         if (text == null || text.length() == 0) {
-            toast("Android 剪贴板是空的");
+            toast(T.t("toast.clipboard_empty"));
             return;
         }
         write(SessionService.runDir(ctx), "clipboard-from-android", text.toString());
-        clipboardState.setText("已发送 " + text.length() + " 个字符到桌面");
+        clipboardState.setText(T.t("toast.sent_to_desktop", text.length()));
     }
 
     private void pullClipboard() {
@@ -202,14 +208,14 @@ final class ControlsView {
         try {
             String text = Files.exists(f.toPath()) ? new String(Files.readAllBytes(f.toPath())) : "";
             if (text.isEmpty()) {
-                toast("桌面上没有新的剪贴板内容");
+                toast(T.t("toast.nothing_to_fetch"));
                 return;
             }
             ClipboardManager cm = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
             cm.setPrimaryClip(ClipData.newPlainText("AOmarchy", text));
-            clipboardState.setText("已取回 " + text.length() + " 个字符");
+            clipboardState.setText(T.t("toast.fetched", text.length()));
         } catch (Exception e) {
-            toast("读取桌面剪贴板失败：" + e.getMessage());
+            toast(T.t("toast.read_clipboard_failed", String.valueOf(e.getMessage())));
         }
     }
 

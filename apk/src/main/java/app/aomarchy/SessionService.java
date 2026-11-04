@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import app.aomarchy.i18n.T;
+
 /**
  * Andromarchy session: keeps the Linux side alive in a foreground service (HyperOS kills background apps).
  *
@@ -210,6 +212,7 @@ public class SessionService extends Service {
     public void onCreate() {
         super.onCreate();
         started = true;
+        T.init(this); // the notification copy follows the console's ui_lang, even when the service starts first
         HostGestures.apply(this); // HyperOS 3-finger gestures off again after a restart, if allowed
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Session", NotificationManager.IMPORTANCE_LOW));
@@ -222,10 +225,10 @@ public class SessionService extends Service {
         Notification n = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_menu_view)
                 .setContentTitle("AOmarchy")
-                .setContentText("Linux 桌面运行中")
+                .setContentText(T.t("session.content"))
                 .setContentIntent(open)
-                .addAction(new Notification.Action.Builder(null, "控制", controls).build())
-                .addAction(new Notification.Action.Builder(null, "控制台", console).build())
+                .addAction(new Notification.Action.Builder(null, T.t("session.action_controls"), controls).build())
+                .addAction(new Notification.Action.Builder(null, T.t("session.action_console"), console).build())
                 .setOngoing(true)
                 .build();
         startForeground(NOTIFICATION_ID, n);

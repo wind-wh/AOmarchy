@@ -15,6 +15,7 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import app.aomarchy.i18n.T;
 import app.aomarchy.ui.TerminalView;
 import app.aomarchy.ui.Toasts;
 import app.aomarchy.ui.Ui;
@@ -38,6 +39,7 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         Prefs.init(this);
+        T.init(this); // the console's ui_lang choice applies to the terminal too
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         // Do not let the editor focus pull up the IME over the terminal: the 键盘 button or a tap shows it.
         getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
@@ -89,16 +91,16 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
         barBg.setCornerRadius(Ui.dp(this, 14));
         bar.setBackground(barBg);
 
-        TextView back = action("‹ 控制台", Ui.ACCENT, v -> finish());
+        TextView back = action(T.t("btn.back_console"), Ui.ACCENT, v -> finish());
         bar.addView(back);
         bar.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
-        bar.addView(action("复制", Ui.DIM, v -> copy()));
-        bar.addView(action("粘贴", Ui.DIM, v -> paste()));
+        bar.addView(action(T.t("btn.copy"), Ui.DIM, v -> copy()));
+        bar.addView(action(T.t("btn.paste"), Ui.DIM, v -> paste()));
         bar.addView(action("A−", Ui.DIM, v -> changeFont(-1)));
         bar.addView(action("A+", Ui.DIM, v -> changeFont(1)));
-        bar.addView(action("键盘", Ui.DIM, v -> toggleKeyboard()));
-        bar.addView(action("重启", Ui.DIM, v -> recreate()));
-        copyButton = (TextView) bar.getChildAt(2); // the 复制 label, dimmed until something is selected
+        bar.addView(action(T.t("btn.keyboard"), Ui.DIM, v -> toggleKeyboard()));
+        bar.addView(action(T.t("btn.restart"), Ui.DIM, v -> recreate()));
+        copyButton = (TextView) bar.getChildAt(2); // the copy label, dimmed until something is selected
 
         FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -109,7 +111,7 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
         root.addView(bar, blp);
 
         // A pill that appears while the view is scrolled back: one tap returns to the live output.
-        scrollHint = Ui.text(this, "↓ 底部", 12, Ui.BG, true);
+        scrollHint = Ui.text(this, T.t("terminal.bottom"), 12, Ui.BG, true);
         GradientDrawable pill = new GradientDrawable();
         pill.setColor(Ui.MINT);
         pill.setCornerRadius(Ui.dp(this, 12));
@@ -135,7 +137,7 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
         }
 
         if (!SessionService.rootfsReady(this)) {
-            terminal.writeLocal("系统还没安装。回到控制台，在「系统」里装好 AOmarchy 再进终端。\r\n");
+            terminal.writeLocal(T.t("terminal.no_system") + "\r\n");
         } else {
             terminal.start(SessionService.ptyArgv(this, "exec bash -l"), SessionService.ptyEnv(this),
                     SessionService.ptyCwd(this).getPath());
@@ -167,7 +169,7 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
         TextView key = Ui.text(this, label, 12, Ui.TEXT, false);
         key.setGravity(Gravity.CENTER);
         key.setPadding(0, Ui.dp(this, 6), 0, Ui.dp(this, 6));
-        key.setContentDescription(label + " 键");
+        key.setContentDescription(T.t("terminal.key_desc", label));
         key.setOnClickListener(v -> terminal.write(sequence));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         lp.setMargins(Ui.dp(this, 2), 0, Ui.dp(this, 2), 0);
@@ -188,21 +190,21 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
         if (whole)
             text = terminal.screenText();
         if (text == null || text.isEmpty()) {
-            Toasts.show(this, "没有可复制的内容");
+            Toasts.show(this, T.t("toast.nothing_to_copy"));
             return;
         }
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         if (cm == null)
             return;
-        cm.setPrimaryClip(ClipData.newPlainText("终端", text));
+        cm.setPrimaryClip(ClipData.newPlainText(T.t("terminal.clip_label"), text));
         int lines = text.split("\n", -1).length;
-        Toasts.show(this, whole ? "已复制屏幕 " + lines + " 行" : "已复制选中 " + lines + " 行");
+        Toasts.show(this, whole ? T.t("toast.copied_screen", lines) : T.t("toast.copied_selection", lines));
     }
 
     private void paste() {
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         if (cm == null || !cm.hasPrimaryClip() || cm.getPrimaryClip() == null) {
-            Toasts.show(this, "剪贴板是空的");
+            Toasts.show(this, T.t("toast.clipboard_empty"));
             return;
         }
         CharSequence text = cm.getPrimaryClip().getItemAt(0).coerceToText(this);
@@ -210,7 +212,7 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
             return;
         // A terminal expects CR for "run it"; a clipboard full of pasted lines must not sit at a bare prompt.
         terminal.write(text.toString().replace("\r\n", "\r").replace('\n', '\r'));
-        Toasts.show(this, "已粘贴 " + text.length() + " 个字符");
+        Toasts.show(this, T.t("toast.pasted", text.length()));
     }
 
     private void toggleKeyboard() {
