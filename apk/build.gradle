@@ -62,7 +62,7 @@ android {
         def sp = new Properties()
         file(signingFile).withInputStream { sp.load(it) }
         signingConfigs {
-            AOmarchy {
+            aomarchy {
                 storeFile = file(sp.storePath)
                 storePassword = sp.storePassword
                 keyAlias = sp.keyAlias
