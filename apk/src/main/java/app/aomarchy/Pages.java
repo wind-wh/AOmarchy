@@ -127,7 +127,7 @@ class OverviewPage extends Page {
         cpuCard.addView(cpuSub);
         sparkline = new Sparkline(shell);
         LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(shell, 22));
+                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(shell, 28));
         slp.topMargin = Ui.dp(shell, 3);
         cpuCard.addView(sparkline, slp);
 
@@ -155,7 +155,7 @@ class OverviewPage extends Page {
         if (wide) {
             LinearLayout row = Ui.row(shell);
             for (int i = 0; i < cards.length; i++) {
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Ui.dp(shell, 126), 1f);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Ui.dp(shell, 132), 1f);
                 if (i < cards.length - 1)
                     lp.rightMargin = Ui.dp(shell, 9);
                 row.addView(cards[i], lp);
@@ -164,10 +164,10 @@ class OverviewPage extends Page {
         } else {
             for (int r = 0; r < 2; r++) {
                 LinearLayout row = Ui.row(shell);
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Ui.dp(shell, 126), 1f);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Ui.dp(shell, 132), 1f);
                 lp.rightMargin = Ui.dp(shell, 9);
                 row.addView(cards[r * 2], lp);
-                row.addView(cards[r * 2 + 1], new LinearLayout.LayoutParams(0, Ui.dp(shell, 126), 1f));
+                row.addView(cards[r * 2 + 1], new LinearLayout.LayoutParams(0, Ui.dp(shell, 132), 1f));
                 body.addView(row);
                 body.addView(Ui.gap(shell, 9));
             }
@@ -176,11 +176,16 @@ class OverviewPage extends Page {
         // One wide card for the things that are two short lines each: less blank space than two half-empty cards.
         LinearLayout netGpu = card("网络与图形");
         networkValue = value("—", Ui.TEXT);
-        netGpu.addView(Ui.kv(shell, "网络", networkValue));
+        netGpu.addView(Ui.kv2(shell, "网络", networkValue, "Android 网络栈提供"));
         gpuValue = value("—", Ui.TEXT);
-        netGpu.addView(Ui.kv(shell, "GPU", gpuValue));
-        netGpu.addView(Ui.text(shell, "网络与 Adreno 驱动都由 Android 侧透传给 Linux 会话。", 11, Ui.FAINT, false));
+        netGpu.addView(Ui.kv2(shell, "GPU", gpuValue, "Mesa KGSL · Adreno"));
+        netGpu.addView(Ui.text(shell, "两者都由 Android 侧透传，Linux 里看到的与系统一致。", 11, Ui.FAINT, false));
         body.addView(netGpu);
+
+        LinearLayout tips = Ui.card(shell, "提示");
+        tips.addView(Ui.text(shell, "桌面里点左上角「A」回控制台；会话通知里也有「控制」「控制台」。第一次使用：先去「系统」装系统，再到「设置」填身份与键盘。",
+                12, Ui.DIM, false));
+        body.addView(tips);
     }
     private LinearLayout card(String title) {
         LinearLayout card = Ui.card(shell, title);

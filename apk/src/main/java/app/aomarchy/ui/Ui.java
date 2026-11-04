@@ -173,6 +173,29 @@ public final class Ui {
         return r;
     }
 
+    /** Key on the left, value with a one-line explanation under it on the right: fills a wide row with information. */
+    public static LinearLayout kv2(Context c, String key, TextView value, String caption) {
+        LinearLayout r = row(c);
+        r.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        r.setPadding(0, dp(c, 5), 0, dp(c, 5));
+        r.addView(text(c, key, 14, DIM, false),
+                new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        View space = new View(c);
+        r.addView(space, new LinearLayout.LayoutParams(0, 1, 1f));
+        LinearLayout right = column(c);
+        right.setGravity(android.view.Gravity.END);
+        value.setGravity(android.view.Gravity.END);
+        right.addView(value);
+        if (caption != null && !caption.isEmpty()) {
+            TextView cap = text(c, caption, 11, FAINT, false);
+            cap.setGravity(android.view.Gravity.END);
+            right.addView(cap);
+        }
+        r.addView(right, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        return r;
+    }
     /** 1dp separator, for rows inside a card. */
     public static View divider(Context c) {
         View v = new View(c);
