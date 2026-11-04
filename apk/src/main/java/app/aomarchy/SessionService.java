@@ -239,6 +239,7 @@ public class SessionService extends Service {
         } catch (IOException e) {
             Log.e(TAG, "session start failed", e);
         }
+        SessionWidget.refresh(this); // the home-screen widget now shows 运行中
     }
 
     @Override
@@ -631,6 +632,7 @@ public class SessionService extends Service {
             p.destroy();
         if (wakeLock != null && wakeLock.isHeld())
             wakeLock.release();
+        SessionWidget.refresh(this); // back to 就绪 once the session is gone
         super.onDestroy();
     }
 

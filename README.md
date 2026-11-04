@@ -67,7 +67,21 @@ are untested.
 The [user guide](docs/user-guide.md) explains the touch gestures, the on-screen keyboard, the Android settings to
 change (HyperOS/MIUI take some gestures for themselves), installing apps, and the self-test.
 
+## What's new in 2.7
+
+- **A new app icon.** The launcher icon is now the console's own language — a dark tile with the brand's four-panel
+  glyph (three accent tiles, one mint) — instead of the leftover green Omarchy box with the Android robot. Adaptive
+  icon with a themeable monochrome layer for Android 13.
+- **A home-screen widget.** Shows the session state (未安装 / 就绪 / 运行中 / 终端模式) and gives one-tap **控制台** and
+  **终端** entry; it refreshes when the session starts or stops.
+- **Suggestions on the overview.** A new 智能建议 card looks at the live numbers and offers the two most useful next
+  actions — "only 12 GB free → clean backups", "memory at 87% → terminal mode is lighter", "session not running →
+  open desktop", "backups take 9 GB → manage", or "install Linux" on a fresh device. It only redraws when the
+  suggestion changes, and every row is a single TalkBack stop.
+- Everything from 2.6 stays: quick settings tile, backup retention and disk usage, Chinese/English console.
+
 ## What's new in 2.6
+
 
 - **A Quick Settings tile.** Pull down the shade and tap the AOmarchy tile to open the console, or the terminal when
   the startup mode is 终端; with no system installed it lands on the System page. The tile's label follows the state.

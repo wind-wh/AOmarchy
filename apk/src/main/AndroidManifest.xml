@@ -74,6 +74,18 @@
         <service
             android:name=".SessionService"
             android:exported="false" />
+        <!-- Home-screen widget: session state + 控制台 / 终端 shortcuts (SessionWidget; updatePeriodMillis=0). -->
+        <receiver
+            android:name=".SessionWidget"
+            android:exported="false"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_session_info" />
+        </receiver>
         <!-- Quick settings tile: one tap into the console, or the terminal in terminal mode (see SessionTileService). -->
         <service
             android:name=".SessionTileService"

@@ -13,6 +13,17 @@
     <string name="tile_terminal">Terminal</string>
     <string name="tile_uninstalled">Not installed</string>
 
+    <!-- Home-screen widget (SessionWidget; res/xml/widget_session_info.xml + res/layout/widget_session.xml) -->
+    <string name="widget_label">AOmarchy</string>
+    <string name="widget_description">Session status with console and terminal shortcuts</string>
+    <string name="widget_status_not_installed">Not installed</string>
+    <string name="widget_status_ready">Ready</string>
+    <string name="widget_status_running">Running</string>
+    <string name="widget_status_terminal">Terminal mode</string>
+    <string name="widget_title_format">%1$s · %2$s</string>
+    <string name="widget_btn_console">Console</string>
+    <string name="widget_btn_terminal">Terminal</string>
+
     <!-- Settings notification (MainActivity.showSettingsNotification; notification_switch/hint are legacy row labels
          kept together with the rest of the notification_* group) -->
     <string name="notification_switch">Show settings notification</string>

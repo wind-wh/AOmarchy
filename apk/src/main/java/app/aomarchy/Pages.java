@@ -226,9 +226,104 @@ class OverviewPage extends Page {
         backupStatus.addView(backupRow);
         body.addView(backupStatus);
 
+        // Smart suggestions: the two most useful next actions for this device, computed from the live metrics.
+        LinearLayout insights = Ui.card(shell, T.t("card.insights"));
+        insightsBox = Ui.column(shell);
+        insights.addView(insightsBox);
+        insightsEmpty = Ui.text(shell, T.t("insights.none"), 12, Ui.DIM, false);
+        insights.addView(insightsEmpty);
+        body.addView(insights);
+
         LinearLayout tips = Ui.card(shell, T.t("card.tips"));
         tips.addView(Ui.text(shell, T.t("overview.tips"), 12, Ui.DIM, false));
         body.addView(tips);
+    }
+
+    private LinearLayout insightsBox;
+    private TextView insightsEmpty;
+    private String insightSignature;
+
+    /** One suggestion row: a colored dot, the text, and a tappable action at the end. */
+    private LinearLayout insightRow(String text, String action, Runnable onClick) {
+        LinearLayout row = Ui.row(shell);
+        row.setPadding(0, Ui.dp(shell, 6), 0, Ui.dp(shell, 6));
+        row.setMinimumHeight(Ui.dp(shell, 48));
+        TextView dot = Ui.text(shell, "•", 16, Ui.ACCENT, true);
+        dot.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        row.addView(dot);
+        row.addView(Ui.space(shell, 8));
+        TextView label = Ui.text(shell, text, 13, Ui.TEXT, false);
+        row.addView(label, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView chip = Ui.text(shell, action, 13, Ui.ACCENT, true);
+        chip.setPadding(Ui.dp(shell, 10), Ui.dp(shell, 8), Ui.dp(shell, 10), Ui.dp(shell, 8));
+        chip.setMinimumHeight(Ui.dp(shell, 48));
+        chip.setContentDescription(action);
+        row.addView(chip);
+        row.setOnClickListener(v -> onClick.run());
+        row.setClickable(true);
+        row.setContentDescription(text + "，" + action);
+        for (int c = 0; c < row.getChildCount(); c++)
+            row.getChildAt(c).setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        return row;
+    }
+
+    /**
+     * Recomputes the suggestion list (max two). Rebuilding the rows every poll would flicker, so it only touches the
+     * views when the suggestion signature changes; the data comes from the poller's metrics.
+     */
+    private void updateInsights() {
+        if (insightsBox == null)
+            return;
+        boolean ready = SessionService.rootfsReady(shell);
+        java.util.List<String[]> found = new java.util.ArrayList<>(); // {signature, text, action, kind}
+        if (!ready) {
+            found.add(new String[]{"nosys", T.t("insight.no_system"), T.t("insight.install"), "install"});
+        } else {
+            long free = metrics.diskTotal - metrics.diskUsed;
+            int diskPercent = metrics.diskPercent();
+            if (diskPercent >= 85)
+                found.add(new String[]{"disk", T.t("insight.disk_low",
+                        app.aomarchy.data.Metrics.gb(free)), T.t("insight.clean"), "system"});
+            if (metrics.memPercent() >= 85)
+                found.add(new String[]{"mem", T.t("insight.mem_high", String.valueOf(metrics.memPercent())),
+                        T.t("insight.to_settings"), "settings"});
+            if (!SessionService.started && !"terminal".equals(shell.getSharedPreferences(Prefs.NAME,
+                    android.content.Context.MODE_PRIVATE).getString("session_mode", "desktop")))
+                found.add(new String[]{"idle", T.t("insight.session_idle"), T.t("insight.enter"), "desktop"});
+            long backupBytes = app.aomarchy.data.Backup.totalBytes(shell);
+            if (backupBytes > 8L * 1024 * 1024 * 1024)
+                found.add(new String[]{"backup", T.t("insight.backup_big",
+                        app.aomarchy.data.Installer.humanSize(backupBytes)), T.t("insight.manage"), "system"});
+        }
+        int count = Math.min(2, found.size());
+        StringBuilder sig = new StringBuilder();
+        for (int i = 0; i < count; i++)
+            sig.append(found.get(i)[0]).append(',');
+        String signature = sig.toString();
+        if (signature.equals(insightSignature))
+            return;
+        insightSignature = signature;
+        insightsBox.removeAllViews();
+        insightsEmpty.setVisibility(count == 0 ? View.VISIBLE : View.GONE);
+        for (int i = 0; i < count; i++) {
+            final String kind = found.get(i)[3];
+            insightsBox.addView(insightRow(found.get(i)[1], found.get(i)[2], () -> {
+                switch (kind) {
+                    case "install":
+                    case "system":
+                        shell.showTab(1);
+                        break;
+                    case "settings":
+                        shell.showTab(4);
+                        break;
+                    case "desktop":
+                        shell.openDesktop();
+                        break;
+                    default:
+                        break;
+                }
+            }));
+        }
     }
     private LinearLayout card(String title) {
         LinearLayout card = Ui.card(shell, title);
@@ -375,6 +470,7 @@ class OverviewPage extends Page {
         batterySub.setText(metrics.charging ? T.t("overview.charging") : T.t("overview.on_battery"));
         networkValue.setText(T.networkLabel(metrics.network));
         gpuValue.setText(Metrics.gpu());
+        updateInsights();
     }
 
     /** Numbers roll to their new value instead of jumping (Kinetik's Stat Card). */

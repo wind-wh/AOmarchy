@@ -13,6 +13,17 @@
     <string name="tile_terminal">终端</string>
     <string name="tile_uninstalled">未安装</string>
 
+    <!-- Home-screen widget (SessionWidget; res/xml/widget_session_info.xml + res/layout/widget_session.xml) -->
+    <string name="widget_label">AOmarchy</string>
+    <string name="widget_description">会话状态与「控制台 / 终端」快捷入口</string>
+    <string name="widget_status_not_installed">未安装</string>
+    <string name="widget_status_ready">就绪</string>
+    <string name="widget_status_running">运行中</string>
+    <string name="widget_status_terminal">终端模式</string>
+    <string name="widget_title_format">%1$s · %2$s</string>
+    <string name="widget_btn_console">控制台</string>
+    <string name="widget_btn_terminal">终端</string>
+
     <!-- Settings notification (MainActivity.showSettingsNotification; notification_switch/hint are legacy row labels
          kept together with the rest of the notification_* group) -->
     <string name="notification_switch">显示设置通知</string>
