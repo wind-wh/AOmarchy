@@ -67,7 +67,20 @@ are untested.
 The [user guide](docs/user-guide.md) explains the touch gestures, the on-screen keyboard, the Android settings to
 change (HyperOS/MIUI take some gestures for themselves), installing apps, and the self-test.
 
+## What's new in 2.4
+
+- **Settings backup file.** 设置 → 详细设置 → 配置备份 exports every console setting to a JSON file (through the
+  system file picker) and imports it back — the quick way to move to a new tablet, recover after a reinstall, or send
+  a bug report with your configuration. The Linux system and its backups are not included, only the app's settings.
+- **The overview says when you last backed up.** A small backup card at the bottom of 概览 shows the age of the newest
+  backup file ("Last backup: 3 h ago"), turns red after 30 days or when there is none, and jumps to the System page.
+- **Launcher shortcuts work now.** Long-pressing the app icon offers Console, System, Settings and Terminal mode. The
+  old shortcut pointed at a screen that 2.2 deleted, and its metadata was attached to the wrong activity, so the
+  platform never read it.
+- The accessibility service's "settings" link now opens the console instead of the deleted settings activity.
+
 ## What's new in 2.3
+
 
 - **The interface language now applies everywhere.** Until now 设置 → 语言 only changed the console's own strings; the
   Android resources around the app (the session notification's title/buttons, the desktop's toasts, the orientation

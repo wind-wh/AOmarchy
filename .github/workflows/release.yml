@@ -92,32 +92,29 @@ jobs:
           fail_on_unmatched_files: true
           files: dist/*
           body: |
-            **AOmarchy 2.3** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
+            **AOmarchy 2.4** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
 
             This release was built and signed by GitHub Actions from the repository source.
 
-            ## What is new in 2.3
+            ## What is new in 2.4
 
-            - **The interface language now applies everywhere.** 设置 → 语言 used to change only the console's own
-              strings; the Android resources around the app (session notification title/buttons, desktop toasts,
-              orientation labels) still followed the system language. Activity resources now follow `ui_lang` too, and
-              switching languages rebuilds the notification immediately instead of waiting for the next session.
-            - **Accessibility pass.** Tappable rows, tiles, switches and buttons in the console and the four detail pages
-              have TalkBack descriptions (with the current value / on-off state), touch targets are at least 48dp, and
-              decorative views (sparkline, progress bars, dividers, spacers) are skipped by the screen reader.
-            - **Network status is translated properly**: a stable network code is reported instead of Chinese display
-              text, so the overview label follows the interface language.
-            - **Picture-in-picture for the desktop is turned off.** It never rendered — the desktop's SurfaceView stays
-              black in Android's small window. The switch is gone and the 显示 page explains it; use the A handle or the
-              session notification to return to the console instead.
-            - Everything from 2.2 and 2.1 stays: the native settings pages, Chinese/English console, terminal mode,
-              备份与回滚, the motion language and the dense pages.
+            - **Settings backup file.** 设置 → 详细设置 → 配置备份 exports every console setting to a JSON file (through
+              the system file picker) and imports it back — for moving to a new tablet, recovering after a reinstall,
+              or attaching your configuration to a bug report. The Linux system and its backups are not included.
+            - **The overview says when you last backed up.** A backup card at the bottom of 概览 shows the age of the
+              newest backup file, turns red after 30 days or when there is none, and jumps to the System page.
+            - **Launcher shortcuts work now.** Long-press the app icon for Console, System, Settings and Terminal mode.
+              The old shortcut pointed at a screen 2.2 deleted and its metadata was attached to the wrong activity, so
+              the platform never read it.
+            - The accessibility service's settings link now opens the console instead of the deleted activity.
+            - Everything from 2.3 stays: interface language applied to resources and the notification, the TalkBack
+              pass, and picture-in-picture turned off (the desktop's SurfaceView stays black in Android's small window).
 
             ## Upgrading
 
-            - From **2.2 / 2.1 / 2.0**: install over it, nothing else to do.
-            - From **1.x**: the package is `app.aomarchy` and Android does not let one app read another app's private
-              data, so a 1.x install cannot be migrated. Save what you need from the desktop, uninstall the old app,
+            - From **2.3 / 2.2 / 2.1 / 2.0**: install over it, nothing else to do. Your settings can be exported before
+              the update and imported after it.
+            - From **1.x**: the package is `app.aomarchy`; save what you need from the desktop, uninstall the old app,
               install AOmarchy and set the system up again (a local archive makes that work offline). The 1.x builds
               stay available in `wind-wh/AOmarchy-legacy`.
 
