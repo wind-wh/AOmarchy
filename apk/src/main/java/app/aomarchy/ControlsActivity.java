@@ -43,6 +43,45 @@ public class ControlsActivity extends Activity {
         head.addView(close);
         sheet.addView(head);
 
+        // Morph sheet: drag the header down to dismiss, spring back if the drag is short (Kinetik's morph-sheet feel).
+        final FrameLayout dim = root;
+        final android.view.VelocityTracker tracker = android.view.VelocityTracker.obtain();
+        final float[] state = new float[2]; // downY, startTranslation
+        head.setOnTouchListener((v, e) -> {
+            switch (e.getActionMasked()) {
+                case android.view.MotionEvent.ACTION_DOWN:
+                    state[0] = e.getRawY();
+                    state[1] = sheet.getTranslationY();
+                    tracker.clear();
+                    tracker.addMovement(e);
+                    return true;
+                case android.view.MotionEvent.ACTION_MOVE: {
+                    tracker.addMovement(e);
+                    float dy = Math.max(0, e.getRawY() - state[0] + state[1]);
+                    sheet.setTranslationY(dy);
+                    dim.getBackground().setAlpha((int) (0xB3 * Math.max(0, 1 - dy / (sheet.getHeight() + 1))));
+                    return true;
+                }
+                case android.view.MotionEvent.ACTION_UP:
+                case android.view.MotionEvent.ACTION_CANCEL: {
+                    tracker.addMovement(e);
+                    tracker.computeCurrentVelocity(1000);
+                    float dy = sheet.getTranslationY();
+                    if (dy > Ui.dp(this, 110) || tracker.getYVelocity() > 900) {
+                        sheet.animate().translationY(sheet.getHeight()).setDuration(180)
+                                .withEndAction(this::finish).start();
+                    } else {
+                        sheet.animate().translationY(0).setDuration(320)
+                                .setInterpolator(app.aomarchy.ui.Motion.SPRING).start();
+                        dim.getBackground().setAlpha(0xB3);
+                    }
+                    return true;
+                }
+                default:
+                    return true;
+            }
+        });
+
         ScrollView scroll = new ScrollView(this);
         ControlsView controls = new ControlsView(this);
         controls.refresh();

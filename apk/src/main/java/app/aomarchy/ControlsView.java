@@ -215,6 +215,9 @@ final class ControlsView {
     }
 
     private void toast(String text) {
-        Toast.makeText(ctx, text, Toast.LENGTH_SHORT).show();
+        if (ctx instanceof android.app.Activity)
+            app.aomarchy.ui.Toasts.show((android.app.Activity) ctx, text);
+        else
+            Toast.makeText(ctx, text, Toast.LENGTH_SHORT).show();
     }
 }

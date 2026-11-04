@@ -29,6 +29,7 @@ public class ShellActivity extends Activity {
     private FrameLayout host;
     private TextView status;
     private int current = -1;
+    private View indicator;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -62,8 +63,9 @@ public class ShellActivity extends Activity {
         LinearLayout root = Ui.row(this);
         root.setBackgroundColor(Ui.BG);
 
+        FrameLayout railFrame = new FrameLayout(this);
+        railFrame.setBackgroundColor(Ui.SURFACE);
         LinearLayout rail = Ui.column(this);
-        rail.setBackgroundColor(Ui.SURFACE);
         rail.setPadding(Ui.dp(this, 8), Ui.dp(this, 24), Ui.dp(this, 8), Ui.dp(this, 16));
         for (int i = 0; i < TITLES.length; i++) {
             final int index = i;
@@ -86,7 +88,19 @@ public class ShellActivity extends Activity {
             icons[i] = icon;
             tabLabels[i] = label;
         }
-        root.addView(rail, new LinearLayout.LayoutParams(Ui.dp(this, 88), ViewGroup.LayoutParams.MATCH_PARENT));
+        // The indicator sits behind the tabs and glides to the selected one (Kinetik's liquid tab bar).
+        indicator = new View(this);
+        android.graphics.drawable.GradientDrawable pill = new android.graphics.drawable.GradientDrawable();
+        pill.setColor(0x1F7C8CFF);
+        pill.setCornerRadius(Ui.dp(this, 16));
+        pill.setStroke(Math.max(1, Ui.dp(this, 1)), 0x337C8CFF);
+        indicator.setBackground(pill);
+        FrameLayout.LayoutParams ilp = new FrameLayout.LayoutParams(Ui.dp(this, 72), Ui.dp(this, 76));
+        ilp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        railFrame.addView(indicator, ilp);
+        railFrame.addView(rail, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        root.addView(railFrame, new LinearLayout.LayoutParams(Ui.dp(this, 88), ViewGroup.LayoutParams.MATCH_PARENT));
 
         View divider = new View(this);
         divider.setBackgroundColor(Ui.LINE);
@@ -139,8 +153,38 @@ public class ShellActivity extends Activity {
             tabs[i].setBackground(on ? Ui.surface(this, 16) : null);
             icons[i].setColor(on ? Ui.ACCENT : Ui.DIM);
             tabLabels[i].setTextColor(on ? Ui.TEXT : Ui.DIM);
+            tabs[i].animate().scaleX(on ? 1.06f : 1f).scaleY(on ? 1.06f : 1f)
+                    .setDuration(280).setInterpolator(app.aomarchy.ui.Motion.SPRING).start();
         }
+        moveIndicator(index);
+        app.aomarchy.ui.Motion.appear(pages[index].root, 0);
         updateStatus();
+    }
+
+    /** Glides the rail pill to the tab that was chosen; on the first show it is placed without an animation. */
+    private void moveIndicator(int index) {
+        if (indicator == null)
+            return;
+        final android.view.View tab = tabs[index];
+        Runnable place = () -> {
+            if (tab.getHeight() == 0)
+                return;
+            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) indicator.getLayoutParams();
+            lp.height = (int) (tab.getHeight() * 0.88f);
+            indicator.setLayoutParams(lp);
+            indicator.animate().y(tab.getTop() + Ui.dp(this, 4)).setDuration(300)
+                    .setInterpolator(app.aomarchy.ui.Motion.SPRING).start();
+        };
+        if (tab.getHeight() > 0) {
+            place.run();
+        } else {
+            tab.post(() -> indicator.post(place));
+        }
+    }
+
+    /** In-app toast (styled, stacking); pages and controls use this instead of the system one. */
+    void toast(String text) {
+        app.aomarchy.ui.Toasts.show(this, text);
     }
 
     private Page newPage(int index) {

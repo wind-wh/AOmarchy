@@ -59,7 +59,7 @@ abstract class Page {
     }
 
     void toast(String text) {
-        Toast.makeText(shell, text, Toast.LENGTH_SHORT).show();
+        shell.toast(text);
     }
 }
 
@@ -89,6 +89,7 @@ class OverviewPage extends Page {
     private TextView networkValue;
     private TextView gpuValue;
     private Sparkline sparkline;
+    private int lastCpu = -1, lastMem = -1, lastDisk = -1, lastBat = -1;
 
     OverviewPage(ShellActivity shell) {
         super(shell);
@@ -220,14 +221,18 @@ class OverviewPage extends Page {
         if (!isAdded())
             return;
         metrics.read(shell);
-        cpuValue.setText(metrics.cpuPercent < 0 ? "—" : metrics.cpuPercent + "%");
+        roll(cpuValue, metrics.cpuPercent, lastCpu, "%");
+        lastCpu = metrics.cpuPercent;
         cpuSub.setText("device".equals(metrics.cpuScope) ? "设备整体" : metrics.processCount + " 个进程（会话）");
         sparkline.push(metrics.cpuPercent);
-        memValue.setText(metrics.memPercent() < 0 ? "—" : metrics.memPercent() + "%");
+        roll(memValue, metrics.memPercent(), lastMem, "%");
+        lastMem = metrics.memPercent();
         memSub.setText(Metrics.gb(metrics.memUsed) + " / " + Metrics.gb(metrics.memTotal));
-        diskValue.setText(metrics.diskPercent() < 0 ? "—" : metrics.diskPercent() + "%");
+        roll(diskValue, metrics.diskPercent(), lastDisk, "%");
+        lastDisk = metrics.diskPercent();
         diskSub.setText(Metrics.gb(metrics.diskUsed) + " / " + Metrics.gb(metrics.diskTotal));
-        batteryValue.setText(metrics.batteryPercent < 0 ? "—" : metrics.batteryPercent + "%");
+        roll(batteryValue, metrics.batteryPercent, lastBat, "%");
+        lastBat = metrics.batteryPercent;
         batterySub.setText(metrics.charging ? "充电中" : "使用电池");
         networkValue.setText(metrics.network);
         networkValue.setTextSize(18);
@@ -235,6 +240,16 @@ class OverviewPage extends Page {
         gpuValue.setTextSize(18);
     }
 
+    /** Numbers roll to their new value instead of jumping (Kinetik's Stat Card). */
+    private void roll(TextView view, int value, int previous, String suffix) {
+        if (value < 0) {
+            view.setText("—");
+        } else if (previous >= 0 && previous != value) {
+            app.aomarchy.ui.Motion.number(view, previous, value, suffix);
+        } else {
+            view.setText(value + suffix);
+        }
+    }
     private boolean isAdded() {
         return root.getParent() != null;
     }
@@ -260,7 +275,7 @@ class SystemPage extends Page {
     private TextView progressText;
     private TextView tileOnline;
     private TextView tileLocal;
-    private android.widget.ProgressBar progress;
+    private app.aomarchy.ui.SpringBar progress;
     private LinearLayout progressBox;
     private LinearLayout startBox;
     private android.net.Uri localUri;
@@ -316,10 +331,9 @@ class SystemPage extends Page {
         progressBox.setPadding(0, Ui.dp(shell, 14), 0, 0);
         progressText = Ui.text(shell, "", 12, Ui.DIM, false);
         progressBox.addView(progressText);
-        progress = new android.widget.ProgressBar(shell, null, android.R.attr.progressBarStyleHorizontal);
-        progress.setMax(1000);
+        progress = new app.aomarchy.ui.SpringBar(shell);
         LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(shell, 6));
+                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(shell, 10));
         plp.topMargin = Ui.dp(shell, 8);
         progressBox.addView(progress, plp);
         progressBox.addView(Ui.gap(shell, 8));
@@ -475,6 +489,7 @@ class SystemPage extends Page {
         progressBox.setVisibility(View.VISIBLE);
         startBox.setVisibility(View.GONE);
         progress.setProgress(0);
+        progress.setRunning(true);
         progressText.setText("准备中…");
         Installer.install(shell, uri, replace, new Installer.Callback() {
             @Override
@@ -490,6 +505,7 @@ class SystemPage extends Page {
             public void done() {
                 shell.runOnUiThread(() -> {
                     installing = false;
+                    progress.setRunning(false);
                     progressBox.setVisibility(View.GONE);
                     startBox.setVisibility(View.VISIBLE);
                     refresh();
@@ -501,6 +517,7 @@ class SystemPage extends Page {
             public void failed(String message) {
                 shell.runOnUiThread(() -> {
                     installing = false;
+                    progress.setRunning(false);
                     progressBox.setVisibility(View.GONE);
                     startBox.setVisibility(View.VISIBLE);
                     progressText.setText("");

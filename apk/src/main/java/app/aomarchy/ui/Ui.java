@@ -108,7 +108,9 @@ public final class Ui {
     /** A section card: rounded surface, optional title, children in a vertical list. */
     public static LinearLayout card(Context c, String title) {
         LinearLayout card = column(c);
-        card.setBackground(surface(c, 20));
+        CardBackground bg = new CardBackground(c, SURFACE, LINE, 1, 20);
+        card.setBackground(bg);
+        CardBackground.attach(card, bg);
         int pad = dp(c, 18);
         card.setPadding(pad, pad, pad, pad);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -137,6 +139,7 @@ public final class Ui {
         TextView t = text(c, s, 14, primary ? 0xFF0A0C10 : TEXT, true);
         t.setGravity(Gravity.CENTER);
         t.setBackground(rounded(c, primary ? ACCENT : SURFACE_HI, primary ? 0 : LINE, 14));
+        Motion.pressable(t);
         int v = dp(c, 12), h = dp(c, 18);
         t.setPadding(h, v, h, v);
         t.setOnClickListener(onClick);
