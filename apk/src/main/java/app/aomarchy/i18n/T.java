@@ -15,6 +15,10 @@ import java.util.Map;
  * follow the same choice through {@link #wrap(Context)} and {@link #applyLocale(Context)}, so the console and the
  * resources never speak different languages.
  *
+ * <p>Chinese copy is written for its context, not translated word by word from the English column: the console is
+ * about "Linux / 桌面 / 后台运行", not about "sessions"; buttons use the words Android itself uses (关机、重启、挂起、
+ * 后台运行). Keep both languages idiomatic, and keep the terminology in the two columns aligned.
+ *
  * <p>Language source: prefs key {@code ui_lang}, one of {@code auto} (follow the system Locale) / {@code zh} /
  * {@code en}; default {@code auto}. A missing key falls back to Chinese, then to the key name itself (so a typo is
  * visible instead of crashing).
@@ -124,14 +128,14 @@ public final class T {
         {"btn.backup_manage", "管理备份 ›", "Manage backups ›"},
         // ===== session power menu (console rail) =====
         {"power.button", "电源", "Power"},
-        {"power.title", "会话电源", "Session power"},
+        {"power.title", "电源", "Power"},
         {"power.state_running", "Linux 正在运行", "Linux is running"},
         {"power.state_stopped", "Linux 未运行", "Linux is not running"},
         {"power.need_system", "未安装系统", "No system installed"},
         {"power.restart", "重启", "Restart"},
-        {"power.restart_hint", "重启 Linux，当前会话会断开", "Restart Linux; the current session ends"},
+        {"power.restart_hint", "重启 Linux，当前运行会被中断", "Restart Linux; the current run is interrupted"},
         {"power.start", "启动 Linux", "Start Linux"},
-        {"power.start_hint", "启动 Linux 会话", "Start the Linux session"},
+        {"power.start_hint", "启动 Linux", "Start Linux"},
         {"power.stop", "关机", "Shut down"},
         {"power.stop_hint", "关闭 Linux，桌面和终端都会结束", "Shut Linux down; the desktop and terminal end"},
         {"power.exit", "退出 App", "Quit app"},
@@ -139,18 +143,18 @@ public final class T {
         {"power.exit_note_off", "只退出控制台，当前没有运行的 Linux", "Exits the console; Linux is not running"},
         {"power.cancel", "取消", "Cancel"},
         {"power.toast_restarting", "正在重启 Linux…", "Restarting Linux…"},
-        {"power.toast_started", "会话已启动", "Session started"},
-        {"power.toast_start_failed", "无法启动会话", "Could not start the session"},
+        {"power.toast_started", "Linux 已启动", "Linux started"},
+        {"power.toast_start_failed", "Linux 启动失败", "Could not start Linux"},
         {"power.toast_stopped", "Linux 已关机", "Linux shut down"},
         {"power.suspend", "挂起", "Suspend"},
         {"power.suspend_hint", "退到后台，Linux 继续运行", "Send to the background; Linux keeps running"},
         {"power.background", "后台运行", "Run in background"},
-        {"power.background_hint", "保活：常驻通知栏，减少被系统回收", "Keep alive with a persistent notification"},
+        {"power.background_hint", "常驻通知栏，减少被系统清理", "Persistent notification, less likely to be reclaimed"},
         {"power.background_on", "后台运行中", "Running in background"},
         {"power.background_off", "未开启", "Off"},
         // ===== keep-alive (persistent foreground notification) =====
         {"keepalive.notif_title", "AOmarchy 后台运行中", "AOmarchy is running in the background"},
-        {"keepalive.notif_text", "Linux 会话会保持运行；点通知回到控制台", "The Linux session stays alive; tap to return to the console"},
+        {"keepalive.notif_text", "Linux 会继续在后台运行；点通知回到控制台", "Linux keeps running in the background; tap to return to the console"},
         {"keepalive.notif_open", "控制台", "Console"},
         {"keepalive.notif_stop", "停止", "Stop"},
         {"keepalive.started", "已开启后台运行", "Background running enabled"},
@@ -163,7 +167,7 @@ public final class T {
         {"keepalive.title", "后台运行", "Run in background"},
         {"keepalive.battery_card", "电池与 ADB 保活", "Battery & ADB keep-alive"},
         {"keepalive.battery_settings", "电池设置", "Battery settings"},
-        {"keepalive.desc", "开启后 AOmarchy 会常驻通知栏，Linux 会话在切到别的 App 后继续运行。", "When on, AOmarchy keeps a persistent notification and the Linux session keeps running while you use other apps."},
+        {"keepalive.desc", "开启后 AOmarchy 会常驻通知栏；切到别的 App，Linux 也继续运行。", "When on, AOmarchy keeps a persistent notification and Linux keeps running while you use other apps."},
         {"keepalive.toggle", "常驻通知与保活", "Persistent notification and keep-alive"},
         // ===== console background =====
         {"card.console_bg", "控制台背景", "Console background"},
@@ -216,14 +220,14 @@ public final class T {
         {"lang.en", "English", "English"},
 
         // ===== page 1: overview ============================================================
-        {"overview.session", "会话", "Session"},
+        {"overview.session", "当前状态", "Status"},
         {"overview.tagline", "Arch Linux · Hyprland · 整个系统跑在 Android 上，不需要 root 和 proot。",
             "Arch Linux · Hyprland · the whole system runs on Android — no root, no proot."},
         {"overview.tagline_terminal", "终端模式：只跑一个 shell，不启动 Hyprland，实测比完整桌面省约 700 MB。",
             "Terminal mode: just a shell, no Hyprland. Measured to save about 700 MB over the full desktop."},
         {"overview.running_for", "已运行 %s", "Up for %s"},
         {"overview.cpu_device_scope", "设备整体占用", "Whole-device load"},
-        {"overview.cpu_process_scope", "%s 个进程 · 会话整体", "%s processes · session total"},
+        {"overview.cpu_process_scope", "%s 个进程（合计）", "%s processes (total)"},
         {"overview.mem_used_avail", "%s 已用 · 可用 %s", "%s used · %s available"},
         {"overview.disk_used_free", "%s 已用 · 剩余 %s", "%s used · %s free"},
         {"overview.charging", "充电中", "Charging"},
@@ -236,7 +240,7 @@ public final class T {
         {"network.unknown", "—", "—"},
         {"overview.net_gpu_note", "两者都由 Android 侧透传，Linux 里看到的与系统一致。",
             "Both are passed through from Android, so Linux sees the same as the system."},
-        {"overview.tips", "桌面里点左上角「A」回控制台；会话通知里也有「控制」「控制台」。第一次使用：先去「系统」装系统，再到「设置」填身份与键盘。",
+        {"overview.tips", "桌面左上角的「A」可以回控制台，通知栏里也有「控制」「控制台」。第一次使用：先去「系统」装系统，再到「设置」填身份与键盘。",
             "Tap 'A' in the desktop's top-left corner to return to the console; the session notification also has 'Controls' and 'Console'. First time: install the system on the System page, then fill in your identity and keyboard in Settings."},
 
         // ===== page 2: system ==============================================================
@@ -254,7 +258,7 @@ public final class T {
         {"system.preparing_backup", "准备备份…", "Preparing backup…"},
         {"system.unpacking_backup", "解包备份…", "Unpacking backup…"},
         {"system.preparing", "准备中…", "Preparing…"},
-        {"system.logs_desc", "会话日志在 files/run/ 下，点开看最后几行。",
+        {"system.logs_desc", "运行日志在 files/run/ 下，点开可以看最后几行。",
             "Session logs live under files/run/ — tap one to see its last lines."},
         {"system.no_logs", "还没有日志（系统未启动过）", "No logs yet (the system has never started)"},
         {"system.no_backups", "还没有备份", "No backups yet"},
@@ -329,9 +333,9 @@ public final class T {
         {"apps.no_android", "没有可启动的 Android 应用。", "No Android apps available to launch."},
 
         // ===== page 4 / desktop sheet: controls ============================================
-        {"controls.warn_notifications", "桌面运行时靠会话通知里的「控制」回到这里；通知权限没开就看不到它。",
+        {"controls.warn_notifications", "桌面运行时靠通知栏里的「控制」回到这里；没给通知权限就看不到它。",
             "While the desktop runs, the 'Controls' action in the session notification brings you back here; without the notification permission you will not see it."},
-        {"controls.session_running", "会话运行中 · 点「进入桌面」回到 Linux",
+        {"controls.session_running", "Linux 正在运行 · 点「进入桌面」返回",
             "Session running · tap 'Open desktop' to return to Linux"},
         {"controls.session_ready", "系统已安装，尚未启动", "System installed, not started yet"},
         {"controls.no_system", "还没有安装系统（到「系统」页安装）",
@@ -352,7 +356,7 @@ public final class T {
         {"term.font_size", "[字号 %ssp]", "[font %ssp]"},
         {"term.start_failed", "[无法启动终端]", "[Could not start the terminal]"},
         {"term.pty_failed", "[无法连接 pty: %s]", "[Could not connect to the pty: %s]"},
-        {"term.session_ended", "[会话已结束]", "[Session ended]"},
+        {"term.session_ended", "[终端已结束]", "[Terminal closed]"},
 
         // ===== session notification ========================================================
         {"session.content", "Linux 桌面运行中", "Linux desktop running"},
@@ -372,11 +376,11 @@ public final class T {
             "The console and the terminal share one interface language; the UI is rebuilt right after switching."},
 
         // ===== keys settings ==============================================================
-        {"keys.vk_desc", "给虚拟键盘绑一个物理按键：按一下呼出或收起。虚拟键盘也可以浮在会话桌面之上，不挤占桌面。",
+        {"keys.vk_desc", "给虚拟键盘绑一个物理按键：按一下呼出或收起。虚拟键盘也可以浮在桌面之上，不挤占桌面。",
             "Bind a physical key to the on-screen keyboard: press it to show or hide. The keyboard can also float above the desktop instead of resizing it."},
         {"keys.bind_key_caption", "按一下要绑定的物理按键；按返回键取消",
             "Press the physical key to bind; press Back to cancel"},
-        {"keys.floating_caption", "关闭时会话桌面缩小并上移，给软键盘让出空间",
+        {"keys.floating_caption", "关闭时桌面画面缩小并上移，给软键盘让出空间",
             "When off, the session desktop shrinks and moves up to make room for the software keyboard"},
         {"keys.accessibility_desc", "用无障碍服务拦截平板键盘的功能键，把 Fn、F1–F12 等转成桌面能识别的键码，并让返回键按 ESC 发给桌面。首次启用需要在系统设置里授予无障碍权限。",
             "Uses the accessibility service to intercept the tablet keyboard's function keys, turning Fn, F1–F12 and friends into key codes the desktop understands, and sending Back as ESC to the desktop. The first enable needs the accessibility permission in system settings."},
@@ -385,7 +389,7 @@ public final class T {
         {"keys.open_accessibility", "打开系统无障碍设置", "Open system accessibility settings"},
         {"keys.open_accessibility_caption", "在列表里找到 AOmarchy 并开启，只需授权一次",
             "Find AOmarchy in the list and enable it — you only authorize once"},
-        {"keys.extra_desc", "会话底部的特殊键栏：ESC / TAB / CTRL / ALT / 方向键 / PgUp 等，触屏上也能当键盘用。",
+        {"keys.extra_desc", "桌面底部的特殊键栏：ESC / TAB / CTRL / ALT / 方向键 / PgUp 等，触屏上也能当键盘用。",
             "The special-key strip at the bottom of the session: ESC / TAB / CTRL / ALT / arrows / PgUp and more, usable as a keyboard on touch."},
         {"keys.show_bar", "显示按键栏", "Show the key bar"},
         {"keys.show_bar_caption", "底部常驻一排特殊键；桌面显示区域会相应缩小",
@@ -399,7 +403,7 @@ public final class T {
         {"keys.reset_layout", "恢复默认布局", "Restore default layout"},
         {"keys.reset_layout_caption", "重置为内置的两行模板", "Reset to the built-in two-row template"},
         {"keys.layout_empty_hint", "留空则使用内置默认布局", "Leave empty to use the built-in default layout"},
-        {"keys.layout_valid", "✓ 布局 JSON 有效，回到会话后生效",
+        {"keys.layout_valid", "✓ 布局 JSON 有效，回到桌面后生效",
             "✓ Valid layout JSON; takes effect when you return to the session"},
         {"keys.notification_desc", "App 运行时在通知栏常驻一条状态通知；它的点按和两个按钮分别做什么，在下面「按键动作」里配置。",
             "While the app runs, a status notification stays in the shade; configure what its tap and two buttons do under 'Key actions' below."},
@@ -464,7 +468,7 @@ public final class T {
         {"display.display_area_caption", "决定窗口能否画到刘海和圆角下面，返回桌面时应用",
             "Whether the window may draw under the cutout and rounded corners; applies when you return to the desktop"},
         {"display.pip_note",
-            "桌面暂不支持画中画：Android 小窗里桌面画面会黑，所以默认关闭。回控制台用桌面左上角的「A」手柄或会话通知。",
+            "桌面暂不支持画中画：Android 的小窗里桌面画面是黑的，所以默认关闭。回控制台用桌面左上角的「A」手柄，或点通知栏里的通知。",
             "Picture-in-picture is not supported for the desktop yet: its small window stays black, so it is off. Use the A handle in the desktop's corner or the session notification to get back to the console."},
         {"display.resolution_caption", "面板当前像素", "Current panel pixels"},
         {"display.density_caption", "逻辑密度，界面缩放按它算", "Logical density; UI scaling is based on it"},
@@ -473,7 +477,7 @@ public final class T {
         {"display.adjust_caption", "分辨率、密度、刷新率的调节入口在「控制」页，本页不重复实现",
             "Resolution, density and refresh rate are adjusted on the Controls page; this page does not duplicate it"},
         {"display.adjust_value", "控制页", "Controls page"},
-        {"display.notes_text", "分辨率、密度、刷新率属于实时显示参数，入口在「控制」页；方向、刘海与 PIP 是窗口级设置，桌面会话启动或返回时读取。",
+        {"display.notes_text", "分辨率、密度、刷新率是实时生效的参数，入口在「控制」页；方向、刘海和 PIP 属于窗口设置，进桌面或返回桌面时才读取。",
             "Resolution, density and refresh rate are live display parameters on the Controls page; orientation, cutout and PIP are window-level settings read when the desktop session starts or returns."},
         {"orient.auto", "自动旋转", "Auto rotate"},
         {"orient.portrait", "竖屏", "Portrait"},
@@ -486,7 +490,7 @@ public final class T {
         {"cutout.none", "全部避开", "Avoid all of them"},
 
         // ===== audio settings ==============================================================
-        {"audio.keepalive_desc", "桌面会话在后台时不让音频通道休眠，外放和麦克风不会每次重新起振。",
+        {"audio.keepalive_desc", "桌面在后台时也让音频通道保持唤醒，外放和麦克风不会每次都重新起振。",
             "Keeps the audio path awake while the desktop session is in the background, so the speaker and microphone do not restart every time."},
         {"audio.keepalive_toggle", "保持音频通道", "Keep the audio path open"},
         {"audio.keepalive_caption", "关闭可省一点电；通话或录音时建议开启",
@@ -515,7 +519,7 @@ public final class T {
         {"insight.clean", "清理备份", "Clean backups"},
         {"insight.mem_high", "内存占用 %s%%，终端模式更省", "Memory at %s%%; terminal mode is lighter"},
         {"insight.to_settings", "去设置", "Settings"},
-        {"insight.session_idle", "桌面会话未运行", "The desktop session is not running"},
+        {"insight.session_idle", "桌面未运行", "The desktop is not running"},
         {"insight.enter", "进入桌面", "Open desktop"},
         {"insight.backup_big", "备份占用 %s", "Backups take %s"},
         {"insight.manage", "去管理", "Manage"},
@@ -539,7 +543,7 @@ public final class T {
         {"card.omarchy_apps", "Omarchy 应用", "Omarchy apps"},
         {"card.android_apps", "Android 应用（浮动窗口）", "Android apps (floating windows)"},
         {"card.notifications_off", "通知未开启", "Notifications are off"},
-        {"card.session", "会话", "Session"},
+        {"card.session", "运行状态", "Session state"},
         {"card.sound", "声音", "Sound"},
         {"card.display_input", "显示与输入", "Display & input"},
         {"card.clipboard", "剪贴板", "Clipboard"},
@@ -617,7 +621,7 @@ public final class T {
         {"toast.cannot_read_file", "读不到这个文件", "Cannot read this file"},
         {"toast.installed", "系统安装完成", "System installed"},
         {"toast.system_missing", "系统还没装好", "The system is not installed yet"},
-        {"toast.start_session_first", "先进桌面启动会话", "Open the desktop first to start a session"},
+        {"toast.start_session_first", "先进入桌面", "Open the desktop first"},
         {"toast.opened_on_desktop", "已在桌面打开 %s", "Opened %s on the desktop"},
         {"toast.floating_open", "浮动打开 %s", "Opening %s in a floating window"},
         {"toast.next_launch_desktop", "下次打开 App 直接进桌面",
@@ -642,8 +646,8 @@ public final class T {
         {"toast.find_ao", "在列表里找到「AOmarchy」并开启", "Find 'AOmarchy' in the list and enable it"},
         {"toast.no_accessibility_settings", "系统没有无障碍设置页面",
             "This system has no accessibility settings page"},
-        {"toast.takes_effect_in_session", "回到会话后生效", "Takes effect when you return to the session"},
-        {"toast.saved_session", "已保存，回到会话后生效",
+        {"toast.takes_effect_in_session", "回到桌面后生效", "Takes effect when you return to the desktop"},
+        {"toast.saved_session", "已保存，回到桌面后生效",
             "Saved; takes effect when you return to the session"},
         {"toast.layout_reset", "已恢复默认布局", "Default layout restored"},
         {"toast.takes_effect_in_app", "回到 App 后生效", "Takes effect when you return to the app"},
@@ -658,7 +662,7 @@ public final class T {
         {"toast.copied_selection", "已复制选中 %s 行", "Copied %s selected lines"},
         {"toast.pasted", "已粘贴 %s 个字符", "Pasted %s characters"},
         {"dialog.restore_title", "恢复系统？", "Restore the system?"},
-        {"dialog.restore_message", "当前的系统会被这份备份整体替换（换装失败会自动换回）。桌面若在运行，恢复后请重启会话。",
+        {"dialog.restore_message", "当前的系统会被这份备份整体替换（换装失败会自动换回）。桌面若在运行，恢复后请重启 Linux。",
             "The current system will be replaced by this backup (a failed swap is rolled back automatically). If the desktop is running, restart the session afterwards."},
         {"dialog.delete_backup_title", "删除备份？", "Delete this backup?"},
         {"dialog.delete_backup_message", "%s 会被删除。", "%s will be deleted."},
