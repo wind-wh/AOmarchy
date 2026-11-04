@@ -1,7 +1,9 @@
 package app.aomarchy;
 
 import android.app.Activity;
-import android.graphics.Color;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -14,18 +16,22 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import app.aomarchy.ui.TerminalView;
+import app.aomarchy.ui.Toasts;
 import app.aomarchy.ui.Ui;
 
 /**
  * Terminal mode: one pty with a login shell inside the rootfs, no compositor, no desktop. This is the low-resource way
  * to use the Linux side (about a fifth of the desktop's memory, and it starts in a couple of seconds).
  */
-public class TerminalActivity extends Activity {
+public class TerminalActivity extends Activity implements TerminalView.Listener {
     static {
         System.loadLibrary("andromarchy_consumer"); // the pty natives live in the same .so as the display consumer
     }
 
+    private static final float MIN_FONT = 9f, MAX_FONT = 24f;
+
     private TerminalView terminal;
+    private TextView copyButton, scrollHint;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -40,14 +46,43 @@ public class TerminalActivity extends Activity {
         root.setBackgroundColor(Ui.BG);
 
         terminal = new TerminalView(this);
-        terminal.setPadding(0, Ui.dp(this, 58), 0, Ui.dp(this, 10)); // keep the first line clear of the bar
+        // Top: the action bar; bottom: the key strip. The grid stays clear of both.
+        terminal.setPadding(0, Ui.dp(this, 58), 0, Ui.dp(this, 48));
+        terminal.setFontSp(getSharedPreferences(Prefs.NAME, MODE_PRIVATE).getFloat("term_font", 13f));
+        terminal.setListener(this);
         root.addView(terminal, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        // Keys a soft keyboard does not offer but a shell needs: Esc/Tab, the control letters, and the arrows.
+        LinearLayout keys = new LinearLayout(this);
+        keys.setOrientation(LinearLayout.HORIZONTAL);
+        keys.setGravity(Gravity.CENTER_VERTICAL);
+        keys.setPadding(Ui.dp(this, 6), Ui.dp(this, 4), Ui.dp(this, 6), Ui.dp(this, 4));
+        GradientDrawable keysBg = new GradientDrawable();
+        keysBg.setColor(0xCC14171F);
+        keysBg.setCornerRadius(Ui.dp(this, 12));
+        keys.setBackground(keysBg);
+        addKey(keys, "Esc", "\u001b");
+        addKey(keys, "Tab", "\t");
+        addKey(keys, "^C", "\u0003");
+        addKey(keys, "^D", "\u0004");
+        addKey(keys, "^Z", "\u001a");
+        addKey(keys, "←", "\u001b[D");
+        addKey(keys, "↑", "\u001b[A");
+        addKey(keys, "↓", "\u001b[B");
+        addKey(keys, "→", "\u001b[C");
+        FrameLayout.LayoutParams klp = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM);
+        klp.leftMargin = Ui.dp(this, 6);
+        klp.rightMargin = Ui.dp(this, 6);
+        klp.bottomMargin = Ui.dp(this, 6);
+        root.addView(keys, klp);
 
         LinearLayout bar = new LinearLayout(this);
         bar.setOrientation(LinearLayout.HORIZONTAL);
         bar.setGravity(Gravity.CENTER_VERTICAL);
-        bar.setPadding(Ui.dp(this, 12), Ui.dp(this, 8), Ui.dp(this, 12), Ui.dp(this, 8));
+        bar.setPadding(Ui.dp(this, 10), Ui.dp(this, 6), Ui.dp(this, 10), Ui.dp(this, 6));
         GradientDrawable barBg = new GradientDrawable();
         barBg.setColor(0xCC14171F);
         barBg.setCornerRadius(Ui.dp(this, 14));
@@ -56,18 +91,38 @@ public class TerminalActivity extends Activity {
         TextView back = action("‹ 控制台", Ui.ACCENT, v -> finish());
         bar.addView(back);
         bar.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
-        TextView kb = action("键盘", Ui.DIM, v -> toggleKeyboard());
-        bar.addView(kb);
-        bar.addView(Ui.space(this, 6));
-        TextView restart = action("重启", Ui.DIM, v -> recreate());
-        bar.addView(restart);
+        bar.addView(action("复制", Ui.DIM, v -> copy()));
+        bar.addView(action("粘贴", Ui.DIM, v -> paste()));
+        bar.addView(action("A−", Ui.DIM, v -> changeFont(-1)));
+        bar.addView(action("A+", Ui.DIM, v -> changeFont(1)));
+        bar.addView(action("键盘", Ui.DIM, v -> toggleKeyboard()));
+        bar.addView(action("重启", Ui.DIM, v -> recreate()));
+        copyButton = (TextView) bar.getChildAt(2); // the 复制 label, dimmed until something is selected
 
         FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP | Gravity.END);
-        blp.topMargin = Ui.dp(this, 10);
-        blp.rightMargin = Ui.dp(this, 10);
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        blp.topMargin = Ui.dp(this, 8);
+        blp.leftMargin = Ui.dp(this, 8);
+        blp.rightMargin = Ui.dp(this, 8);
+        blp.gravity = Gravity.TOP;
         root.addView(bar, blp);
+
+        // A pill that appears while the view is scrolled back: one tap returns to the live output.
+        scrollHint = Ui.text(this, "↓ 底部", 12, Ui.BG, true);
+        GradientDrawable pill = new GradientDrawable();
+        pill.setColor(Ui.MINT);
+        pill.setCornerRadius(Ui.dp(this, 12));
+        scrollHint.setBackground(pill);
+        scrollHint.setPadding(Ui.dp(this, 12), Ui.dp(this, 7), Ui.dp(this, 12), Ui.dp(this, 7));
+        scrollHint.setOnClickListener(v -> terminal.scrollToBottom());
+        scrollHint.setVisibility(View.GONE);
+        FrameLayout.LayoutParams hlp = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM | Gravity.END);
+        hlp.bottomMargin = Ui.dp(this, 16);
+        hlp.rightMargin = Ui.dp(this, 16);
+        root.addView(scrollHint, hlp);
+
         setContentView(root);
         if (android.os.Build.VERSION.SDK_INT >= 30) {
             getWindow().setDecorFitsSystemWindows(false);
@@ -101,9 +156,60 @@ public class TerminalActivity extends Activity {
 
     private TextView action(String label, int color, View.OnClickListener onClick) {
         TextView t = Ui.text(this, label, 13, color, false);
-        t.setPadding(Ui.dp(this, 8), Ui.dp(this, 6), Ui.dp(this, 8), Ui.dp(this, 6));
+        t.setPadding(Ui.dp(this, 7), Ui.dp(this, 6), Ui.dp(this, 7), Ui.dp(this, 6));
         t.setOnClickListener(onClick);
         return t;
+    }
+
+    /** One key of the bottom strip: it sends a raw byte sequence to the shell, exactly like a real key would. */
+    private void addKey(LinearLayout row, String label, String sequence) {
+        TextView key = Ui.text(this, label, 12, Ui.TEXT, false);
+        key.setGravity(Gravity.CENTER);
+        key.setPadding(0, Ui.dp(this, 6), 0, Ui.dp(this, 6));
+        key.setContentDescription(label + " 键");
+        key.setOnClickListener(v -> terminal.write(sequence));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        lp.setMargins(Ui.dp(this, 2), 0, Ui.dp(this, 2), 0);
+        row.addView(key, lp);
+    }
+
+    private void changeFont(int delta) {
+        float next = Math.max(MIN_FONT, Math.min(MAX_FONT, terminal.getFontSp() + delta));
+        if (Math.abs(next - terminal.getFontSp()) < 0.01f)
+            return;
+        terminal.setFontSp(next);
+        getSharedPreferences(Prefs.NAME, MODE_PRIVATE).edit().putFloat("term_font", next).apply();
+    }
+
+    private void copy() {
+        String text = terminal.selectedText();
+        boolean whole = text == null;
+        if (whole)
+            text = terminal.screenText();
+        if (text == null || text.isEmpty()) {
+            Toasts.show(this, "没有可复制的内容");
+            return;
+        }
+        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        if (cm == null)
+            return;
+        cm.setPrimaryClip(ClipData.newPlainText("终端", text));
+        int lines = text.split("\n", -1).length;
+        Toasts.show(this, whole ? "已复制屏幕 " + lines + " 行" : "已复制选中 " + lines + " 行");
+    }
+
+    private void paste() {
+        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        if (cm == null || !cm.hasPrimaryClip() || cm.getPrimaryClip() == null) {
+            Toasts.show(this, "剪贴板是空的");
+            return;
+        }
+        CharSequence text = cm.getPrimaryClip().getItemAt(0).coerceToText(this);
+        if (text == null || text.length() == 0)
+            return;
+        // A terminal expects CR for "run it"; a clipboard full of pasted lines must not sit at a bare prompt.
+        terminal.write(text.toString().replace("\r\n", "\r").replace('\n', '\r'));
+        Toasts.show(this, "已粘贴 " + text.length() + " 个字符");
     }
 
     private void toggleKeyboard() {
@@ -113,6 +219,25 @@ public class TerminalActivity extends Activity {
             return;
         terminal.requestFocus();
         imm.toggleSoftInput(android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT, 0);
+    }
+
+    // ---- TerminalView.Listener -------------------------------------------------------------------------------
+
+    @Override
+    public void onSelectionChanged(boolean hasSelection) {
+        if (copyButton != null)
+            copyButton.setAlpha(hasSelection ? 1f : 0.55f);
+    }
+
+    @Override
+    public void onTapTerminal() {
+        toggleKeyboard();
+    }
+
+    @Override
+    public void onScrolledChanged(boolean scrolled) {
+        if (scrollHint != null)
+            scrollHint.setVisibility(scrolled ? View.VISIBLE : View.GONE);
     }
 
     @Override

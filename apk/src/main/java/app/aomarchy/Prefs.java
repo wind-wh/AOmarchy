@@ -36,6 +36,7 @@ final class Prefs {
         {"kb_layouts", ""}, // empty: keep whatever the installer chose from the device language
         {"open_desktop_on_start", false},
         {"session_mode", "desktop"}, // desktop | terminal: what the big button starts
+        {"term_font", 13f}, // terminal mode font size in sp
     };
 
     private static boolean done;

@@ -5,10 +5,15 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Typeface;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.text.InputType;
+import android.view.HapticFeedbackConstants;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.inputmethod.BaseInputConnection;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
@@ -23,11 +28,13 @@ import java.util.ArrayList;
  * A small terminal emulator for terminal mode: the pty's bytes go through a VT100/ANSI parser into a character grid,
  * drawn character by character. It covers what a shell and full-screen programs (vim, top, less) need: cursor motion,
  * erase, scroll regions, insert/delete lines, 16/256 colours, the alternate screen and a soft keyboard connection.
+ * Beyond the grid it keeps scrollback history (drag up), drag selection (long press) and a word-free copy/paste path.
  */
 public class TerminalView extends View {
     private static final int DEFAULT_FG = 0xFFD8DEE9;
     private static final int DEFAULT_BG = 0xFF0A0C10;
     private static final int CURSOR = 0xFF7C8CFF;
+    private static final int SELECTION = 0xFF33417E;
 
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint bgPaint = new Paint();
@@ -56,6 +63,40 @@ public class TerminalView extends View {
     private int pid = -1;
     private volatile boolean running;
 
+    // Scrollback: history lines live in a ring buffer; the grid itself behaves like the last "rows" lines of the total.
+    private static final int MAX_HISTORY = 3000;
+    private char[] hText = new char[0];
+    private int[] hFg = new int[0];
+    private int[] hBg = new int[0];
+    private int hCap, hCount, hHead;
+    private int scrollOffset; // lines scrolled up from the bottom, 0 = following the output
+
+    // Selection, in absolute line coordinates (history lines first, then the grid rows).
+    private int selLine0 = -1, selCol0, selLine1, selCol1;
+    private boolean selecting, hasSelection, longPressFired, touchMoved;
+    private int nStartLine, nStartCol, nEndLine, nEndCol;
+
+    private float fontSp = 13;
+    private int touchSlop;
+    private float downX, downY, lastTouchY;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Runnable longPress = this::beginSelection;
+
+    /** Terminal -> activity callbacks: selection changed, a tap on the grid, the scroll position changed. */
+    public interface Listener {
+        void onSelectionChanged(boolean hasSelection);
+
+        void onTapTerminal();
+
+        void onScrolledChanged(boolean scrolled);
+    }
+
+    private Listener listener;
+
+    public void setListener(Listener l) {
+        listener = l;
+    }
+
     // Parser state.
     private static final int ST_NORMAL = 0, ST_ESC = 1, ST_CSI = 2, ST_OSC = 3;
     private int state = ST_NORMAL;
@@ -69,15 +110,41 @@ public class TerminalView extends View {
         setFocusable(true);
         setFocusableInTouchMode(true);
         setBackgroundColor(DEFAULT_BG);
+        touchSlop = ViewConfiguration.get(c).getScaledTouchSlop();
         paint.setTypeface(Typeface.MONOSPACE);
-        paint.setTextSize(dp(13));
-        cellH = (int) Math.ceil(paint.getFontMetrics().bottom - paint.getFontMetrics().top) + (int) Math.ceil(dp(2));
-        cellW = Math.max(1, (int) Math.ceil(paint.measureText("M")));
+        applyTextMetrics(cellPixels(fontSp));
         reset();
     }
 
     private float dp(float v) {
         return v * getResources().getDisplayMetrics().density;
+    }
+
+    private float cellPixels(float valueSp) {
+        return valueSp * getResources().getDisplayMetrics().scaledDensity;
+    }
+
+    private void applyTextMetrics(float sizePx) {
+        paint.setTextSize(sizePx);
+        Paint.FontMetrics fm = paint.getFontMetrics();
+        cellH = (int) Math.ceil(fm.bottom - fm.top) + (int) Math.ceil(dp(2));
+        cellW = Math.max(1, (int) Math.ceil(paint.measureText("M")));
+    }
+
+    public float getFontSp() {
+        return fontSp;
+    }
+
+    /** Changes the font size: the grid is rebuilt for the new cell metrics and the shell gets a resize. */
+    public void setFontSp(float valueSp) {
+        valueSp = Math.max(9f, Math.min(24f, valueSp));
+        if (Math.abs(valueSp - fontSp) < 0.01f)
+            return;
+        fontSp = valueSp;
+        applyTextMetrics(cellPixels(fontSp));
+        applyDimensions(getWidth(), getHeight());
+        if (getHeight() > 0 && pid > 0)
+            writeLocal("\r\n[字号 " + (int) Math.round(valueSp) + "sp]\r\n");
     }
 
     /** Starts the pty: argv is the rootfs launcher, env the session environment. */
@@ -304,6 +371,8 @@ public class TerminalView extends View {
     private void scrollUp(int top) {
         char[] buf = activeText();
         int[] f = activeFg(), b = activeBg();
+        if (top == 0 && !altScreen)
+            rememberTopLine();
         System.arraycopy(buf, (top + 1) * cols, buf, top * cols, (rows - top - 1) * cols);
         System.arraycopy(f, (top + 1) * cols, f, top * cols, (rows - top - 1) * cols);
         System.arraycopy(b, (top + 1) * cols, b, top * cols, (rows - top - 1) * cols);
@@ -338,6 +407,23 @@ public class TerminalView extends View {
 
     private int[] activeBg() {
         return altScreen ? altBg : bg;
+    }
+
+    /** Copies the grid's top row into the scrollback ring before the grid scrolls. */
+    private void rememberTopLine() {
+        if (hCap == 0 || cols == 0)
+            return;
+        if (hCount == hCap)
+            hHead = (hHead + 1) % hCap;
+        else
+            hCount++;
+        int idx = (hHead + hCount - 1) % hCap;
+        int dst = idx * cols;
+        System.arraycopy(text, 0, hText, dst, cols);
+        System.arraycopy(fg, 0, hFg, dst, cols);
+        System.arraycopy(bg, 0, hBg, dst, cols);
+        if (scrollOffset > 0) // keep the user's place while output keeps arriving
+            scrollOffset = Math.min(scrollOffset + 1, hCount);
     }
 
     private void csi(char finalChar) {
@@ -591,6 +677,15 @@ public class TerminalView extends View {
         altFg = null;
         altBg = null;
         altScreen = false;
+        // History lines are stored with the column count they were written at, so a resize starts a fresh one.
+        hCap = MAX_HISTORY;
+        hText = new char[hCap * cols];
+        hFg = new int[hCap * cols];
+        hBg = new int[hCap * cols];
+        hCount = 0;
+        hHead = 0;
+        scrollOffset = 0;
+        clearSelection();
         cx = cy = 0;
         scrollTop = 0;
         scrollBottom = rows - 1;
@@ -599,6 +694,14 @@ public class TerminalView extends View {
         bold = false;
         cursorVisible = true;
         clearActive();
+    }
+
+    private void clearSelection() {
+        selLine0 = -1;
+        hasSelection = false;
+        selecting = false;
+        if (listener != null)
+            listener.onSelectionChanged(false);
     }
 
     /** Local echo of messages (errors), so the view is never just black when the pty cannot start. */
@@ -628,19 +731,23 @@ public class TerminalView extends View {
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
+        applyDimensions(w, h);
+    }
+
+    /** Fits the grid to the view: cols/rows from the cell metrics, then the shell is told about the new size. */
+    private void applyDimensions(int w, int h) {
+        if (w <= 0 || h <= 0)
+            return;
         int availW = Math.max(1, w - getPaddingLeft() - getPaddingRight());
         int availH = Math.max(1, h - getPaddingTop() - getPaddingBottom());
-        int newCols = Math.max(20, availW / cellW);
-        int newRows = Math.max(4, availH / cellH);
-        if (newCols == cols && newRows == rows)
-            return;
-        cols = newCols;
-        rows = newRows;
+        cols = Math.max(20, availW / cellW);
+        rows = Math.max(4, availH / cellH);
         scrollTop = 0;
         scrollBottom = rows - 1;
         reset();
         if (pid > 0)
-            app.aomarchy.Native.nativePtyResize((int) (pidPackedFd()), cols, rows);
+            app.aomarchy.Native.nativePtyResize((int) pidPackedFd(), cols, rows);
+        invalidate();
     }
 
     private int fd = -1;
@@ -652,41 +759,100 @@ public class TerminalView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        char[] buf = activeText();
-        int[] f = activeFg(), b = activeBg();
         float baseline = -paint.getFontMetrics().top;
-        for (int row = 0; row < rows; row++) {
-            for (int col = 0; col < cols; col++) {
-                int i = row * cols + col;
-                int color = b[i];
-                if (color != DEFAULT_BG) {
-                    bgPaint.setColor(color);
-                    canvas.drawRect(getPaddingLeft() + col * cellW, getPaddingTop() + row * cellH,
-                            getPaddingLeft() + (col + 1) * cellW, getPaddingTop() + (row + 1) * cellH, bgPaint);
-                }
+        if (scrollOffset > hCount)
+            scrollOffset = hCount;
+        int topAbs = hCount - scrollOffset; // absolute line shown at the top of the view
+        normalizeSelection();
+        boolean selActive = hasSelection || (selecting && selLine0 >= 0);
+        for (int vr = 0; vr < rows; vr++) {
+            int abs = topAbs + vr;
+            char[] lt;
+            int[] lf, lb;
+            int base;
+            if (abs < hCount) {
+                base = ((hHead + abs) % hCap) * cols;
+                lt = hText;
+                lf = hFg;
+                lb = hBg;
+            } else {
+                int row = abs - hCount;
+                if (row >= rows)
+                    continue;
+                base = row * cols;
+                lt = text;
+                lf = fg;
+                lb = bg;
             }
-        }
-        for (int row = 0; row < rows; row++) {
             for (int col = 0; col < cols; col++) {
-                int i = row * cols + col;
-                char ch = buf[i];
+                int i = base + col;
+                float left = getPaddingLeft() + col * cellW;
+                float top = getPaddingTop() + vr * cellH;
+                int color = lb[i];
+                boolean inSel = selActive && isSelected(abs, col);
+                if (inSel) {
+                    bgPaint.setColor(SELECTION);
+                    canvas.drawRect(left, top, left + cellW, top + cellH, bgPaint);
+                } else if (color != DEFAULT_BG) {
+                    bgPaint.setColor(color);
+                    canvas.drawRect(left, top, left + cellW, top + cellH, bgPaint);
+                }
+                char ch = lt[i];
                 if (ch == ' ' || ch == 0)
                     continue;
-                paint.setColor(f[i]);
-                canvas.drawText(String.valueOf(ch), getPaddingLeft() + col * cellW,
-                        getPaddingTop() + row * cellH + baseline, paint);
+                paint.setColor(lf[i]);
+                canvas.drawText(String.valueOf(ch), left, top + baseline, paint);
             }
         }
-        if (cursorVisible && cy >= 0 && cy < rows && cx >= 0 && cx < cols && hasWindowFocus()) {
+        int cursorRow = cy + hCount - topAbs;
+        if (cursorVisible && scrollOffset == 0 && cursorRow >= 0 && cursorRow < rows && cx >= 0 && cx < cols
+                && hasWindowFocus()) {
             bgPaint.setColor(CURSOR);
             bgPaint.setAlpha(160);
-            canvas.drawRect(getPaddingLeft() + cx * cellW, getPaddingTop() + cy * cellH,
-                    getPaddingLeft() + (cx + 1) * cellW, getPaddingTop() + (cy + 1) * cellH, bgPaint);
+            canvas.drawRect(getPaddingLeft() + cx * cellW, getPaddingTop() + cursorRow * cellH,
+                    getPaddingLeft() + (cx + 1) * cellW, getPaddingTop() + (cursorRow + 1) * cellH, bgPaint);
+        }
+        // A slim indicator while the view is not following the output.
+        if (scrollOffset > 0) {
+            bgPaint.setColor(CURSOR);
+            bgPaint.setAlpha(90);
+            canvas.drawRect(getWidth() - dp(3), getPaddingTop(), getWidth(), getHeight() - getPaddingBottom(), bgPaint);
         }
     }
 
-    /** Writes text to the pty. */
+    private boolean isSelected(int abs, int col) {
+        if (nStartLine < 0)
+            return false;
+        if (abs < nStartLine || abs > nEndLine)
+            return false;
+        if (abs == nStartLine && abs == nEndLine)
+            return col >= nStartCol && col <= nEndCol;
+        if (abs == nStartLine)
+            return col >= nStartCol;
+        if (abs == nEndLine)
+            return col <= nEndCol;
+        return true;
+    }
+
+    /** Normalises the anchor/focus pair into the start and end line/column of the selection. */
+    private void normalizeSelection() {
+        nStartLine = -1;
+        if (selLine0 < 0)
+            return;
+        boolean forward = selLine0 < selLine1 || (selLine0 == selLine1 && selCol0 <= selCol1);
+        nStartLine = forward ? selLine0 : selLine1;
+        nStartCol = forward ? selCol0 : selCol1;
+        nEndLine = forward ? selLine1 : selLine0;
+        nEndCol = forward ? selCol1 : selCol0;
+    }
+
+    /** Writes text to the pty. Any input snaps the view back to the live output. */
     public void write(String s) {
+        if (scrollOffset != 0) {
+            scrollOffset = 0;
+            notifyScrolled();
+            invalidate();
+        }
         if (out == null)
             return;
         try {
@@ -694,6 +860,195 @@ public class TerminalView extends View {
             out.flush();
         } catch (IOException ignored) {
             // session ended
+        }
+    }
+
+    public boolean isScrolled() {
+        return scrollOffset > 0;
+    }
+
+    public void scrollToBottom() {
+        if (scrollOffset == 0)
+            return;
+        scrollOffset = 0;
+        notifyScrolled();
+        invalidate();
+    }
+
+    private void notifyScrolled() {
+        if (listener != null)
+            listener.onScrolledChanged(scrollOffset > 0);
+    }
+
+    // ---- scrollback, selection and copy ---------------------------------------------------------------------
+
+    /** Absolute line index (history first) under a y coordinate. */
+    private int lineAt(float y) {
+        int topAbs = hCount - scrollOffset;
+        int line = topAbs + (int) ((y - getPaddingTop()) / cellH);
+        return Math.max(0, Math.min(hCount + rows - 1, line));
+    }
+
+    private int colAt(float x) {
+        return Math.max(0, Math.min(cols - 1, (int) ((x - getPaddingLeft()) / cellW)));
+    }
+
+    /** Text of one absolute line with trailing blanks trimmed; null when the line has no content. */
+    private String lineText(int abs) {
+        char[] lt;
+        int base;
+        if (abs < hCount) {
+            base = ((hHead + abs) % hCap) * cols;
+            lt = hText;
+        } else {
+            int row = abs - hCount;
+            if (row < 0 || row >= rows)
+                return null;
+            base = row * cols;
+            lt = text;
+        }
+        StringBuilder sb = new StringBuilder(cols);
+        for (int c = 0; c < cols; c++) {
+            char ch = lt[base + c];
+            sb.append(ch == 0 ? ' ' : ch);
+        }
+        int end = sb.length();
+        while (end > 0 && sb.charAt(end - 1) == ' ')
+            end--;
+        return end == 0 ? null : sb.substring(0, end);
+    }
+
+    /** The selected text, or null when nothing is selected. Selection is inclusive on both ends. */
+    public String selectedText() {
+        if (!hasSelection || selLine0 < 0)
+            return null;
+        normalizeSelection();
+        StringBuilder sb = new StringBuilder();
+        for (int line = nStartLine; line <= nEndLine; line++) {
+            String raw = lineText(line);
+            if (raw == null)
+                raw = "";
+            int from = line == nStartLine ? Math.min(nStartCol, raw.length()) : 0;
+            int to = line == nEndLine ? Math.min(nEndCol + 1, raw.length()) : raw.length();
+            if (to < from)
+                to = from;
+            if (sb.length() > 0)
+                sb.append('\n');
+            sb.append(raw, from, to);
+        }
+        return sb.toString();
+    }
+
+    /** The visible grid as text, used when copying without a selection. */
+    public String screenText() {
+        int topAbs = hCount - scrollOffset;
+        StringBuilder sb = new StringBuilder();
+        int lastContent = -1;
+        String[] lines = new String[rows];
+        for (int r = 0; r < rows; r++) {
+            lines[r] = lineText(topAbs + r);
+            if (lines[r] != null)
+                lastContent = r;
+        }
+        for (int r = 0; r <= lastContent; r++) {
+            if (r > 0)
+                sb.append('\n');
+            if (lines[r] != null)
+                sb.append(lines[r]);
+        }
+        return sb.toString();
+    }
+
+    public boolean hasSelection() {
+        return hasSelection;
+    }
+
+    private void beginSelection() {
+        longPressFired = true;
+        int line = lineAt(downY);
+        int col = colAt(downX);
+        selLine0 = line;
+        selCol0 = col;
+        selLine1 = line;
+        selCol1 = col;
+        selecting = true;
+        hasSelection = false;
+        performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+        invalidate();
+    }
+
+    private void extendSelection(float x, float y) {
+        selLine1 = lineAt(y);
+        selCol1 = colAt(x);
+        hasSelection = selLine1 != selLine0 || selCol1 != selCol0;
+        invalidate();
+    }
+
+    private void finishSelection() {
+        selecting = false;
+        hasSelection = selLine0 >= 0 && (selLine1 != selLine0 || selCol1 != selCol0);
+        if (listener != null)
+            listener.onSelectionChanged(hasSelection);
+        invalidate();
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent e) {
+        switch (e.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                downX = e.getX();
+                downY = e.getY();
+                lastTouchY = downY;
+                longPressFired = false;
+                touchMoved = false;
+                handler.postDelayed(longPress, 380);
+                return true;
+            case MotionEvent.ACTION_MOVE:
+                if (longPressFired) {
+                    extendSelection(e.getX(), e.getY());
+                    return true;
+                }
+                if (!touchMoved
+                        && (Math.abs(e.getX() - downX) > touchSlop || Math.abs(e.getY() - downY) > touchSlop)) {
+                    touchMoved = true;
+                    handler.removeCallbacks(longPress);
+                }
+                if (touchMoved && !altScreen && hCount > 0) {
+                    float dy = lastTouchY - e.getY();
+                    int lines = (int) (dy / cellH);
+                    if (lines != 0) {
+                        lastTouchY -= lines * cellH;
+                        int next = Math.max(0, Math.min(hCount, scrollOffset + lines));
+                        if (next != scrollOffset) {
+                            scrollOffset = next;
+                            notifyScrolled();
+                            invalidate();
+                        }
+                    }
+                }
+                return true;
+            case MotionEvent.ACTION_UP:
+                handler.removeCallbacks(longPress);
+                if (longPressFired) {
+                    finishSelection();
+                } else if (!touchMoved) {
+                    if (isScrolled()) {
+                        scrollToBottom();
+                    } else if (hasSelection) {
+                        clearSelection();
+                        invalidate();
+                    } else if (listener != null) {
+                        listener.onTapTerminal();
+                    }
+                }
+                return true;
+            case MotionEvent.ACTION_CANCEL:
+                handler.removeCallbacks(longPress);
+                if (longPressFired)
+                    finishSelection();
+                return true;
+            default:
+                return super.onTouchEvent(e);
         }
     }
 
