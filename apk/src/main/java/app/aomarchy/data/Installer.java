@@ -307,30 +307,56 @@ public final class Installer {
         }, "rootfs-cleanup").start();
     }
 
-    /** Recursive delete; returns false when something could not be removed. */
+    /** Recursive delete; returns false when something could not be removed. Symlinks are deleted, never followed. */
     public static boolean deleteTree(File f) {
         if (f == null || !f.exists())
             return true;
-        if (isSymlink(f))
-            return f.delete(); // deleting the link, never what it points at
-        if (f.isDirectory()) {
-            // Extracted trees carry the archive's modes: a read-only directory refuses to lose its children.
-            f.setWritable(true, true);
-            f.setExecutable(true, true);
-            f.setReadable(true, true);
-            File[] children = f.listFiles();
-            if (children != null) {
-                for (File c : children) {
-                    if (!deleteTree(c))
-                        return false;
-                }
+        final boolean[] ok = {true};
+        try {
+            if (isSymlink(f)) {
+                java.nio.file.Files.deleteIfExists(f.toPath());
+                return true;
             }
-        } else {
-            f.setWritable(true, true); // files like etc/sudoers (0440) would block a re-extraction
+            java.nio.file.Files.walkFileTree(f.toPath(), new java.nio.file.SimpleFileVisitor<java.nio.file.Path>() {
+                @Override
+                public java.nio.file.FileVisitResult visitFile(java.nio.file.Path file,
+                        java.nio.file.attribute.BasicFileAttributes attrs) throws java.io.IOException {
+                    try {
+                        file.toFile().setWritable(true);
+                        java.nio.file.Files.deleteIfExists(file);
+                    } catch (java.io.IOException e) {
+                        ok[0] = false;
+                        android.util.Log.w("Installer", "delete failed: " + file + ": " + e);
+                    }
+                    return java.nio.file.FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public java.nio.file.FileVisitResult visitFileFailed(java.nio.file.Path file,
+                        java.io.IOException e) {
+                    ok[0] = false;
+                    android.util.Log.w("Installer", "visit failed: " + file + ": " + e);
+                    return java.nio.file.FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public java.nio.file.FileVisitResult postVisitDirectory(java.nio.file.Path dir,
+                        java.io.IOException e) throws java.io.IOException {
+                    try {
+                        dir.toFile().setWritable(true);
+                        dir.toFile().setExecutable(true);
+                        java.nio.file.Files.deleteIfExists(dir);
+                    } catch (java.io.IOException de) {
+                        ok[0] = false;
+                        android.util.Log.w("Installer", "rmdir failed: " + dir + ": " + de);
+                    }
+                    return java.nio.file.FileVisitResult.CONTINUE;
+                }
+            });
+        } catch (java.io.IOException e) {
+            ok[0] = false;
+            android.util.Log.w("Installer", "delete tree failed: " + f + ": " + e);
         }
-        boolean ok = f.delete();
-        if (!ok && f.exists())
-            android.util.Log.w("Installer", "delete failed: " + f);
-        return ok;
+        return ok[0] && !f.exists();
     }
 }
