@@ -286,6 +286,12 @@ class SystemPage extends Page {
     private app.aomarchy.ui.SpringBar progress;
     private LinearLayout progressBox;
     private LinearLayout startBox;
+    private LinearLayout backupList;
+    private LinearLayout backupProgressBox;
+    private TextView backupText;
+    private app.aomarchy.ui.SpringBar backupBar;
+    private File pendingExport;
+    private boolean importing;
     private android.net.Uri localUri;
     private String localName;
     private long localBytes = -1;
@@ -349,6 +355,42 @@ class SystemPage extends Page {
         install.addView(progressBox);
         body.addView(install);
 
+        LinearLayout backup = Ui.card(shell, "备份与回滚");
+        backup.addView(Ui.text(shell, "把整个系统打包成一个 tar.gz（约 1.6 GB），恢复时整树换入。备份存在本机 Android/data/app.aomarchy/files/backups，也可以导出到别处。",
+                12, Ui.DIM, false));
+        backup.addView(Ui.gap(shell, 8));
+        LinearLayout backupButtons = Ui.row(shell);
+        backupButtons.addView(Ui.button(shell, "创建备份", true, v -> startBackup()));
+        backupButtons.addView(Ui.space(shell, 8));
+        TextView importBtn = Ui.text(shell, "导入备份…", 13, Ui.ACCENT, false);
+        importBtn.setPadding(Ui.dp(shell, 4), Ui.dp(shell, 10), Ui.dp(shell, 4), Ui.dp(shell, 10));
+        importBtn.setOnClickListener(v -> importBackup());
+        backupButtons.addView(importBtn);
+        backup.addView(backupButtons);
+
+        backupProgressBox = Ui.column(shell);
+        backupProgressBox.setVisibility(View.GONE);
+        backupProgressBox.setPadding(0, Ui.dp(shell, 10), 0, 0);
+        backupText = Ui.text(shell, "", 12, Ui.DIM, false);
+        backupProgressBox.addView(backupText);
+        backupBar = new app.aomarchy.ui.SpringBar(shell);
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(shell, 10));
+        blp.topMargin = Ui.dp(shell, 6);
+        backupProgressBox.addView(backupBar, blp);
+        backupProgressBox.addView(Ui.gap(shell, 6));
+        backupProgressBox.addView(Ui.text(shell, "取消", 13, Ui.ACCENT, false), new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        backupProgressBox.getChildAt(backupProgressBox.getChildCount() - 1).setOnClickListener(v -> {
+            app.aomarchy.data.Backup.cancel();
+            v.setEnabled(false);
+        });
+        backup.addView(backupProgressBox);
+
+        backupList = Ui.column(shell);
+        backup.addView(backupList);
+        body.addView(backup);
+        paintBackups();
         LinearLayout logs = Ui.card(shell, "日志");
         logs.addView(Ui.text(shell, "会话日志在 files/run/ 下，点开看最后几行。", 13, Ui.DIM, false));
         logs.addView(Ui.gap(shell, 6));
@@ -365,6 +407,192 @@ class SystemPage extends Page {
         body.addView(logs);
     }
 
+    private static final int EXPORT_BACKUP = 42;
+    private static final int IMPORT_BACKUP = 43;
+
+    private void paintBackups() {
+        if (backupList == null)
+            return;
+        backupList.removeAllViews();
+        java.util.List<File> backups = app.aomarchy.data.Backup.list(shell);
+        if (backups.isEmpty()) {
+            backupList.addView(Ui.text(shell, "还没有备份", 12, Ui.FAINT, false));
+            return;
+        }
+        backupList.addView(Ui.gap(shell, 4));
+        for (int i = 0; i < Math.min(5, backups.size()); i++) {
+            File f = backups.get(i);
+            LinearLayout r = Ui.row(shell);
+            r.setPadding(0, Ui.dp(shell, 6), 0, Ui.dp(shell, 6));
+            r.addView(Ui.text(shell, app.aomarchy.data.Backup.stamp(f), 13, Ui.TEXT, false));
+            r.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
+            r.addView(Ui.text(shell, smallSize(f.length()), 12, Ui.DIM, false));
+            r.setOnClickListener(v -> showBackup(f));
+            backupList.addView(r);
+        }
+    }
+
+    private void showBackup(File backup) {
+        String[] actions = {"恢复到这个备份", "导出到…", "删除"};
+        new android.app.AlertDialog.Builder(shell)
+                .setTitle(app.aomarchy.data.Backup.stamp(backup) + " · " + smallSize(backup.length()))
+                .setItems(actions, (d, which) -> {
+                    if (which == 0)
+                        confirmRestore(backup);
+                    else if (which == 1)
+                        exportBackup(backup);
+                    else
+                        confirmDelete(backup);
+                })
+                .setNegativeButton("关闭", null)
+                .show();
+    }
+
+    private void startBackup() {
+        if (app.aomarchy.data.Backup.running() || installing) {
+            toast("已有任务在进行");
+            return;
+        }
+        backupProgressBox.setVisibility(View.VISIBLE);
+        backupList.setVisibility(View.GONE);
+        backupBar.setProgress(0);
+        backupBar.setRunning(true);
+        backupText.setText("准备备份…");
+        app.aomarchy.data.Backup.create(shell, backupCallback());
+    }
+
+    private app.aomarchy.data.Backup.Callback backupCallback() {
+        return new app.aomarchy.data.Backup.Callback() {
+            @Override
+            public void progress(int permille, String text) {
+                shell.runOnUiThread(() -> {
+                    if (backupBar != null)
+                        backupBar.setProgress(permille);
+                    if (backupText != null)
+                        backupText.setText(text);
+                });
+            }
+
+            @Override
+            public void done(String message) {
+                shell.runOnUiThread(() -> {
+                    finishBackup();
+                    toast(message);
+                });
+            }
+
+            @Override
+            public void failed(String message) {
+                shell.runOnUiThread(() -> {
+                    finishBackup();
+                    toast(message);
+                });
+            }
+        };
+    }
+
+    private void finishBackup() {
+        if (backupProgressBox != null) {
+            backupProgressBox.setVisibility(View.GONE);
+            backupBar.setRunning(false);
+        }
+        if (backupList != null)
+            backupList.setVisibility(View.VISIBLE);
+        paintBackups();
+        refresh();
+    }
+
+    private void confirmRestore(File backup) {
+        new android.app.AlertDialog.Builder(shell)
+                .setTitle("恢复系统？")
+                .setMessage("当前的系统会被这份备份整体替换（换装失败会自动换回）。桌面若在运行，恢复后请重启会话。")
+                .setNegativeButton("取消", null)
+                .setPositiveButton("恢复", (d, w) -> {
+                    backupProgressBox.setVisibility(View.VISIBLE);
+                    backupList.setVisibility(View.GONE);
+                    backupBar.setProgress(0);
+                    backupBar.setRunning(true);
+                    backupText.setText("解包备份…");
+                    app.aomarchy.data.Backup.restore(shell, backup, backupCallback());
+                })
+                .show();
+    }
+
+    private void exportBackup(File backup) {
+        pendingExport = backup;
+        android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_CREATE_DOCUMENT)
+                .addCategory(android.content.Intent.CATEGORY_OPENABLE)
+                .setType("application/gzip")
+                .putExtra(android.content.Intent.EXTRA_TITLE, backup.getName());
+        shell.startActivityForResult(i, EXPORT_BACKUP);
+    }
+
+    private void exportTo(android.net.Uri target) {
+        File src = pendingExport;
+        pendingExport = null;
+        if (src == null)
+            return;
+        toast("正在导出 " + src.getName() + "…");
+        new Thread(() -> {
+            try (java.io.InputStream in = new java.io.FileInputStream(src);
+                    java.io.OutputStream out = shell.getContentResolver().openOutputStream(target)) {
+                if (out == null)
+                    throw new java.io.IOException("无法写入目标文件");
+                byte[] buf = new byte[1 << 16];
+                int n;
+                while ((n = in.read(buf)) > 0)
+                    out.write(buf, 0, n);
+                shell.runOnUiThread(() -> toast("已导出"));
+            } catch (Exception e) {
+                shell.runOnUiThread(() -> toast("导出失败：" + e.getMessage()));
+            }
+        }, "backup-export").start();
+    }
+
+    private void importBackup() {
+        importing = true;
+        android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT)
+                .addCategory(android.content.Intent.CATEGORY_OPENABLE)
+                .setType("*/*")
+                .putExtra(android.content.Intent.EXTRA_MIME_TYPES, new String[] {
+                        "application/gzip", "application/x-gzip", "application/x-tar", "application/octet-stream"});
+        shell.startActivityForResult(i, IMPORT_BACKUP);
+    }
+
+    private void importFrom(android.net.Uri source) {
+        importing = false;
+        File dest = new File(shell.getCacheDir(), "import-backup.tar.gz");
+        toast("正在读取备份…");
+        new Thread(() -> {
+            try (java.io.InputStream in = shell.getContentResolver().openInputStream(source);
+                    java.io.OutputStream out = new java.io.FileOutputStream(dest)) {
+                if (in == null)
+                    throw new java.io.IOException("无法读取文件");
+                byte[] buf = new byte[1 << 16];
+                int n;
+                while ((n = in.read(buf)) > 0)
+                    out.write(buf, 0, n);
+                shell.runOnUiThread(() -> confirmRestore(dest));
+            } catch (Exception e) {
+                shell.runOnUiThread(() -> toast("读取失败：" + e.getMessage()));
+            }
+        }, "backup-import").start();
+    }
+    private void confirmDelete(File backup) {
+        new android.app.AlertDialog.Builder(shell)
+                .setTitle("删除备份？")
+                .setMessage(app.aomarchy.data.Backup.stamp(backup) + " 会被删除。")
+                .setNegativeButton("取消", null)
+                .setPositiveButton("删除", (d, w) -> {
+                    if (backup.delete()) {
+                        paintBackups();
+                        toast("已删除");
+                    } else {
+                        toast("删不掉这个备份");
+                    }
+                })
+                .show();
+    }
     private TextView sourceTile(String title, String sub) {
         TextView t = Ui.text(shell, title + "\n" + sub, 12, Ui.DIM, false);
         t.setPadding(Ui.dp(shell, 12), Ui.dp(shell, 10), Ui.dp(shell, 12), Ui.dp(shell, 10));
@@ -428,6 +656,19 @@ class SystemPage extends Page {
 
     @Override
     void onActivityResult(int request, int result, android.content.Intent data) {
+        if (request == EXPORT_BACKUP || request == IMPORT_BACKUP) {
+            android.net.Uri uri = result == android.app.Activity.RESULT_OK && data != null ? data.getData() : null;
+            if (uri == null) {
+                toast("没有选择文件");
+                pendingExport = null;
+                return;
+            }
+            if (request == EXPORT_BACKUP)
+                exportTo(uri);
+            else
+                importFrom(uri);
+            return;
+        }
         if (request != PICK_ARCHIVE)
             return;
         android.net.Uri picked = result == android.app.Activity.RESULT_OK && data != null ? data.getData() : null;

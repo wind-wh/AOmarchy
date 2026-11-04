@@ -198,8 +198,8 @@ public final class TarWriter {
         }
     }
 
-    static final class Cancelled extends IOException {
-        Cancelled() {
+    public static final class Cancelled extends IOException {
+        public Cancelled() {
             super("cancelled");
         }
     }
