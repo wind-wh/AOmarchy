@@ -1413,11 +1413,15 @@ class SettingsPage extends Page {
 
         dialog.setContentView(wrap);
         dialog.setOnDismissListener(d -> {
+            app.aomarchy.ui.Toasts.clearSheet();
             if (onDismiss != null)
                 onDismiss.run();
             refresh();
         });
         dialog.show();
+        // Toasts belong in the sheet's window: the activity's toast view would be hidden behind this Dialog.
+        if (dialog.getWindow() != null)
+            app.aomarchy.ui.Toasts.useSheet((ViewGroup) dialog.getWindow().getDecorView());
         android.view.Window w = dialog.getWindow();
         if (w != null) {
             w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Ui.BG));

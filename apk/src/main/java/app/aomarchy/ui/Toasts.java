@@ -18,16 +18,32 @@ import java.util.List;
  */
 public final class Toasts {
     private static WeakReference<Activity> host = new WeakReference<>(null);
+    /** While a full-screen sheet (Dialog) is open, toasts belong in its window or they stay behind it. */
+    private static WeakReference<ViewGroup> sheetRoot = new WeakReference<>(null);
     private static final List<View> shown = new ArrayList<>();
 
     private Toasts() {
+    }
+
+    /**
+     * Routes toasts into a sheet's own decor view: a Dialog window sits above the activity's content, so a toast
+     * added to the activity would be invisible while the sheet is open. Pair with {@link #clearSheet()} on dismiss.
+     */
+    public static void useSheet(ViewGroup root) {
+        sheetRoot = new WeakReference<>(root);
+    }
+
+    public static void clearSheet() {
+        sheetRoot = new WeakReference<>(null);
     }
 
     public static void show(Activity activity, String text) {
         if (activity == null || activity.isFinishing())
             return;
         host = new WeakReference<>(activity);
-        ViewGroup root = activity.findViewById(android.R.id.content);
+        ViewGroup sheet = sheetRoot.get();
+        boolean inSheet = sheet != null && sheet.isAttachedToWindow();
+        ViewGroup root = inSheet ? sheet : activity.findViewById(android.R.id.content);
         if (root == null)
             return;
         TextView toast = Ui.text(activity, text, 13, Ui.TEXT, false);
