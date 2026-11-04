@@ -251,15 +251,14 @@ public class TerminalView extends View {
     }
 
     private void put(char ch) {
-        if (wrapPending && cx >= cols) {
+        int width = isWide(ch) ? 2 : 1;
+        if ((wrapPending && cx + width > cols) || cx + width > cols) {
             cx = 0;
             lineFeed();
         }
         wrapPending = false;
         if (cx < 0)
             cx = 0;
-        if (cx >= cols)
-            cx = cols - 1;
         if (cy < 0)
             cy = 0;
         if (cy >= rows)
@@ -268,9 +267,22 @@ public class TerminalView extends View {
         text[i] = ch;
         fg[i] = bold ? brighten(curFg) : curFg;
         bg[i] = curBg;
-        cx++;
+        if (width == 2 && cx + 1 < cols) {
+            text[i + 1] = 0; // continuation cell of a double-width character
+            fg[i + 1] = fg[i];
+            bg[i + 1] = curBg;
+        }
+        cx += width;
         if (cx >= cols)
             wrapPending = true;
+    }
+
+    /** East Asian wide characters take two cells; everything else (ASCII, accents) takes one. */
+    private static boolean isWide(char c) {
+        return (c >= 0x1100 && c <= 0x115F) || (c >= 0x2E80 && c <= 0xA4CF && c != 0x303F)
+                || (c >= 0xAC00 && c <= 0xD7A3) || (c >= 0xF900 && c <= 0xFAFF)
+                || (c >= 0xFE30 && c <= 0xFE4F) || (c >= 0xFF00 && c <= 0xFF60)
+                || (c >= 0xFFE0 && c <= 0xFFE6);
     }
 
     private static int brighten(int color) {
