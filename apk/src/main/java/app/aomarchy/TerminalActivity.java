@@ -33,7 +33,9 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
     private static final float MIN_FONT = 9f, MAX_FONT = 24f;
 
     private TerminalView terminal;
-    private TextView copyButton, scrollHint;
+    private TerminalCommandsView commands;
+    private TextView copyButton, scrollHint, panelButton;
+    private boolean panelVisible = true;
 
     /** ui_lang also decides the resource Locale (see {@link T#wrap(Context)}); auto keeps the system Locale. */
     @Override
@@ -54,12 +56,25 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Ui.BG);
 
+        // Terminal 55% over the quick-command panel 45%. The top action bar and the bottom key strip stay overlays;
+        // their height is reserved as padding here, so neither covers the terminal grid or the panel. Hiding the
+        // panel leaves the terminal as the only weighted child, so it takes the whole height and the pty resizes
+        // through TerminalView.onSizeChanged.
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(0, Ui.dp(this, 58), 0, Ui.dp(this, 48));
+
         terminal = new TerminalView(this);
-        // Top: the action bar; bottom: the key strip. The grid stays clear of both.
-        terminal.setPadding(0, Ui.dp(this, 58), 0, Ui.dp(this, 48));
         terminal.setFontSp(getSharedPreferences(Prefs.NAME, MODE_PRIVATE).getFloat("term_font", 13f));
         terminal.setListener(this);
-        root.addView(terminal, new FrameLayout.LayoutParams(
+        content.addView(terminal, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 0.55f));
+
+        commands = new TerminalCommandsView(this, this::sendCommand);
+        content.addView(commands, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 0.45f));
+
+        root.addView(content, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         // Keys a soft keyboard does not offer but a shell needs: Esc/Tab, the control letters, and the arrows.
@@ -105,6 +120,8 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
         bar.addView(action("A−", Ui.DIM, v -> changeFont(-1)));
         bar.addView(action("A+", Ui.DIM, v -> changeFont(1)));
         bar.addView(action(T.t("btn.keyboard"), Ui.DIM, v -> toggleKeyboard()));
+        panelButton = action(TerminalPresets.text("btn.panel", "面板"), Ui.ACCENT, v -> togglePanel());
+        bar.addView(panelButton);
         bar.addView(action(T.t("btn.restart"), Ui.DIM, v -> recreate()));
         copyButton = (TextView) bar.getChildAt(2); // the copy label, dimmed until something is selected
 
@@ -161,6 +178,34 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
             getWindow().getDecorView().invalidate();
             reportFullyDrawn();
         }, 400);
+    }
+
+    @Override
+    public void onConfigurationChanged(android.content.res.Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        // The activity keeps its views on rotation: re-apply the panel's 2-column / 3-column layout.
+        if (commands != null)
+            commands.updateColumns();
+    }
+
+    /** Shows or hides the quick-command panel; hidden, the terminal takes the whole height (pty resize follows). */
+    private void togglePanel() {
+        panelVisible = !panelVisible;
+        if (commands != null)
+            commands.setVisibility(panelVisible ? View.VISIBLE : View.GONE);
+        if (panelButton != null)
+            panelButton.setTextColor(panelVisible ? Ui.ACCENT : Ui.DIM);
+    }
+
+    /** A chip tap: append Enter and write it to the pty, or say that there is no live terminal to write to. */
+    private void sendCommand(String command) {
+        if (command == null || command.isEmpty())
+            return;
+        if (terminal == null || !terminal.isRunning()) {
+            Toasts.show(this, TerminalPresets.text("panel.not_running", "终端没有运行"));
+            return;
+        }
+        terminal.write(command + "\r");
     }
 
     private TextView action(String label, int color, View.OnClickListener onClick) {

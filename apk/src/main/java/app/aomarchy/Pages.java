@@ -28,7 +28,7 @@ abstract class Page {
     Page(ShellActivity shell) {
         this.shell = shell;
         root = new ScrollView(shell);
-        root.setBackgroundColor(Ui.BG);
+        root.setBackgroundColor(android.graphics.Color.TRANSPARENT); // the console's wallpaper shows through
         root.setFillViewport(true);
         body = Ui.column(shell);
         int pad = Ui.dp(shell, 18);

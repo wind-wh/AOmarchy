@@ -54,6 +54,7 @@ public class ShellActivity extends Activity {
     private int current = -1;
     private View indicator;
     private TextView entryButton;
+    private PowerIcon powerIcon;
 
     private final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
     /** While there is no system, keep the top bar in step with the install the 系统 page runs off-thread. */
@@ -209,6 +210,21 @@ public class ShellActivity extends Activity {
             icons[i] = icon;
             tabLabels[i] = label;
         }
+        // The rail ends with the power entry: the session's on/off switch is one tap away, at thumb height.
+        rail.addView(new View(this), new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        FrameLayout power = new FrameLayout(this);
+        power.setBackground(Ui.surface(this, 14));
+        power.setContentDescription(T.t("power.button"));
+        power.setClickable(true);
+        power.setFocusable(true);
+        power.setOnClickListener(v -> PowerMenu.show(this));
+        powerIcon = new PowerIcon(this);
+        powerIcon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        power.addView(powerIcon, new FrameLayout.LayoutParams(
+                Ui.dp(this, 24), Ui.dp(this, 24), Gravity.CENTER));
+        rail.addView(power, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 48)));
         // The indicator sits behind the tabs and glides to the selected one (Kinetik's liquid tab bar).
         indicator = new View(this);
         android.graphics.drawable.GradientDrawable pill = new android.graphics.drawable.GradientDrawable();
@@ -255,7 +271,14 @@ public class ShellActivity extends Activity {
         content.addView(host, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
-        setContentView(root);
+        // The console floats over the device wallpaper (blurred + dimmed), so it feels like the home screen behind it.
+        root.setBackground(null);
+        FrameLayout shellRoot = new FrameLayout(this);
+        shellRoot.setBackgroundColor(Ui.BG);
+        shellRoot.addView(root, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        setContentView(shellRoot);
+        app.aomarchy.ui.Wallpaper.behind(this, shellRoot);
         updateStatus();
         updateEntryLabel();
     }
@@ -420,6 +443,17 @@ public class ShellActivity extends Activity {
         status.setTextColor(!ready ? Ui.FAINT : running ? Ui.MINT : Ui.ACCENT);
         if (installHint != null)
             installHint.setVisibility(ready ? View.GONE : View.VISIBLE);
+        // The rail's power glyph doubles as the session LED: mint while Linux runs, dim when only the rootfs is there.
+        if (powerIcon != null)
+            powerIcon.setColor(!ready ? Ui.FAINT : running ? Ui.MINT : Ui.DIM);
+    }
+
+    /** PowerMenu calls this once a session start/stop has settled, so the chip and the rail follow in place. */
+    void sessionChanged() {
+        if (isFinishing() || isDestroyed())
+            return;
+        updateStatus();
+        updateEntryLabel();
     }
 
     /** Rail glyphs, drawn instead of shipping five drawables: same 1.8dp stroke everywhere. */
@@ -497,6 +531,35 @@ public class ShellActivity extends Activity {
                     }
                     break;
             }
+        }
+    }
+
+    /** The rail's power glyph: the classic ring with a gap at the top and a stem through it (no drawable needed). */
+    static final class PowerIcon extends View {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private int color = Ui.DIM;
+
+        PowerIcon(android.content.Context c) {
+            super(c);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeCap(Paint.Cap.ROUND);
+        }
+
+        void setColor(int c) {
+            color = c;
+            invalidate();
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            float w = getWidth(), h = getHeight();
+            float s = Math.min(w, h);
+            float cx = w / 2f, cy = h / 2f;
+            paint.setColor(color);
+            paint.setStrokeWidth(s * 0.09f);
+            float r = s * 0.31f;
+            canvas.drawArc(new RectF(cx - r, cy - r, cx + r, cy + r), -60, 300, false, paint);
+            canvas.drawLine(cx, cy - s * 0.44f, cx, cy - s * 0.08f, paint);
         }
     }
 }
