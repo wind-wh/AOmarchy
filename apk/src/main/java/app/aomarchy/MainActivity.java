@@ -329,7 +329,6 @@ public class MainActivity extends Activity
         }
         consoleDialog.setOnDismissListener(d -> consoleDialog = null);
         consoleDialog.show();
-        android.util.Log.i("ConsoleHandle", "shown at " + (int) (8 * mDensity) + "," + (int) (44 * mDensity));
     }
     private android.app.Dialog consoleDialog;
 
