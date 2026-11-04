@@ -279,6 +279,7 @@ public class ShellActivity extends Activity {
         T.applyLocale(this); // resource strings of the rebuilt views follow the new ui_lang as well
         T.init(this);
         SessionService.refreshNotification(this); // the shade copy was fixed when the service started
+        SessionWidget.refresh(this); // and the home-screen widget says the same language
         int tab = Math.max(0, current);
         for (Page page : pages)
             if (page != null)

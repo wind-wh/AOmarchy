@@ -624,6 +624,7 @@ public class SessionService extends Service {
 
     @Override
     public void onDestroy() {
+        started = false; // the widget and the overview show 就绪 again once the session is gone
         unregisterReceiver(battery);
         getSystemService(ConnectivityManager.class).unregisterNetworkCallback(network);
         requests.stopWatching();

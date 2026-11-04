@@ -82,14 +82,20 @@ public class SessionWidget extends AppWidgetProvider {
         int terminalId = res(ui, "widget_terminal", "id");
         int titleFormat = res(ui, "widget_title_format", "string");
         int labelId = res(ui, "widget_label", "string");
+        int consoleLabel = res(ui, "widget_btn_console", "string");
+        int terminalLabel = res(ui, "widget_btn_terminal", "string");
         if (layout == 0 || statusId == 0 || consoleId == 0 || terminalId == 0
-                || titleFormat == 0 || labelId == 0) {
+                || titleFormat == 0 || labelId == 0 || consoleLabel == 0 || terminalLabel == 0) {
             android.util.Log.w(TAG, "widget resources are missing (layout, ids or strings)");
             return null;
         }
 
         RemoteViews views = new RemoteViews(packageName, layout);
         views.setTextViewText(statusId, ui.getString(titleFormat, ui.getString(labelId), statusText(ui)));
+        // Set the button labels here too: the launcher inflates the layout with its own Locale, while these strings
+        // must follow the console's ui_lang (the same wrapped Context the status line uses).
+        views.setTextViewText(consoleId, ui.getString(consoleLabel));
+        views.setTextViewText(terminalId, ui.getString(terminalLabel));
 
         // Both entries reuse the console activity (singleTop): an already running console gets onNewIntent.
         final int flags = Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP
