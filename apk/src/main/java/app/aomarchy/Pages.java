@@ -1115,16 +1115,20 @@ class SettingsPage extends Page {
         startup.addView(row);
         body.addView(startup);
 
-        LinearLayout detailed = Ui.card(shell, "详细设置（旧版页面）");
-        detailed.addView(Ui.text(shell, "逐项配置暂时还在旧版设置页。", 12, Ui.DIM, false));
+        LinearLayout detailed = Ui.card(shell, "详细设置");
+        detailed.addView(Ui.text(shell, "这些页已按控制台风格重做，改动立即生效。", 12, Ui.DIM, false));
         detailed.addView(Ui.gap(shell, 6));
-        detailed.addView(row("键盘与按键", value("›", Ui.FAINT), () -> openSettings()));
+        detailed.addView(row("键盘与按键", value("›", Ui.FAINT),
+                () -> openPage("键盘与按键", KeysSettingsView.build(shell))));
         detailed.addView(Ui.divider(shell));
-        detailed.addView(row("触摸板与鼠标", value("›", Ui.FAINT), () -> openSettings()));
+        detailed.addView(row("触摸板与鼠标", value("›", Ui.FAINT),
+                () -> openPage("触摸板与鼠标", InputSettingsView.build(shell))));
         detailed.addView(Ui.divider(shell));
-        detailed.addView(row("连接（socket / root / 音频）", value("›", Ui.FAINT), () -> openSettings()));
+        detailed.addView(row("显示", value("›", Ui.FAINT),
+                () -> openPage("显示", DisplaySettingsView.build(shell))));
         detailed.addView(Ui.divider(shell));
-        detailed.addView(row("显示（分辨率 / 方向 / 刘海）", value("›", Ui.FAINT), () -> openSettings()));
+        detailed.addView(row("音频", value("›", Ui.FAINT),
+                () -> openPage("音频", AudioSettingsView.build(shell))));
         body.addView(detailed);
 
         LinearLayout about = Ui.card(shell, "关于");
@@ -1197,8 +1201,39 @@ class SettingsPage extends Page {
                 .show();
     }
 
-    private void openSettings() {
-        shell.startActivity(new android.content.Intent(shell, SettingsActivity.class));
+    /** Opens a native detail page (the rebuilt 详细设置 sub-pages) as a full-screen sheet over the console. */
+    private void openPage(String title, View content) {
+        android.app.Dialog dialog = new android.app.Dialog(shell,
+                android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+
+        LinearLayout wrap = Ui.column(shell);
+        wrap.setBackgroundColor(Ui.BG);
+
+        LinearLayout bar = Ui.row(shell);
+        bar.setPadding(Ui.dp(shell, 12), Ui.dp(shell, 10), Ui.dp(shell, 12), Ui.dp(shell, 10));
+        TextView back = Ui.text(shell, "‹ 返回", 14, Ui.ACCENT, true);
+        back.setPadding(Ui.dp(shell, 8), Ui.dp(shell, 4), Ui.dp(shell, 8), Ui.dp(shell, 4));
+        back.setOnClickListener(v -> dialog.dismiss());
+        bar.addView(back);
+        bar.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
+        bar.addView(Ui.text(shell, title, 16, Ui.TEXT, true));
+        wrap.addView(bar);
+
+        ScrollView scroll = new ScrollView(shell);
+        scroll.setFillViewport(true);
+        content.setPadding(Ui.dp(shell, 16), Ui.dp(shell, 6), Ui.dp(shell, 16), Ui.dp(shell, 24));
+        scroll.addView(content, new ScrollView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        wrap.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+
+        dialog.setContentView(wrap);
+        dialog.setOnDismissListener(d -> refresh());
+        dialog.show();
+        android.view.Window w = dialog.getWindow();
+        if (w != null) {
+            w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Ui.BG));
+            w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        }
     }
 
     @Override

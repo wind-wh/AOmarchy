@@ -1,6 +1,7 @@
 package app.aomarchy;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -21,6 +22,18 @@ import app.aomarchy.ui.Ui;
  */
 public class ShellActivity extends Activity {
     private static final String[] TITLES = {"概览", "系统", "应用", "控制", "设置"};
+    /** MainActivity asks for this when it was opened without an installed system: the console installs it now. */
+    static final String EXTRA_NEED_SYSTEM = "app.aomarchy.NEED_SYSTEM";
+    /** Which page to land on (0-based, see TITLES): the desktop's settings links use 4. */
+    static final String EXTRA_TAB = "app.aomarchy.TAB";
+    private static final String NEED_SYSTEM_HINT = "系统还没安装，先在「系统」页安装 Linux";
+
+    /** Intent that opens the console on one page, from the desktop's settings entries. */
+    static Intent intent(Context c, int tab) {
+        Intent i = new Intent(c, ShellActivity.class);
+        i.putExtra(EXTRA_TAB, tab);
+        return i;
+    }
 
     private final Page[] pages = new Page[TITLES.length];
     private final LinearLayout[] tabs = new LinearLayout[TITLES.length];
@@ -28,15 +41,34 @@ public class ShellActivity extends Activity {
     private final TextView[] tabLabels = new TextView[TITLES.length];
     private FrameLayout host;
     private TextView status;
+    private TextView installHint;
     private int current = -1;
     private View indicator;
     private TextView entryButton;
+
+    private final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+    /** While there is no system, keep the top bar in step with the install the 系统 page runs off-thread. */
+    private final Runnable statusTicker = new Runnable() {
+        @Override
+        public void run() {
+            updateStatus();
+            updateEntryLabel();
+            if (!SessionService.rootfsReady(ShellActivity.this))
+                handler.postDelayed(this, 2000);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         build();
-        show(0);
+        int startTab = getIntent() != null ? getIntent().getIntExtra(EXTRA_TAB, -1) : -1;
+        if (SessionService.rootfsReady(this)) {
+            show(startTab >= 0 && startTab < TITLES.length ? startTab : 0);
+        } else {
+            // No system yet: the 系统 page (tab 1) owns installing it now that the WebView installer is gone.
+            promptInstall();
+        }
         app.aomarchy.data.Installer.cleanupAsync(this); // leftover partial / old system from an interrupted install
         requestNotificationPermission();
         if (getSharedPreferences(Prefs.NAME, MODE_PRIVATE).getBoolean("open_desktop_on_start", false)
@@ -45,11 +77,34 @@ public class ShellActivity extends Activity {
     }
 
     @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (intent != null && intent.getBooleanExtra(EXTRA_NEED_SYSTEM, false))
+            promptInstall(); // the desktop bounced back because there is nothing to start
+    }
+
+    /** Shows the 系统 page and says why: there is no Linux system to open yet, and that page installs it. */
+    private void promptInstall() {
+        showTab(1);
+        toast(NEED_SYSTEM_HINT);
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         updateStatus();
         updateEntryLabel();
+        handler.removeCallbacks(statusTicker);
+        if (!SessionService.rootfsReady(this))
+            handler.postDelayed(statusTicker, 1000); // the install finishes in the background: follow it
         if (pages[current] != null) pages[current].refresh();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        handler.removeCallbacks(statusTicker);
     }
 
     /** The session notification (with its 控制 action) only shows once notifications are allowed (Android 13+). */
@@ -124,6 +179,13 @@ public class ShellActivity extends Activity {
         entryButton = Ui.button(this, "进入桌面", true, v -> openDesktop());
         top.addView(entryButton);
         content.addView(top);
+
+        // While there is no system, a warning line above the page points at the install card (tapping opens it).
+        installHint = Ui.text(this, NEED_SYSTEM_HINT, 12, Ui.WARN, false);
+        installHint.setPadding(Ui.dp(this, 24), 0, Ui.dp(this, 24), Ui.dp(this, 8));
+        installHint.setOnClickListener(v -> showTab(1));
+        installHint.setVisibility(View.GONE);
+        content.addView(installHint);
 
         host = new FrameLayout(this);
         content.addView(host, new LinearLayout.LayoutParams(
@@ -217,7 +279,7 @@ public class ShellActivity extends Activity {
     /** The one action the whole shell is about: show the Linux side, installing it first if it is not there. */
     void openDesktop() {
         if (!SessionService.rootfsReady(this)) {
-            startActivity(new Intent(this, InstallActivity.class));
+            promptInstall(); // no system: the 系统 page installs it natively now, no separate installer screen
             return;
         }
         boolean terminal = "terminal".equals(getSharedPreferences(Prefs.NAME, MODE_PRIVATE)
@@ -231,10 +293,14 @@ public class ShellActivity extends Activity {
         startActivity(new Intent(this, MainActivity.class));
     }
 
-    /** The big button follows the startup mode chosen in Settings. */
+    /** The big button follows the startup mode chosen in Settings (and is an install button until there is a system). */
     void updateEntryLabel() {
         if (entryButton == null)
             return;
+        if (!SessionService.rootfsReady(this)) {
+            entryButton.setText("安装系统");
+            return;
+        }
         boolean terminal = "terminal".equals(getSharedPreferences(Prefs.NAME, MODE_PRIVATE)
                 .getString("session_mode", "desktop"));
         entryButton.setText(terminal ? "进入终端" : "进入桌面");
@@ -256,6 +322,8 @@ public class ShellActivity extends Activity {
         String text = !ready ? "○ 未安装" : running ? "● 运行中" : "● 就绪";
         status.setText(text);
         status.setTextColor(!ready ? Ui.FAINT : running ? Ui.MINT : Ui.ACCENT);
+        if (installHint != null)
+            installHint.setVisibility(ready ? View.GONE : View.VISIBLE);
     }
 
     /** Rail glyphs, drawn instead of shipping five drawables: same 1.8dp stroke everywhere. */

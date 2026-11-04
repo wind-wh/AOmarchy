@@ -86,7 +86,7 @@ final class ControlsView {
         display.addView(Ui.kv2(ctx, "输入", Ui.mono(ctx, "触摸板 · 虚拟键盘", 14, Ui.TEXT), "按键映射在设置里"));
         TextView displayLink = Ui.text(ctx, "显示、方向与刘海设置 ›", 12, Ui.ACCENT, false);
         displayLink.setPadding(0, Ui.dp(ctx, 4), 0, 0);
-        displayLink.setOnClickListener(v -> ctx.startActivity(new Intent(ctx, SettingsActivity.class)));
+        displayLink.setOnClickListener(v -> ctx.startActivity(ShellActivity.intent(ctx, 4)));
         display.addView(displayLink);
         root.addView(display);
 

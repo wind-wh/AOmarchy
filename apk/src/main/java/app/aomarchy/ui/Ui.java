@@ -208,4 +208,66 @@ public final class Ui {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         v.setLayoutParams(lp);
     }
+
+    /** Callback for {@link #toggleRow}: the row already shows the new state, the caller persists it. */
+    public interface OnToggle {
+        void onToggle(boolean value);
+    }
+
+    /**
+     * A settings row that switches something on or off: label (and an optional one-line explanation) left, a
+     * 开启/关闭 pill right. The pill flips immediately; the caller writes the preference in the callback.
+     */
+    public static LinearLayout toggleRow(Context c, String label, String caption, boolean value, OnToggle onChange) {
+        LinearLayout r = row(c);
+        r.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        r.setPadding(0, dp(c, 7), 0, dp(c, 7));
+
+        LinearLayout texts = column(c);
+        texts.addView(text(c, label, 14, TEXT, false));
+        if (caption != null && !caption.isEmpty())
+            texts.addView(text(c, caption, 11, FAINT, false));
+        r.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        final boolean[] on = {value};
+        TextView pill = text(c, on[0] ? "开启" : "关闭", 13, on[0] ? ACCENT : DIM, true);
+        pill.setPadding(dp(c, 10), dp(c, 5), dp(c, 10), dp(c, 5));
+        pill.setBackground(rounded(c, SURFACE_HI, LINE, 30));
+        r.addView(pill);
+        r.setOnClickListener(v -> {
+            on[0] = !on[0];
+            pill.setText(on[0] ? "开启" : "关闭");
+            pill.setTextColor(on[0] ? ACCENT : DIM);
+            onChange.onToggle(on[0]);
+        });
+        r.setClickable(true);
+        return r;
+    }
+
+    /** A settings row that opens something: label (optional explanation) left, a value and › right. */
+    public static LinearLayout actionRow(Context c, String label, String caption, String value, Runnable onClick) {
+        LinearLayout r = row(c);
+        r.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        r.setPadding(0, dp(c, 7), 0, dp(c, 7));
+
+        LinearLayout texts = column(c);
+        texts.addView(text(c, label, 14, TEXT, false));
+        if (caption != null && !caption.isEmpty())
+            texts.addView(text(c, caption, 11, FAINT, false));
+        r.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        LinearLayout right = row(c);
+        if (value != null && !value.isEmpty()) {
+            TextView v = text(c, value, 13, DIM, false);
+            right.addView(v);
+            right.addView(space(c, 6));
+        }
+        right.addView(text(c, "›", 15, FAINT, false));
+        r.addView(right);
+        r.setOnClickListener(v -> onClick.run());
+        r.setClickable(true);
+        return r;
+    }
 }

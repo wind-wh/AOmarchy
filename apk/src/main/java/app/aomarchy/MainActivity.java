@@ -339,9 +339,11 @@ public class MainActivity extends Activity
 
         // Andromarchy: this app is also the Linux side. Start the session (daemon, audio, Hyprland) if the Arch
         // rootfs is installed; this activity then connects to the daemon like the Termux version did.
-        if (!SessionService.rootfsReady(this)) { // first launch: setup form, then the rootfs download
+        if (!SessionService.rootfsReady(this)) { // no system: hand the user back to the console, whose 系统 page installs it
             redirected = true;
-            startActivity(new Intent(this, InstallActivity.class));
+            startActivity(new Intent(this, ShellActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    .putExtra(ShellActivity.EXTRA_NEED_SYSTEM, true));
             finish();
             return;
         }
@@ -532,7 +534,7 @@ public class MainActivity extends Activity
             return null;
 
         if (UserActions.OPEN_PREFERENCES.equals(response)) {
-            Intent intent = new Intent(this, SettingsActivity.class);
+            Intent intent = ShellActivity.intent(this, 4);
             intent.setAction(Intent.ACTION_MAIN);
             return PendingIntent.getActivity(this, requestCode, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
@@ -847,7 +849,7 @@ public class MainActivity extends Activity
                 toggleExtraKeysBar();
                 break;
             case UserActions.OPEN_PREFERENCES:
-                startActivity(new Intent(this, SettingsActivity.class));
+                startActivity(ShellActivity.intent(this, 4));
                 break;
             case UserActions.RELEASE_POINTER_AND_KEYBOARD_CAPTURE:
                 if (surfaceView.hasPointerCapture())
@@ -966,7 +968,7 @@ public class MainActivity extends Activity
             consoleDialog.dismiss();
             consoleDialog = null;
         }
-        if (redirected) { // only forwarded to InstallActivity: nothing was set up
+        if (redirected) { // only handed back to the console: nothing was set up
             super.onDestroy();
             return;
         }
@@ -1214,7 +1216,7 @@ public class MainActivity extends Activity
                 }
             }
             @Override public void openSettings() {
-                startActivity(new Intent(MainActivity.this, SettingsActivity.class));
+                startActivity(ShellActivity.intent(MainActivity.this, 4));
             }
         });
         mBarHeight = Math.round(37.5f * mDensity * extraKeysBar.getRowCount());
@@ -2146,7 +2148,7 @@ public class MainActivity extends Activity
     }
 
     // 原有 handleTouchEvent 一字未改
-    private boolean redirected; // first launch: handed over to InstallActivity in onCreate
+    private boolean redirected; // no system installed: onCreate handed the user back to the console
     private Backlight backlight; // a FileObserver must stay referenced, or it stops when collected
 
     private boolean handleTouchEvent(MotionEvent event) {
