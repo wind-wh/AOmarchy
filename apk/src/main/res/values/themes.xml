@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The shell: fixed brand dark, no title bar, status/navigation bars blend into the page. -->
+    <style name="Theme.AOmarchy" parent="@android:style/Theme.NoTitleBar.Fullscreen">
+        <item name="android:windowBackground">@color/brand_bg</item>
+        <item name="android:colorBackground">@color/brand_bg</item>
+        <item name="android:colorAccent">@color/brand_accent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/brand_bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
+
+    <!-- The detailed settings pages keep their light theme (long plain list, unrelated to the shell). -->
+    <style name="Theme.AOmarchy.Settings"
+           parent="@android:style/Theme.DeviceDefault.Light.NoActionBar">
+        <item name="android:windowBackground">@color/settings_background</item>
+        <item name="android:colorBackground">@color/settings_background</item>
+        <item name="android:colorAccent">@color/settings_accent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/settings_background</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
+</resources>

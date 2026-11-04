@@ -1,0 +1,118 @@
+name: Release APK
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to create/update (for example v1.0.1)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install Android SDK packages
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          SDKMANAGER="$(ls "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | tail -n1)"
+          echo "Using $SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358" "cmake;3.22.1"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare signing key
+        id: signing
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          if [ -z "$SIGNING_KEYSTORE_BASE64" ]; then
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::SIGNING_KEYSTORE_BASE64 is not set: this release will carry a debug-signed APK."
+            exit 0
+          fi
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+          echo "$SIGNING_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          {
+            echo "storePath=$RUNNER_TEMP/release.jks"
+            echo "storePassword=$SIGNING_STORE_PASSWORD"
+            echo "keyAlias=$SIGNING_KEY_ALIAS"
+            echo "keyPassword=$SIGNING_KEY_PASSWORD"
+          } > "$RUNNER_TEMP/signing.properties"
+          echo "AOmarchy_SIGNING=$RUNNER_TEMP/signing.properties" >> "$GITHUB_ENV"
+
+      - name: Build APK
+        working-directory: apk
+        run: |
+          chmod +x gradlew
+          if [ "${{ steps.signing.outputs.signed }}" = "true" ]; then
+            ./gradlew --no-daemon assembleRelease
+          else
+            ./gradlew --no-daemon assembleDebug
+          fi
+
+      - name: Collect APK and checksum
+        run: |
+          mkdir -p dist
+          if [ -f apk/build/outputs/apk/release/AOmarchy-release.apk ]; then
+            cp apk/build/outputs/apk/release/AOmarchy-release.apk dist/
+          else
+            cp apk/build/outputs/apk/debug/AOmarchy-debug.apk dist/
+          fi
+          cd dist
+          for f in *.apk; do sha256sum "$f" > "$f.sha256"; done
+          ls -l
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          name: AOmarchy ${{ inputs.tag || github.ref_name }}
+          prerelease: ${{ steps.signing.outputs.signed != 'true' }}
+          fail_on_unmatched_files: true
+          files: dist/*
+          body: |
+            **AOmarchy** — Omarchy (Arch Linux + Hyprland) on Android, in one APK.
+
+            This release was built by GitHub Actions from the repository source.
+            The first-launch setup screen can install the system from the online
+            download or from a `lotfix-rootfs.tar.gz` on the device (**Local archive**).
+
+            The session now copies Android's CJK font into the Linux system, so
+            Chinese, Japanese and Korean text in the desktop is no longer drawn as
+            empty boxes.
+
+            Shutdown, reboot and log out from Omarchy's power menu now work: the
+            real `systemd-inhibit` needs logind, which Android does not have, so the
+            session installs a shim that runs the command instead. Shutdown closes
+            the session back to Android (no app can power the tablet off); reboot and
+            log out start a fresh session.
+
+            Install: download the APK and open it. Android may ask to allow
+            installing apps from this source. If a previous AOmarchy build
+            signed with a different key is installed, uninstall it first.
+
+            Checksum: run `sha256sum -c AOmarchy-<variant>.apk.sha256`.
+
+            > Debug-signed placeholder releases (no release key configured yet)
+            > are marked as pre-releases; they cannot update a release-signed install.

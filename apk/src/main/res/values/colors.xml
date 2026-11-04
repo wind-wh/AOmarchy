@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AOmarchy brand (fixed dark, not the desktop's Omarchy theme): keep in sync with app.aomarchy.ui.Ui. -->
+    <color name="brand_bg">#0A0C10</color>
+    <color name="brand_surface">#14171F</color>
+    <color name="brand_surface_hi">#1C2230</color>
+    <color name="brand_line">#262C3A</color>
+    <color name="brand_accent">#7C8CFF</color>
+    <color name="brand_mint">#5FE1B4</color>
+    <color name="brand_warn">#FF6B6B</color>
+    <color name="brand_text">#E6E9F0</color>
+    <color name="brand_dim">#98A2B3</color>
+
+    <color name="settings_background">#FFFFFF</color>
+    <color name="settings_dropdown_background">#E6E6E6</color>
+    <color name="settings_text_primary">#DE000000</color>
+    <color name="settings_text_secondary">#99000000</color>
+    <color name="settings_accent">#1565C0</color>
+    <color name="settings_divider">#E0E0E0</color>
+    <color name="settings_success">#2E7D32</color>
+    <color name="settings_error">#C62828</color>
+    <color name="ic_launcher_background">#0A0C10</color>
+</resources>
