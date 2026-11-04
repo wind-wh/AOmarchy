@@ -74,6 +74,11 @@
         <service
             android:name=".SessionService"
             android:exported="false" />
+        <!-- Optional background keep-alive: only holds the process in the foreground with a low-priority
+             notification; it never starts or stops the Linux session (KeepAliveService). -->
+        <service
+            android:name=".KeepAliveService"
+            android:exported="false" />
         <!-- Home-screen widget: session state + 控制台 / 终端 shortcuts (SessionWidget; updatePeriodMillis=0). -->
         <receiver
             android:name=".SessionWidget"

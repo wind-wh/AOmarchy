@@ -1418,6 +1418,8 @@ class SettingsPage extends Page {
     private TextView kbValue;
     private TextView modeValue;
     private SettingsExportView exportView; // the 配置备份 sheet, while it is open
+    private KeepAliveView keepAliveView; // the 后台运行 sheet
+    private BackgroundPickerView backgroundView; // the 控制台背景 sheet
     private TextView langValue;
     /** The rows whose value changes after a pick: their TalkBack description is rebuilt in {@link #refresh()}. */
     private LinearLayout nameRow;
@@ -1513,6 +1515,27 @@ class SettingsPage extends Page {
         detailed.addView(row(T.t("page.settings_io"), value("›", Ui.FAINT), () -> {
             exportView = SettingsExportView.create(shell);
             openPage(T.t("page.settings_io"), exportView.view(), this::dropExportView);
+        }));
+        detailed.addView(divider());
+        detailed.addView(row(T.t("keepalive.title"), value("›", Ui.FAINT), () -> {
+            keepAliveView = KeepAliveView.create(shell);
+            openPage(T.t("keepalive.title"), keepAliveView.view(), () -> {
+                if (keepAliveView != null) {
+                    keepAliveView.dispose();
+                    keepAliveView = null;
+                }
+            });
+        }));
+        detailed.addView(divider());
+        detailed.addView(row(T.t("card.console_bg"), value("›", Ui.FAINT), () -> {
+            backgroundView = BackgroundPickerView.create(shell);
+            openPage(T.t("card.console_bg"), backgroundView.view(), () -> {
+                if (backgroundView != null) {
+                    backgroundView.dispose();
+                    backgroundView = null;
+                }
+                shell.refreshConsoleBackground(); // a picked image shows as soon as the sheet closes
+            });
         }));
         body.addView(detailed);
 
@@ -1695,6 +1718,8 @@ class SettingsPage extends Page {
     @Override
     void onActivityResult(int request, int result, android.content.Intent data) {
         if (exportView != null && exportView.onActivityResult(request, result, data))
+            return;
+        if (backgroundView != null && backgroundView.onActivityResult(request, result, data))
             return;
         super.onActivityResult(request, result, data);
     }

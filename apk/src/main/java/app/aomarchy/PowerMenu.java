@@ -17,9 +17,10 @@ import app.aomarchy.i18n.T;
 import app.aomarchy.ui.Ui;
 
 /**
- * The console rail's power menu: restart or stop the Linux session without going through the desktop or the
- * notification, plus a way out of the console that leaves the session running. Drawn with the console's own design
- * system (a centred card) instead of a stock dialog, so the unavailable entries can be dimmed in place.
+ * The console rail's power menu, using the words people know from Android and their PCs: 挂起 (send the console to
+ * the background), 后台运行 (keep-alive toggle), 重启 (restart Linux), 关机 (shut Linux down) and 退出 App (close
+ * the console only). 挂起 and 后台运行 work without an installed system; 重启 and 关机 are dimmed until Linux is
+ * installed and running.
  */
 final class PowerMenu {
     /**
@@ -54,23 +55,27 @@ final class PowerMenu {
         panel.addView(Ui.gap(host, 8));
         panel.addView(Ui.divider(host));
 
-        // Restart only makes sense with a system; without a running session the same entry simply starts it.
-        if (!ready) {
-            panel.addView(row(host, dialog, T.t("power.restart"), T.t("power.need_system"), false, null));
-        } else if (running) {
-            panel.addView(row(host, dialog, T.t("power.restart"), T.t("power.restart_hint"),
-                    true, () -> restart(host)));
-        } else {
-            panel.addView(row(host, dialog, T.t("power.start"), T.t("power.start_hint"),
-                    true, () -> start(host)));
-        }
+        // 挂起: the console leaves the screen like Home does, and the Linux session keeps running.
+        panel.addView(row(host, dialog, T.t("power.suspend"), T.t("power.suspend_hint"),
+                null, 0, true, () -> suspend(host)));
+        // 后台运行: the keep-alive notification has nothing to do with Linux, so it works without a system too.
+        boolean keepAlive = keepAliveRunning(host);
+        panel.addView(row(host, dialog, T.t("power.background"), T.t("power.background_hint"),
+                T.t(keepAlive ? "power.background_on" : "power.background_off"),
+                keepAlive ? Ui.MINT : Ui.FAINT, true, () -> toggleBackground(host)));
+        // 重启 / 关机 only make sense with a running Linux: dimmed with the reason in place otherwise.
+        panel.addView(row(host, dialog, T.t("power.restart"),
+                !ready ? T.t("power.need_system")
+                        : !running ? T.t("power.state_stopped") : T.t("power.restart_hint"),
+                null, 0, ready && running, () -> restart(host)));
         panel.addView(row(host, dialog, T.t("power.stop"),
-                !ready ? T.t("power.need_system") : T.t("power.stop_hint"),
-                ready && running, () -> stop(host)));
-        // Leaving the console keeps the session: the notification and the home-screen widget stay as they are.
+                !ready ? T.t("power.need_system")
+                        : !running ? T.t("power.state_stopped") : T.t("power.stop_hint"),
+                null, 0, ready && running, () -> stop(host)));
+        // 退出 App closes the console only: Linux (and the keep-alive notification) stay as they are.
         panel.addView(row(host, dialog, T.t("power.exit"),
                 running ? T.t("power.exit_note") : T.t("power.exit_note_off"),
-                true, () -> exit(host)));
+                null, 0, true, () -> exit(host)));
 
         panel.addView(Ui.gap(host, 12));
         TextView cancel = Ui.button(host, T.t("power.cancel"), false, v -> dialog.dismiss());
@@ -93,22 +98,33 @@ final class PowerMenu {
         dialog.show();
     }
 
-    /** One 48dp row: an action label with a one-line explanation, dimmed and inert when it cannot run. */
-    private static LinearLayout row(ShellActivity host, Dialog dialog, String label, String caption,
-            boolean enabled, Runnable action) {
+    /**
+     * One 48dp row: label, a one-line explanation and an optional right-hand state value. Dimmed and inert when the
+     * action cannot run; TalkBack reads it as one node ("label：explanation：value").
+     */
+    private static LinearLayout row(ShellActivity host, Dialog dialog, String label, String hint,
+            String value, int valueColor, boolean enabled, Runnable action) {
         LinearLayout row = Ui.row(host);
         row.setMinimumHeight(Ui.dp(host, 48));
         row.setPadding(0, Ui.dp(host, 9), 0, Ui.dp(host, 9));
         LinearLayout texts = Ui.column(host);
         TextView title = Ui.text(host, label, 14, Ui.TEXT, false);
-        TextView hint = Ui.text(host, caption, 11, Ui.FAINT, false);
+        TextView hintView = Ui.text(host, hint, 11, Ui.FAINT, false);
         texts.addView(title);
-        texts.addView(hint);
+        texts.addView(hintView);
         row.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        // One TalkBack stop per row: it reads label and explanation, not the two child TextViews separately.
-        row.setContentDescription(label + ": " + caption);
+        TextView valueView = null;
+        if (value != null) {
+            valueView = Ui.text(host, value, 12, valueColor, false);
+            row.addView(valueView, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        }
+        // One TalkBack stop per row, so the state (e.g. 后台运行中) is read with the action that changes it.
+        row.setContentDescription(value == null ? label + "：" + hint : label + "：" + hint + "：" + value);
         title.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        hint.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        hintView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        if (valueView != null)
+            valueView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         if (enabled) {
             row.setClickable(true);
             row.setFocusable(true);
@@ -121,6 +137,31 @@ final class PowerMenu {
             row.setEnabled(false);
         }
         return row;
+    }
+
+    /** 挂起: same as Home — the console goes to the back, Linux (and its notification) keeps running. */
+    private static void suspend(ShellActivity host) {
+        host.moveTaskToBack(true);
+    }
+
+    /** 后台运行: toggles the keep-alive foreground service; independent of whether Linux was ever installed. */
+    private static void toggleBackground(ShellActivity host) {
+        try {
+            if (KeepAliveService.isRunning(host))
+                KeepAliveService.stop(host);
+            else
+                KeepAliveService.start(host);
+        } catch (RuntimeException ignored) {
+            // best-effort: a failed toggle must not take the console (or the System UI) down
+        }
+    }
+
+    private static boolean keepAliveRunning(ShellActivity host) {
+        try {
+            return KeepAliveService.isRunning(host);
+        } catch (RuntimeException e) {
+            return false; // the service is best-effort: never stop the menu from opening
+        }
     }
 
     private static void restart(ShellActivity host) {
@@ -152,7 +193,7 @@ final class PowerMenu {
     }
 
     private static void exit(ShellActivity host) {
-        // Only the console goes away: the session (and its notification) keeps running in the background.
+        // Only the console goes away: Linux (and the keep-alive notification) keep running in the background.
         host.finishAffinity();
     }
 

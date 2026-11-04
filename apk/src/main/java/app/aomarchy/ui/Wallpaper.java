@@ -2,55 +2,364 @@ package app.aomarchy.ui;
 
 import android.app.Activity;
 import android.app.WallpaperManager;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.RenderEffect;
+import android.graphics.Shader;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.LayerDrawable;
+import android.net.Uri;
 import android.os.Build;
+import android.os.ParcelFileDescriptor;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
+import java.io.FileDescriptor;
+import java.io.IOException;
+import java.io.InputStream;
+
+import app.aomarchy.i18n.T;
+
 /**
- * The console's background: the device wallpaper, blurred and dimmed under the brand scrim, so the console keeps its
- * fixed dark look while still feeling like part of the home screen. Falls back to the flat brand background when the
- * wallpaper cannot be read (some launchers/ROMs refuse it).
+ * The console's backdrop, in three levels of reliability.
+ *
+ * <ol>
+ *   <li>A custom picture the user picked in Settings → 控制台背景 (prefs {@code console_bg_uri}, a content URI whose
+ *       read grant is persisted by SAF).</li>
+ *   <li>The device wallpaper. {@link WallpaperManager#getDrawable()} is tried first; several ROMs (Android 13+ and
+ *       MIUI in particular) refuse it, so {@link WallpaperManager#getWallpaperFile(int)} is tried as a second chance.</li>
+ *   <li>The brand gradient (not a flat fill): {@code #0A0C10 → #14171F} with a diagonal {@code #1F7C8CFF} highlight,
+ *       so the console still has depth when neither picture can be read.</li>
+ * </ol>
+ *
+ * <p>The picture is drawn CENTER_CROP, blurred on API 31+, and covered by the same 88% brand scrim as before, so the
+ * console keeps its fixed dark look and white-on-dark text stays readable over any photo. Decoding runs off the UI
+ * thread (downsampled to {@link #MAX_IMAGE_SIDE} px, memory friendly) and the layers never intercept touches.
+ *
+ * <p>Call {@link #behind(Activity, FrameLayout)} (or {@link #apply(Activity, FrameLayout)}) after the console's views
+ * are built; calling it again on the same host replaces the previous layers, so the host can refresh the backdrop
+ * after the user changes the setting without rebuilding the console.
  */
 public final class Wallpaper {
     /** Brand background at 88% — enough to keep white-on-dark text readable over any photo. */
     private static final int SCRIM = 0xE60A0C10;
+    /** Longest decoded side of a picture: enough for a tablet panel at 2x, small enough to stay cheap. */
+    private static final int MAX_IMAGE_SIDE = 2000;
+    /** Brand gradient endpoints (keep in sync with {@link Ui}). */
+    private static final int GRADIENT_FROM = 0xFF0A0C10;
+    private static final int GRADIENT_TO = 0xFF14171F;
+    /** The diagonal accent wash drawn over the gradient. */
+    private static final int GRADIENT_GLOW = 0x1F7C8CFF;
+
+    /** Must match {@code app.aomarchy.Prefs.NAME}; that class is package-private, so the name is repeated here. */
+    private static final String PREFS = "andromarchy_settings";
+    private static final String KEY_MODE = "console_bg_mode";
+    private static final String KEY_URI = "console_bg_uri";
+
+    /** The saved {@code console_bg_mode} values. */
+    public static final String MODE_SYSTEM = "system";
+    public static final String MODE_CUSTOM = "custom";
+    public static final String MODE_OFF = "off";
+
+    /** Marks the backdrop layers so a repeated apply can replace them instead of stacking another set. */
+    private static final Object BACKDROP_TAG = new Object();
 
     private Wallpaper() {
     }
 
     /**
-     * Adds the wallpaper (and its scrim) behind everything already in {@code host}. Call after the console's views are
-     * built; the two layers are inserted at the bottom of the stack and never intercept touches.
+     * Adds the backdrop behind everything already in {@code host}. Kept for the existing call site; {@link #apply} does
+     * the work and can be called again to refresh.
      */
     public static void behind(Activity activity, FrameLayout host) {
+        apply(activity, host);
+    }
+
+    /**
+     * Replaces the backdrop of {@code host} (layers added by an earlier call are removed first, so this is safe to call
+     * on every refresh). {@code MODE_OFF} leaves the host's own solid brand colour showing; the other modes draw the
+     * brand gradient immediately and the picture as soon as it has been decoded.
+     */
+    public static void apply(Activity activity, FrameLayout host) {
         if (activity == null || host == null)
             return;
+        removeBackdrop(host);
+
+        String mode = mode(activity);
+        if (MODE_OFF.equals(mode))
+            return; // 纯色: the host's own brand background is exactly what the user asked for
+
+        View gradient = new View(activity);
+        gradient.setBackground(brandGradient());
+        decorate(gradient);
+        host.addView(gradient, 0, fullscreen());
+
+        ImageView picture = new ImageView(activity);
+        picture.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        picture.setVisibility(View.GONE);
+        picture.setAlpha(0f);
+        decorate(picture);
+        blur(activity, picture);
+        host.addView(picture, 1, fullscreen());
+
+        View scrim = new View(activity);
+        scrim.setBackground(new ColorDrawable(SCRIM));
+        scrim.setVisibility(View.GONE);
+        scrim.setAlpha(0f);
+        decorate(scrim);
+        host.addView(scrim, 2, fullscreen());
+
+        load(activity, picture, scrim, mode);
+    }
+
+    /** True when a custom image is configured (whatever the current mode: the URI is remembered when switching away). */
+    public static boolean hasCustom(Activity activity) {
+        return customUri(activity) != null;
+    }
+
+    /** The stored {@code console_bg_mode}: {@link #MODE_SYSTEM} when unset or unrecognised. */
+    public static String mode(Activity activity) {
+        if (activity == null)
+            return MODE_SYSTEM;
+        String value = prefs(activity).getString(KEY_MODE, MODE_SYSTEM);
+        return MODE_CUSTOM.equals(value) || MODE_OFF.equals(value) ? value : MODE_SYSTEM;
+    }
+
+    /** Stores {@code console_bg_mode}; anything but "custom" / "off" means {@link #MODE_SYSTEM}. */
+    public static void setMode(Activity activity, String mode) {
+        if (activity == null)
+            return;
+        String value = MODE_CUSTOM.equals(mode) || MODE_OFF.equals(mode) ? mode : MODE_SYSTEM;
+        prefs(activity).edit().putString(KEY_MODE, value).apply();
+    }
+
+    /** The user's custom picture, or null when none is stored. */
+    public static Uri customUri(Activity activity) {
+        if (activity == null)
+            return null;
+        String value = prefs(activity).getString(KEY_URI, "");
+        if (value == null || value.trim().isEmpty())
+            return null;
         try {
-            Drawable src = WallpaperManager.getInstance(activity).getDrawable();
-            if (src == null)
-                return;
-            ImageView image = new ImageView(activity);
-            image.setImageDrawable(src);
-            image.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            image.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-            if (Build.VERSION.SDK_INT >= 31) {
-                // A real blur instead of a scaled bitmap: the photo becomes texture, not a readable picture.
-                image.setRenderEffect(android.graphics.RenderEffect.createBlurEffect(
-                        24f, 24f, android.graphics.Shader.TileMode.CLAMP));
+            return Uri.parse(value.trim());
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Remembers a custom picture. The caller (the settings picker) has already taken the persistable read grant; an
+     * earlier picture's grant is released so switching images does not leak permissions.
+     */
+    public static void setCustom(Activity activity, Uri uri) {
+        if (activity == null)
+            return;
+        if (uri == null) {
+            clearCustom(activity);
+            return;
+        }
+        Uri previous = customUri(activity);
+        if (previous != null && !previous.equals(uri))
+            release(activity, previous);
+        prefs(activity).edit().putString(KEY_URI, uri.toString()).apply();
+    }
+
+    /** Forgets the custom picture and releases its persisted SAF read grant; the mode is left to the caller. */
+    public static void clearCustom(Activity activity) {
+        if (activity == null)
+            return;
+        Uri previous = customUri(activity);
+        prefs(activity).edit().remove(KEY_URI).apply();
+        if (previous != null)
+            release(activity, previous);
+    }
+
+    // ---- loading -------------------------------------------------------------------------------------------------
+
+    /**
+     * Loads the best available picture off the UI thread: custom image first (in custom mode), then the system
+     * wallpaper, otherwise the gradient stays. A custom image that cannot be read reports {@code bg.failed} and then
+     * still falls back, so a revoked permission never leaves a blank background.
+     */
+    private static void load(Activity activity, ImageView picture, View scrim, String mode) {
+        if (activity.isFinishing())
+            return;
+        Uri custom = MODE_CUSTOM.equals(mode) ? customUri(activity) : null;
+        boolean allowSystem = !MODE_OFF.equals(mode);
+        new Thread(() -> {
+            Object source = null;
+            boolean customFailed = false;
+            if (custom != null) {
+                try {
+                    source = decodeCustom(activity, custom);
+                } catch (Throwable t) {
+                    customFailed = true;
+                }
             }
-            View scrim = new View(activity);
-            scrim.setBackground(new ColorDrawable(SCRIM));
-            scrim.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-            host.addView(image, 0, new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            host.addView(scrim, 1, new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            if (source == null && allowSystem)
+                source = systemWallpaper(activity);
+
+            Object loaded = source;
+            boolean reportFailure = customFailed;
+            activity.runOnUiThread(() -> {
+                if (picture.getParent() == null || activity.isFinishing() || activity.isDestroyed())
+                    return; // the console was rebuilt or closed while decoding
+                if (reportFailure)
+                    Toasts.show(activity, T.t("bg.failed"));
+                if (loaded == null)
+                    return; // the brand gradient is the fallback and is already visible
+                if (loaded instanceof Bitmap)
+                    picture.setImageBitmap((Bitmap) loaded);
+                else
+                    picture.setImageDrawable((Drawable) loaded);
+                picture.setVisibility(View.VISIBLE);
+                scrim.setVisibility(View.VISIBLE);
+                picture.animate().alpha(1f).setDuration(260).start();
+                scrim.animate().alpha(1f).setDuration(260).start();
+            });
+        }, "console-background").start();
+    }
+
+    /** The custom picture, downsampled so neither side exceeds {@link #MAX_IMAGE_SIDE}. */
+    private static Bitmap decodeCustom(Activity activity, Uri uri) throws IOException {
+        BitmapFactory.Options bounds = new BitmapFactory.Options();
+        bounds.inJustDecodeBounds = true;
+        try (InputStream in = activity.getContentResolver().openInputStream(uri)) {
+            if (in == null)
+                throw new IOException("no stream for " + uri);
+            BitmapFactory.decodeStream(in, null, bounds);
+        }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0)
+            throw new IOException("not a bitmap: " + uri);
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inSampleSize = sampleSize(bounds.outWidth, bounds.outHeight);
+        Bitmap bitmap;
+        try (InputStream in = activity.getContentResolver().openInputStream(uri)) {
+            if (in == null)
+                throw new IOException("no stream for " + uri);
+            bitmap = BitmapFactory.decodeStream(in, null, options);
+        }
+        if (bitmap == null)
+            throw new IOException("could not decode " + uri);
+        return bitmap;
+    }
+
+    /** The device wallpaper: public Drawable first, then the wallpaper file (some ROMs only block the first path). */
+    private static Object systemWallpaper(Activity activity) {
+        try {
+            Drawable drawable = WallpaperManager.getInstance(activity).getDrawable();
+            if (drawable != null)
+                return drawable;
         } catch (Throwable ignored) {
-            // no wallpaper: the flat brand background stays
+            // refused on Android 13+/MIUI: try the wallpaper file below
+        }
+        ParcelFileDescriptor descriptor = null;
+        try {
+            descriptor = WallpaperManager.getInstance(activity).getWallpaperFile(WallpaperManager.FLAG_SYSTEM);
+            if (descriptor == null)
+                return null;
+            FileDescriptor file = descriptor.getFileDescriptor();
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeFileDescriptor(file, null, bounds);
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0)
+                return null;
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inSampleSize = sampleSize(bounds.outWidth, bounds.outHeight);
+            // The bounds pass may leave the descriptor at the end of the image: rewind before decoding for real.
+            try {
+                android.system.Os.lseek(file, 0, android.system.OsConstants.SEEK_SET);
+            } catch (Throwable ignored) {
+                // not seekable (a pipe on some ROMs): the decode below simply reports failure
+            }
+            return BitmapFactory.decodeFileDescriptor(file, null, options);
+        } catch (Throwable ignored) {
+            return null;
+        } finally {
+            if (descriptor != null) {
+                try {
+                    descriptor.close();
+                } catch (IOException ignored) {
+                    // nothing to do at this point
+                }
+            }
+        }
+    }
+
+    /** Power-of-two downsample so neither side of the decoded bitmap exceeds {@link #MAX_IMAGE_SIDE}. */
+    private static int sampleSize(int width, int height) {
+        int sample = 1;
+        while (width / sample > MAX_IMAGE_SIDE || height / sample > MAX_IMAGE_SIDE)
+            sample <<= 1;
+        return sample;
+    }
+
+    // ---- layers --------------------------------------------------------------------------------------------------
+
+    /**
+     * The brand gradient fallback: a diagonal {@code #0A0C10 → #14171F} base with the same {@code #1F7C8CFF} accent
+     * wash on top, so the backdrop has depth instead of reading as one dead flat colour.
+     */
+    private static Drawable brandGradient() {
+        GradientDrawable base = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[] {GRADIENT_FROM, GRADIENT_TO});
+        GradientDrawable glow = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[] {GRADIENT_GLOW, 0x007C8CFF});
+        return new LayerDrawable(new Drawable[] {base, glow});
+    }
+
+    /** A blurred picture: the wallpaper becomes texture, not a readable photo under the scrim. */
+    private static void blur(Activity activity, ImageView picture) {
+        if (Build.VERSION.SDK_INT >= 31) {
+            float radius = 24f * activity.getResources().getDisplayMetrics().density;
+            picture.setRenderEffect(RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP));
+        }
+    }
+
+    /** Background layers are decoration: no touches, no focus, no TalkBack stops. */
+    private static void decorate(View view) {
+        view.setTag(BACKDROP_TAG);
+        view.setClickable(false);
+        view.setFocusable(false);
+        view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+    }
+
+    private static FrameLayout.LayoutParams fullscreen() {
+        return new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+    }
+
+    /** Removes the layers of a previous apply, releasing an old picture bitmap before the host rebuilds. */
+    private static void removeBackdrop(FrameLayout host) {
+        for (int i = host.getChildCount() - 1; i >= 0; i--) {
+            View child = host.getChildAt(i);
+            if (child.getTag() != BACKDROP_TAG)
+                continue;
+            if (child instanceof ImageView)
+                ((ImageView) child).setImageDrawable(null);
+            host.removeViewAt(i);
+        }
+    }
+
+    // ---- prefs ---------------------------------------------------------------------------------------------------
+
+    private static SharedPreferences prefs(Activity activity) {
+        return activity.getSharedPreferences(PREFS, Activity.MODE_PRIVATE);
+    }
+
+    /** Drops a persisted SAF read grant; providers that do not support persistence simply ignore it. */
+    private static void release(Activity activity, Uri uri) {
+        try {
+            activity.getContentResolver().releasePersistableUriPermission(
+                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        } catch (Throwable ignored) {
+            // not persisted, already released, or a provider that does not implement it
         }
     }
 }

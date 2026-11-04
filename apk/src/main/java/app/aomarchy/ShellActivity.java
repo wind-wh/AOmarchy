@@ -49,6 +49,7 @@ public class ShellActivity extends Activity {
     private final RailIcon[] icons = new RailIcon[TITLES.length];
     private final TextView[] tabLabels = new TextView[TITLES.length];
     private FrameLayout host;
+    private FrameLayout shellRoot;
     private TextView status;
     private TextView installHint;
     private int current = -1;
@@ -273,7 +274,7 @@ public class ShellActivity extends Activity {
 
         // The console floats over the device wallpaper (blurred + dimmed), so it feels like the home screen behind it.
         root.setBackground(null);
-        FrameLayout shellRoot = new FrameLayout(this);
+        shellRoot = new FrameLayout(this);
         shellRoot.setBackgroundColor(Ui.BG);
         shellRoot.addView(root, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -294,6 +295,13 @@ public class ShellActivity extends Activity {
         show(tab);
     }
 
+    /** Re-applies the console background after the user picked another image in 设置 → 控制台背景. */
+    void refreshConsoleBackground() {
+        // Wallpaper.behind is idempotent: it swaps its own backdrop layers and leaves the console views alone.
+        if (shellRoot != null)
+            app.aomarchy.ui.Wallpaper.behind(this, shellRoot);
+    }
+
     /**
      * Rebuilds the whole console after the Settings page changed {@code ui_lang}: every page is recreated, so the new
      * language applies immediately and the rail/pages stay on the tab the user was on (no activity restart).
@@ -303,6 +311,7 @@ public class ShellActivity extends Activity {
         T.init(this);
         SessionService.refreshNotification(this); // the shade copy was fixed when the service started
         SessionWidget.refresh(this); // and the home-screen widget says the same language
+        KeepAliveService.refresh(this); // and the persistent background notification does too
         int tab = Math.max(0, current);
         for (Page page : pages)
             if (page != null)
