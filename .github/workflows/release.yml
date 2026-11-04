@@ -92,27 +92,35 @@ jobs:
           fail_on_unmatched_files: true
           files: dist/*
           body: |
-            **AOmarchy** — Omarchy (Arch Linux + Hyprland) on Android, in one APK.
+            **AOmarchy 2.0** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
 
-            This release was built by GitHub Actions from the repository source.
-            The first-launch setup screen can install the system from the online
-            download or from a `lotfix-rootfs.tar.gz` on the device (**Local archive**).
+            This release was built and signed by GitHub Actions from the repository source.
 
-            The session now copies Android's CJK font into the Linux system, so
-            Chinese, Japanese and Korean text in the desktop is no longer drawn as
-            empty boxes.
+            ## What is new in 2.0
 
-            Shutdown, reboot and log out from Omarchy's power menu now work: the
-            real `systemd-inhibit` needs logind, which Android does not have, so the
-            session installs a shim that runs the command instead. Shutdown closes
-            the session back to Android (no app can power the tablet off); reboot and
-            log out start a fresh session.
+            - **A console around the desktop.** The app opens on five pages — 概览 / 系统 / 应用 / 控制 / 设置 — with
+              live session metrics, the system installer, the app list, the volume/clipboard/controls switchboard and
+              the settings. The Linux desktop is one destination instead of the only screen, and a small A handle in
+              its corner (or the session notification) brings you back without stopping it.
+            - **The first-launch form is gone.** Install the system from 系统 → 安装系统 (online download or a local
+              `lotfix-rootfs.tar.gz`); name/email and the keyboard layout live in 设置 and are applied on every session
+              start; “open the desktop directly” is a setting.
+            - Fixed brand dark theme; the console is independent from the desktop's Omarchy theme.
+            - CJK text and the power menu (shutdown / reboot / log out) work as in 1.0.2 / 1.0.3.
 
-            Install: download the APK and open it. Android may ask to allow
-            installing apps from this source. If a previous AOmarchy build
-            signed with a different key is installed, uninstall it first.
+            ## Upgrading from 1.x
 
-            Checksum: run `sha256sum -c AOmarchy-<variant>.apk.sha256`.
+            The package is now `app.aomarchy`. Android does not let one app read another app's private data, so a 1.x
+            install cannot be migrated: save what you need from the desktop, uninstall the old app, install AOmarchy and
+            set the system up again (a local archive makes that work offline). The 1.x builds stay available in
+            `wind-wh/AOmarchy-legacy`.
 
-            > Debug-signed placeholder releases (no release key configured yet)
-            > are marked as pre-releases; they cannot update a release-signed install.
+            ## Install
+
+            Download the APK and open it. Android may ask to allow installing apps from this source. If a previous
+            AOmarchy build signed with a different key is installed, uninstall it first.
+
+            Checksum: run `sha256sum -c AOmarchy-release.apk.sha256`.
+
+            > Debug-signed placeholder releases (no release key configured) are marked as pre-releases; they cannot
+            > update a release-signed install.

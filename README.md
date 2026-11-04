@@ -14,6 +14,19 @@ desktop with its apps, the Flatpak store, Brave, VS Code, and anything else from
 
 Watch full Demo on Youtube: (https://youtu.be/V79Su8oHRUI)
 
+## Screens
+
+The console around the desktop (2.0). Left to right: overview with live metrics, the system page (install, size,
+logs), apps (Flatpak + Android floating windows), controls (volume, clipboard, power), settings (identity,
+keyboard, startup).
+
+| Console | System | Apps | Controls | Settings |
+|---|---|---|---|---|
+| [<img src="docs/screenshots/overview.jpg" width="150">](docs/screenshots/overview.jpg) | [<img src="docs/screenshots/system.jpg" width="150">](docs/screenshots/system.jpg) | [<img src="docs/screenshots/apps.jpg" width="150">](docs/screenshots/apps.jpg) | [<img src="docs/screenshots/controls.jpg" width="150">](docs/screenshots/controls.jpg) | [<img src="docs/screenshots/settings.jpg" width="150">](docs/screenshots/settings.jpg) |
+
+The desktop itself, with the small **A** handle that returns to the console without stopping the session:
+
+[<img src="docs/screenshots/desktop.jpg" width="360">](docs/screenshots/desktop.jpg)
 ## Requirements
 
 - Android 11 or later, with a **Qualcomm Adreno GPU** (Snapdragon).

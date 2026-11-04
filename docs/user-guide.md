@@ -12,17 +12,29 @@ machine: Linux programs run directly on the tablet, with its GPU, sound, cameras
 
 ## Installing
 
-1. Install the AOmarchy APK.
-2. Open it. The first-launch screen asks for your name, your email (for Git) and your keyboard layouts, then lets you
-   choose where the system comes from: **Online download** (about 2 GB, over Wi-Fi) or **Local archive**, a
-   `lotfix-rootfs.tar.gz` you pick on the device. It then unpacks the system. This takes a few minutes.
-   - To install without a network, copy `lotfix-rootfs.tar.gz` from the release to the tablet first, then pick it with
+1. Install the AOmarchy APK and open it. You land on the **console**, not on the desktop:
+   **概览 / Overview**, **系统 / System**, **应用 / Apps**, **控制 / Controls**, **设置 / Settings**.
+2. Install the Linux system from **系统 → 安装系统**: **Online download** (about 2 GB, over Wi-Fi) or **Local
+   archive**, a `lotfix-rootfs.tar.gz` you pick on the device. It unpacks the system; this takes a few minutes.
+   - To install without a network, copy `lotfix-rootfs.tar.gz` to the tablet first, then pick it with
      **Local archive**; the file stays where it is.
-3. Android asks for a few permissions at once:
+   - Installing again replaces the system. It asks first, and the old system is moved aside (not deleted) until the
+     new one is in place.
+3. Fill in **设置 → 身份** (name and email, used by Git and the compose key) and **设置 → 键盘 → 系统布局** when you
+   like: both are applied the next time the desktop starts. **设置 → 启动** makes the app go straight to the desktop.
+4. Android asks for a few permissions at once:
    - **Microphone** and **Camera**: for calls and video in Linux apps.
    - **Location**: Android only shows the Wi-Fi network's name to apps allowed to use location. AOmarchy uses it
      for the network name in the bar.
-4. The desktop appears. Omarchy's menu opens with **Super + Space**.
+   - **Notifications** (Android 13+): the session notification carries the **控制 / Controls** and **控制台 /
+     Console** buttons, which is how you get back to the console from the desktop.
+5. Press **进入桌面 / Enter desktop**. Omarchy's menu opens with **Super + Space**.
+
+### Getting back to the console
+
+While the desktop is in front, the small **A** handle in the top-left corner opens the console and leaves the Linux
+session running. The session notification does the same (**控制台**), and its **控制** button opens the controls as a
+half-screen sheet over the desktop.
 
 ### The Super key (recommended)
 
