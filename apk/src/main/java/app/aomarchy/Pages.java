@@ -90,6 +90,7 @@ class OverviewPage extends Page {
     private TextView gpuValue;
     private Sparkline sparkline;
     private int lastCpu = -1, lastMem = -1, lastDisk = -1, lastBat = -1;
+    private TextView heroEntry;
 
     OverviewPage(ShellActivity shell) {
         super(shell);
@@ -111,7 +112,8 @@ class OverviewPage extends Page {
         hero.addView(uptime);
         hero.addView(Ui.gap(shell, 10));
         LinearLayout actions = Ui.row(shell);
-        actions.addView(Ui.button(shell, "进入桌面", true, v -> shell.openDesktop()));
+        heroEntry = Ui.button(shell, "进入桌面", true, v -> shell.openDesktop());
+        actions.addView(heroEntry);
         actions.addView(Ui.space(shell, 10));
         actions.addView(Ui.button(shell, "安装 / 重装系统", false, v -> shell.showTab(1)));
         actions.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
@@ -215,12 +217,17 @@ class OverviewPage extends Page {
     @Override
     void refresh() {
         boolean ready = SessionService.rootfsReady(shell);
-        state.setText(ready ? (SessionService.started ? "会话运行中" : "会话已就绪") : "尚未安装系统");
+        boolean terminal = "terminal".equals(shell.getSharedPreferences(Prefs.NAME,
+                android.content.Context.MODE_PRIVATE).getString("session_mode", "desktop"));
+        state.setText(!ready ? "尚未安装系统" : terminal ? "终端模式" : (SessionService.started ? "会话运行中" : "会话已就绪"));
         state.setTextColor(ready ? Ui.TEXT : Ui.DIM);
-        heroChip.setText(ready ? (SessionService.started ? "● 运行中" : "● 就绪") : "○ 未安装");
+        heroChip.setText(!ready ? "○ 未安装" : terminal ? "● 终端模式" : (SessionService.started ? "● 运行中" : "● 就绪"));
         heroChip.setTextColor(ready ? Ui.MINT : Ui.FAINT);
-        uptime.setText(ready && SessionService.started
-                ? "已运行 " + duration(System.currentTimeMillis() - SessionService.startedAt)
+        if (heroEntry != null)
+            heroEntry.setText(terminal ? "进入终端" : "进入桌面");
+        uptime.setText(!ready ? "Arch Linux · Hyprland · 整个系统跑在 Android 上，不需要 root 和 proot。"
+                : terminal ? "终端模式：只跑一个 shell，不启动 Hyprland，内存约是桌面的 1/5。"
+                : SessionService.started ? "已运行 " + duration(System.currentTimeMillis() - SessionService.startedAt)
                 : "Arch Linux · Hyprland · 整个系统跑在 Android 上，不需要 root 和 proot。");
         poll();
     }
@@ -1164,6 +1171,7 @@ class SettingsPage extends Page {
                     d.dismiss();
                     refresh();
                     toast(which == 1 ? "下次进入终端：不起桌面，内存约 1/5" : "下次进入完整桌面");
+                    shell.updateEntryLabel();
                 })
                 .setNegativeButton("取消", null)
                 .show();

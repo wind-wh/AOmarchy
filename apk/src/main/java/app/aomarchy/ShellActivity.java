@@ -232,7 +232,7 @@ public class ShellActivity extends Activity {
     }
 
     /** The big button follows the startup mode chosen in Settings. */
-    private void updateEntryLabel() {
+    void updateEntryLabel() {
         if (entryButton == null)
             return;
         boolean terminal = "terminal".equals(getSharedPreferences(Prefs.NAME, MODE_PRIVATE)

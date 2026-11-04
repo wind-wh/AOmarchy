@@ -616,8 +616,10 @@ public class TerminalView extends View {
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
-        int newCols = Math.max(20, w / cellW);
-        int newRows = Math.max(4, h / cellH);
+        int availW = Math.max(1, w - getPaddingLeft() - getPaddingRight());
+        int availH = Math.max(1, h - getPaddingTop() - getPaddingBottom());
+        int newCols = Math.max(20, availW / cellW);
+        int newRows = Math.max(4, availH / cellH);
         if (newCols == cols && newRows == rows)
             return;
         cols = newCols;
@@ -647,7 +649,8 @@ public class TerminalView extends View {
                 int color = b[i];
                 if (color != DEFAULT_BG) {
                     bgPaint.setColor(color);
-                    canvas.drawRect(col * cellW, row * cellH, (col + 1) * cellW, (row + 1) * cellH, bgPaint);
+                    canvas.drawRect(getPaddingLeft() + col * cellW, getPaddingTop() + row * cellH,
+                            getPaddingLeft() + (col + 1) * cellW, getPaddingTop() + (row + 1) * cellH, bgPaint);
                 }
             }
         }
@@ -658,13 +661,15 @@ public class TerminalView extends View {
                 if (ch == ' ' || ch == 0)
                     continue;
                 paint.setColor(f[i]);
-                canvas.drawText(String.valueOf(ch), col * cellW, row * cellH + baseline, paint);
+                canvas.drawText(String.valueOf(ch), getPaddingLeft() + col * cellW,
+                        getPaddingTop() + row * cellH + baseline, paint);
             }
         }
         if (cursorVisible && cy >= 0 && cy < rows && cx >= 0 && cx < cols && hasWindowFocus()) {
             bgPaint.setColor(CURSOR);
             bgPaint.setAlpha(160);
-            canvas.drawRect(cx * cellW, cy * cellH, (cx + 1) * cellW, (cy + 1) * cellH, bgPaint);
+            canvas.drawRect(getPaddingLeft() + cx * cellW, getPaddingTop() + cy * cellH,
+                    getPaddingLeft() + (cx + 1) * cellW, getPaddingTop() + (cy + 1) * cellH, bgPaint);
         }
     }
 

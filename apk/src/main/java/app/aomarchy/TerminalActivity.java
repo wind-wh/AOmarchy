@@ -37,6 +37,7 @@ public class TerminalActivity extends Activity {
         root.setBackgroundColor(Ui.BG);
 
         terminal = new TerminalView(this);
+        terminal.setPadding(0, Ui.dp(this, 58), 0, Ui.dp(this, 10)); // keep the first line clear of the bar
         root.addView(terminal, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
