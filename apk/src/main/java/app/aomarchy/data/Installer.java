@@ -121,6 +121,8 @@ public final class Installer {
             throw new IOException("空间不足：需要约 " + (needed >> 30) + " GB，当前可用 " + humanSize(available));
 
         deleteTree(partial);
+        if (partial.exists())
+            throw new IOException("上次安装的临时目录清理不掉（权限），请重启应用后重试");
         InputStream raw;
         long size;
         if (local != null) {
@@ -287,6 +289,7 @@ public final class Installer {
             // Extracted trees carry the archive's modes: a read-only directory refuses to lose its children.
             f.setWritable(true, true);
             f.setExecutable(true, true);
+            f.setReadable(true, true);
             File[] children = f.listFiles();
             if (children != null) {
                 for (File c : children) {
@@ -294,6 +297,8 @@ public final class Installer {
                         return false;
                 }
             }
+        } else {
+            f.setWritable(true, true); // files like etc/sudoers (0440) would block a re-extraction
         }
         return f.delete();
     }
