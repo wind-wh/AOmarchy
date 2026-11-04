@@ -34,7 +34,15 @@ public final class TarWriter {
     public static void writeTree(File root, OutputStream target, Progress progress) throws IOException {
         long total = totalBytes(root);
         BufferedOutputStream out = new BufferedOutputStream(target, 1 << 20);
-        write(out, root, "", total, new long[] {0}, progress);
+        File[] children = root.listFiles();
+        if (children == null)
+            throw new IOException("cannot list " + root);
+        java.util.List<File> sorted = new ArrayList<>();
+        for (File c : children)
+            sorted.add(c);
+        sorted.sort((a, b) -> a.getName().compareTo(b.getName()));
+        for (File c : sorted)
+            write(out, c, "", total, new long[] {0}, progress); // top-level entries keep their bare names
         out.write(ZEROS); // end of archive: two zero blocks
         out.flush();
     }
@@ -83,10 +91,8 @@ public final class TarWriter {
             return;
         }
         if (OsConstants.S_ISDIR(st.st_mode)) {
-            if (!prefix.isEmpty()) { // the archive root itself is not an entry: its children are
-                if (!emit(out, name + "/", mode, 0, mtime, (byte) '5', null, done, total, progress))
-                    throw new Cancelled();
-            }
+            if (!emit(out, name + "/", mode, 0, mtime, (byte) '5', null, done, total, progress))
+                throw new Cancelled();
             File[] children = file.listFiles();
             if (children != null) {
                 List<File> sorted = new ArrayList<>();
@@ -94,7 +100,7 @@ public final class TarWriter {
                     sorted.add(c);
                 sorted.sort((a, b) -> a.getName().compareTo(b.getName()));
                 for (File c : sorted)
-                    write(out, c, prefix.isEmpty() ? "" : name, total, done, progress);
+                    write(out, c, name, total, done, progress);
             }
             return;
         }

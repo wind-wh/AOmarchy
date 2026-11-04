@@ -94,6 +94,12 @@ public final class TarExtractor {
                 case '\0':
                 case '7':
                     f.getParentFile().mkdirs();
+                    // A tar replaces what it finds: an earlier entry (or a leftover) may be a symlink, and opening
+                    // through a dangling link would fail with ENOENT instead of replacing it.
+                    if (existsNoFollow(f))
+                        f.delete();
+                    if (f.isDirectory())
+                        throw new IOException("archive wants a file where a directory is: " + name);
                     try (OutputStream out = new BufferedOutputStream(new FileOutputStream(f), 1 << 16)) {
                         long left = size;
                         while (left > 0) {
@@ -113,6 +119,15 @@ public final class TarExtractor {
         }
         for (int i = dirModes.size() - 1; i >= 0; i--) // deepest first
             chmod((File) dirModes.get(i)[0], (Integer) dirModes.get(i)[1]);
+    }
+
+    private static boolean existsNoFollow(File f) {
+        try {
+            Os.lstat(f.getPath());
+            return true;
+        } catch (ErrnoException e) {
+            return false;
+        }
     }
 
     private static void chmod(File f, int mode) {
