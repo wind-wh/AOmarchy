@@ -92,31 +92,31 @@ jobs:
           fail_on_unmatched_files: true
           files: dist/*
           body: |
-            **AOmarchy 2.1** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
+            **AOmarchy 2.2** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
 
             This release was built and signed by GitHub Actions from the repository source.
 
-            ## What is new in 2.1
+            ## What is new in 2.2
 
-            - **Terminal mode.** 设置 → 启动方式 chooses what the big button starts: the full desktop, or a terminal —
-              one login shell in the installed system, without Hyprland, the bar or the app menu. The terminal is drawn
-              by the app itself (VT100/ANSI: colours, cursor, scroll regions, alternate screen, CJK double-width
-              cells), so it needs no VNC and no desktop: about **700 MB less memory** and a start in seconds.
-              It has scrollback (drag), selection (long press then drag), copy/paste, font size (A− / A+) and a key
-              strip with Esc, Tab, ^C, ^D, ^Z and the arrows.
-            - **Backup and restore.** 系统 → 备份与回滚 snapshots the whole Linux system to a `.tar.gz` (about 4.8 GB
-              to 1.9 GB, a few minutes, with progress and cancel), restores it, exports it, or imports one; a restore
-              moves the old system aside and rolls back if anything fails.
-            - **Motion and density.** The console now uses the Kinetik-style motion language in native code (rail
-              indicator, rolling numbers, card glints, spring progress bars, morphing controls sheet, in-app toasts)
-              and the pages are denser: fixed-height metric cards with detail lines, one-line app rows, merged
-              display/input cards.
-            - The A handle over the desktop still returns to the console, and the session notification keeps its
-              控制 / 控制台 buttons.
+            - **The old settings screen is gone.** Everything it held now lives in the console as four native pages
+              under 设置 → 详细设置, with the same cards as the rest of the app: 键盘与按键 (key binding, floating
+              keyboard, accessibility key interception, extra keys bar and its layout editor, notifications, seven
+              actions for the back/volume/media keys and the notification buttons), 触摸板与鼠标 (touchpad mode,
+              pointer speed, capture with its transform, scroll direction/speed, gesture thresholds), 显示
+              (orientation, display cutout, PiP) and 音频 (audio keep-alive, speaker/microphone latency).
+              The WebView installer is gone as well: a fresh install now starts on 系统, where the native install
+              card already was, and the big console button becomes 安装系统 until the system is there.
+            - **Chinese and English.** 设置 → 语言 switches between 跟随系统 / 中文 / English and rebuilds the console
+              in place. 391 strings cover the five pages, the four detail pages, the terminal, install/backup
+              progress, the session notification and the toasts.
+            - Desktop-side settings entries (the session notification's settings action, the extra keys bar's gear)
+              now come back to the console's settings page instead of a second settings screen.
+            - Everything from 2.1 stays: the terminal mode (about 700 MB less memory than the desktop), 备份与回滚,
+              the Kinetik-style motion and the denser pages.
 
             ## Upgrading
 
-            - From **2.0**: install over it, nothing else to do.
+            - From **2.1 / 2.0**: install over it, nothing else to do.
             - From **1.x**: the package is `app.aomarchy` and Android does not let one app read another app's private
               data, so a 1.x install cannot be migrated. Save what you need from the desktop, uninstall the old app,
               install AOmarchy and set the system up again (a local archive makes that work offline). The 1.x builds

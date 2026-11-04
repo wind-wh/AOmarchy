@@ -22,6 +22,8 @@ machine: Linux programs run directly on the tablet, with its GPU, sound, cameras
      new one is in place.
 3. Fill in **设置 → 身份** (name and email, used by Git and the compose key) and **设置 → 键盘 → 系统布局** when you
    like: both are applied the next time the desktop starts. **设置 → 启动** makes the app go straight to the desktop.
+   The rest of the configuration — the on-screen keyboard and keys, the touchpad, the display, audio latency, and the
+   interface language — is in **设置 → 详细设置** and **设置 → 语言**.
 4. Android asks for a few permissions at once:
    - **Microphone** and **Camera**: for calls and video in Linux apps.
    - **Location**: Android only shows the Wi-Fi network's name to apps allowed to use location. AOmarchy uses it

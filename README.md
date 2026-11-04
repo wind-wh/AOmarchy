@@ -61,6 +61,22 @@ are untested.
 The [user guide](docs/user-guide.md) explains the touch gestures, the on-screen keyboard, the Android settings to
 change (HyperOS/MIUI take some gestures for themselves), installing apps, and the self-test.
 
+## What's new in 2.2
+
+- **The old settings screen is gone.** Everything it held now lives in the console as four native pages under
+  **设置 → 详细设置**, built with the same cards and rows as the rest of the app:
+  **键盘与按键** (key binding, floating keyboard, accessibility key interception, the extra keys bar and its layout
+  editor with live validation, notifications, and the seven actions for the back/volume/media keys and the
+  notification buttons), **触摸板与鼠标** (touchpad mode, pointer speed, pointer capture with its transform and
+  speed, scroll direction and speed, gesture thresholds), **显示** (orientation, display cutout, Picture-in-Picture,
+  plus a jump to the live display parameters) and **音频** (audio keep-alive and speaker/microphone latency).
+  The WebView installer is gone too: a fresh install starts on **系统**, where the install button already was.
+- **Chinese and English.** 设置 → 语言 switches the console between 跟随系统 / 中文 / English; it rebuilds in place,
+  no restart. 391 strings cover the five pages, the four detail pages, the terminal, install/backup progress, the
+  session notification and the toasts.
+- Desktop-side settings entries (the notification's 设置 action and the extra keys bar's gear) now come back to the
+  console's Settings page instead of a second, older settings screen.
+
 ## What's new in 2.1
 
 - **Terminal mode.** 设置 → 启动方式 picks what the big button starts: the full desktop, or a terminal — one login
