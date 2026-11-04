@@ -34,6 +34,9 @@ public class ShellActivity extends Activity {
     static Intent intent(Context c, int tab) {
         Intent i = new Intent(c, ShellActivity.class);
         i.putExtra(EXTRA_TAB, tab);
+        // Reuse the console instance that is already running (singleTop) so onNewIntent switches its page,
+        // instead of stacking a second console in the desktop's task.
+        i.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         return i;
     }
 

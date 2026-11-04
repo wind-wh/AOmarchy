@@ -28,13 +28,14 @@
             android:name=".TerminalActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:exported="false"
-
-            android:theme="@style/Theme.AOmarchy" />        <activity
+            android:theme="@style/Theme.AOmarchy" />
+        <!-- singleTop: the console is one instance, so the desktop's settings entries arrive in onNewIntent. -->
+        <activity
             android:name=".ShellActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:enableOnBackInvokedCallback="false"
             android:exported="true"
-
+            android:launchMode="singleTop"
             android:resizeableActivity="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -46,7 +47,6 @@
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:enableOnBackInvokedCallback="false"
             android:exported="false"
-
             android:resizeableActivity="true"
             android:supportsPictureInPicture="true">
             <property

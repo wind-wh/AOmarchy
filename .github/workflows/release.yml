@@ -92,9 +92,16 @@ jobs:
           fail_on_unmatched_files: true
           files: dist/*
           body: |
-            **AOmarchy 2.2** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
+            **AOmarchy 2.2.1** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
 
             This release was built and signed by GitHub Actions from the repository source.
+
+            ## What is new in 2.2.1
+
+            - **The console is a single instance now** (singleTop): the desktop-side settings entries and an
+              `am start ... --ei app.aomarchy.TAB N` switch the page of the console that is already open instead of
+              stacking a second one or ignoring the request.
+            - Everything below is the 2.2 feature set, unchanged.
 
             ## What is new in 2.2
 
