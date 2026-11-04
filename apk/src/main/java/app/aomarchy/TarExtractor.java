@@ -19,12 +19,12 @@ import java.util.List;
  * Directory modes are applied last: a read-only directory set first would refuse its own children (toybox's tar
  * failed that way). Ownership is not kept: every file belongs to the app's uid, the only user here.
  */
-final class TarExtractor {
-    interface Progress {
+public final class TarExtractor {
+    public interface Progress {
         void onEntry(String name);
     }
 
-    static void extract(InputStream in, File dest, Progress progress) throws IOException {
+    public static void extract(InputStream in, File dest, Progress progress) throws IOException {
         byte[] header = new byte[512];
         byte[] buf = new byte[1 << 16];
         String longName = null, longLink = null;

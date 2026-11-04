@@ -10,6 +10,9 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.File;
+
+import app.aomarchy.data.Installer;
 import app.aomarchy.data.Metrics;
 import app.aomarchy.ui.Sparkline;
 import app.aomarchy.ui.Ui;
@@ -41,6 +44,10 @@ abstract class Page {
 
     /** Called when another page replaces this one: stop everything started in {@link #onShown()}. */
     void onHidden() {
+    }
+
+    /** Activity results (file pickers) land on the shell and are forwarded to the page that asked. */
+    void onActivityResult(int request, int result, android.content.Intent data) {
     }
 
     void refresh() {
@@ -240,10 +247,24 @@ class OverviewPage extends Page {
     }
 }
 
-/** 系统: the Linux system itself — install, size, backups (M2), logs. */
+/** 系统: the Linux system itself — install/reinstall from the release or a local archive, logs. */
 class SystemPage extends Page {
-    private TextView size;
+    private static final int PICK_ARCHIVE = 41;
+
     private TextView stateValue;
+    private TextView size;
+    private TextView archiveInfo;
+    private TextView progressText;
+    private TextView tileOnline;
+    private TextView tileLocal;
+    private android.widget.ProgressBar progress;
+    private LinearLayout progressBox;
+    private LinearLayout startBox;
+    private android.net.Uri localUri;
+    private String localName;
+    private long localBytes = -1;
+    private boolean sourceLocal;
+    private boolean installing;
 
     SystemPage(ShellActivity shell) {
         super(shell);
@@ -257,31 +278,259 @@ class SystemPage extends Page {
         size = value("—", Ui.TEXT);
         sys.addView(Ui.kv(shell, "占用", size));
         sys.addView(Ui.kv(shell, "路径", value("files/rootfs", Ui.DIM)));
-        sys.addView(Ui.gap(shell, 14));
-        LinearLayout actions = Ui.row(shell);
-        actions.addView(Ui.button(shell, "安装系统", true, v -> shell.installSystem()));
-        actions.addView(Ui.space(shell, 10));
-        actions.addView(Ui.button(shell, "重装", false, v -> shell.installSystem()));
-        sys.addView(actions);
         body.addView(sys);
 
-        LinearLayout backup = Ui.card(shell, "备份与回滚");
-        backup.addView(Ui.text(shell, "把整个 Linux 系统打成归档（约 5 GB，需要外部存储空间），可回滚、可导出给别的设备。",
+        LinearLayout install = Ui.card(shell, "安装系统");
+        install.addView(Ui.text(shell, "首次安装或重装 Linux 系统。安装包来自 GitHub Release 的在线下载，或设备上的 lotfix-rootfs.tar.gz。",
                 13, Ui.DIM, false));
-        backup.addView(Ui.gap(shell, 12));
-        LinearLayout brow = Ui.row(shell);
-        brow.addView(Ui.button(shell, "备份", false, v -> toast("M2 接入")));
-        brow.addView(Ui.space(shell, 10));
-        brow.addView(Ui.button(shell, "回滚", false, v -> toast("M2 接入")));
-        brow.addView(Ui.space(shell, 10));
-        brow.addView(Ui.button(shell, "导出", false, v -> toast("M2 接入")));
-        backup.addView(brow);
-        body.addView(backup);
+        install.addView(Ui.gap(shell, 12));
 
-        LinearLayout logs = Ui.card(shell, "日志与自检");
-        logs.addView(Ui.text(shell, "andromarchy-selftest 的摘要、Hyprland / PipeWire / Xwayland 日志会在这里汇总（M2）。",
-                13, Ui.DIM, false));
+        tileOnline = sourceTile("在线下载", "GitHub Release · 约 1.9 GB");
+        tileLocal = sourceTile("本地归档", "设备上的 lotfix-rootfs.tar.gz");
+        LinearLayout srcRow = Ui.row(shell);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        lp.rightMargin = Ui.dp(shell, 10);
+        srcRow.addView(tileOnline, lp);
+        srcRow.addView(tileLocal, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        install.addView(srcRow);
+
+        sourceLocal = Installer.staged(shell) != null;
+        archiveInfo = Ui.text(shell, "", 12, Ui.DIM, false);
+        archiveInfo.setPadding(0, Ui.dp(shell, 10), 0, 0);
+        install.addView(archiveInfo);
+
+        LinearLayout buttons = Ui.row(shell);
+        buttons.setPadding(0, Ui.dp(shell, 12), 0, 0);
+        buttons.addView(Ui.button(shell, "选择本地文件", false, v -> pickArchive()));
+        buttons.addView(Ui.space(shell, 10));
+        startBox = Ui.row(shell);
+        startBox.addView(Ui.button(shell, "开始安装", true, v -> confirmInstall()));
+        buttons.addView(startBox);
+        install.addView(buttons);
+
+        progressBox = Ui.column(shell);
+        progressBox.setVisibility(View.GONE);
+        progressBox.setPadding(0, Ui.dp(shell, 14), 0, 0);
+        progressText = Ui.text(shell, "", 12, Ui.DIM, false);
+        progressBox.addView(progressText);
+        progress = new android.widget.ProgressBar(shell, null, android.R.attr.progressBarStyleHorizontal);
+        progress.setMax(1000);
+        LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(shell, 6));
+        plp.topMargin = Ui.dp(shell, 8);
+        progressBox.addView(progress, plp);
+        progressBox.addView(Ui.gap(shell, 8));
+        progressBox.addView(Ui.button(shell, "取消", false, v -> Installer.cancel()));
+        install.addView(progressBox);
+        body.addView(install);
+
+        LinearLayout logs = Ui.card(shell, "日志");
+        logs.addView(Ui.text(shell, "会话日志在 files/run/ 下，点开看最后几行。", 13, Ui.DIM, false));
+        logs.addView(Ui.gap(shell, 6));
+        File[] files = SessionService.runDir(shell).listFiles((d, n) -> n.endsWith(".log"));
+        if (files == null || files.length == 0) {
+            logs.addView(Ui.text(shell, "还没有日志（系统未启动过）", 13, Ui.FAINT, false));
+        } else {
+            java.util.Arrays.sort(files, (x, y) -> Long.compare(y.lastModified(), x.lastModified()));
+            for (int i = 0; i < Math.min(6, files.length); i++) {
+                File f = files[i];
+                logs.addView(row(f.getName(), f.length(), () -> showLog(f)));
+            }
+        }
         body.addView(logs);
+    }
+
+    private TextView sourceTile(String title, String sub) {
+        TextView t = Ui.text(shell, title + "\n" + sub, 12, Ui.DIM, false);
+        t.setPadding(Ui.dp(shell, 12), Ui.dp(shell, 10), Ui.dp(shell, 12), Ui.dp(shell, 10));
+        t.setOnClickListener(v -> {
+            if (installing)
+                return;
+            sourceLocal = title.startsWith("本地");
+            paintSources();
+        });
+        return t;
+    }
+
+    private View row(String name, long bytes, Runnable onClick) {
+        LinearLayout r = Ui.row(shell);
+        r.setPadding(0, Ui.dp(shell, 8), 0, Ui.dp(shell, 8));
+        r.addView(Ui.text(shell, name, 13, Ui.TEXT, false));
+        r.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
+        r.addView(Ui.text(shell, Installer.humanSize(bytes), 12, Ui.DIM, false));
+        r.setOnClickListener(v -> onClick.run());
+        return r;
+    }
+
+    private void paintSources() {
+        boolean local = sourceLocal;
+        tileOnline.setBackground(Ui.surface(shell, 14));
+        tileOnline.setTextColor(local ? Ui.DIM : Ui.TEXT);
+        tileLocal.setBackground(Ui.surface(shell, 14));
+        tileLocal.setTextColor(local ? Ui.TEXT : Ui.DIM);
+        File staged = Installer.staged(shell);
+        boolean haveLocal = localUri != null || staged != null;
+        if (local) {
+            if (localUri != null) {
+                archiveInfo.setText("已选择：" + localName + (localBytes > 0 ? " · " + Installer.humanSize(localBytes) : ""));
+            } else if (staged != null) {
+                archiveInfo.setText("已发现设备上的归档：" + staged.getName() + " · " + Installer.humanSize(staged.length()));
+            } else {
+                archiveInfo.setText("还没有选择本地归档，点「选择本地文件」。");
+            }
+        } else {
+            archiveInfo.setText("从 GitHub Release 下载（需要联网，约 1.9 GB）。");
+        }
+        archiveInfo.setTextColor(haveLocal || !local ? Ui.DIM : Ui.WARN);
+    }
+
+    private void pickArchive() {
+        android.content.Intent pick = new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT);
+        pick.addCategory(android.content.Intent.CATEGORY_OPENABLE);
+        pick.setType("*/*");
+        pick.putExtra(android.content.Intent.EXTRA_MIME_TYPES, new String[] {
+                "application/gzip", "application/x-gzip", "application/x-tar", "application/octet-stream"});
+        shell.startActivityForResult(pick, PICK_ARCHIVE);
+    }
+
+    @Override
+    void onActivityResult(int request, int result, android.content.Intent data) {
+        if (request != PICK_ARCHIVE)
+            return;
+        android.net.Uri picked = result == android.app.Activity.RESULT_OK && data != null ? data.getData() : null;
+        if (picked == null) {
+            toast("没有选择文件");
+            return;
+        }
+        try {
+            shell.getContentResolver().takePersistableUriPermission(
+                    picked, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        } catch (Exception ignored) {
+            // provider that only grants for this session
+        }
+        new Thread(() -> {
+            String name = "lotfix-rootfs.tar.gz";
+            long bytes = -1;
+            try (android.database.Cursor c = shell.getContentResolver().query(picked,
+                    new String[] {android.provider.OpenableColumns.DISPLAY_NAME,
+                            android.provider.OpenableColumns.SIZE}, null, null, null)) {
+                if (c != null && c.moveToFirst()) {
+                    int nc = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME);
+                    if (nc >= 0 && !c.isNull(nc))
+                        name = c.getString(nc);
+                    int sc = c.getColumnIndex(android.provider.OpenableColumns.SIZE);
+                    if (sc >= 0 && !c.isNull(sc))
+                        bytes = c.getLong(sc);
+                }
+            } catch (RuntimeException ignored) {
+                // keep the defaults
+            }
+            final String fileName = name;
+            final long fileBytes = bytes;
+            shell.runOnUiThread(() -> {
+                localUri = picked;
+                localName = fileName;
+                localBytes = fileBytes;
+                sourceLocal = true;
+                paintSources();
+            });
+        }).start();
+    }
+
+    private void confirmInstall() {
+        if (installing)
+            return;
+        boolean replace = SessionService.rootfsReady(shell);
+        android.app.AlertDialog.Builder b = new android.app.AlertDialog.Builder(shell);
+        b.setTitle(replace ? "重装并删除现有系统？" : "开始安装系统？");
+        b.setMessage(replace
+                ? "现有的 Linux 系统（约 5 GB）会被删除后重新安装。数据会丢失，确定继续？"
+                : (sourceLocal ? "从本地归档安装，可能需要几分钟。" : "在线下载约 1.9 GB，然后解压，可能需要几分钟。"));
+        b.setNegativeButton("取消", null);
+        b.setPositiveButton(replace ? "删除并重装" : "开始", (d, w) -> startInstall(replace));
+        b.show();
+    }
+
+    private void startInstall(boolean replace) {
+        android.net.Uri uri = null;
+        File staged = null;
+        if (sourceLocal) {
+            if (localUri != null) {
+                uri = localUri;
+            } else if ((staged = Installer.staged(shell)) != null) {
+                uri = android.net.Uri.fromFile(staged);
+            } else {
+                toast("先选择一个本地归档，或改用在线下载");
+                return;
+            }
+        }
+        if (uri != null && "file".equals(uri.getScheme()) && !new File(uri.getPath()).canRead()) {
+            toast("读不到这个文件");
+            return;
+        }
+        installing = true;
+        progressBox.setVisibility(View.VISIBLE);
+        startBox.setVisibility(View.GONE);
+        progress.setProgress(0);
+        progressText.setText("准备中…");
+        Installer.install(shell, uri, replace, new Installer.Callback() {
+            @Override
+            public void progress(int permille, String text) {
+                shell.runOnUiThread(() -> {
+                    if (permille >= 0)
+                        progress.setProgress(permille);
+                    progressText.setText(text);
+                });
+            }
+
+            @Override
+            public void done() {
+                shell.runOnUiThread(() -> {
+                    installing = false;
+                    progressBox.setVisibility(View.GONE);
+                    startBox.setVisibility(View.VISIBLE);
+                    refresh();
+                    toast("系统安装完成");
+                });
+            }
+
+            @Override
+            public void failed(String message) {
+                shell.runOnUiThread(() -> {
+                    installing = false;
+                    progressBox.setVisibility(View.GONE);
+                    startBox.setVisibility(View.VISIBLE);
+                    progressText.setText("");
+                    refresh();
+                    new android.app.AlertDialog.Builder(shell)
+                            .setTitle("安装失败")
+                            .setMessage(message)
+                            .setPositiveButton("知道了", null)
+                            .show();
+                });
+            }
+        });
+    }
+
+    private void showLog(File f) {
+        StringBuilder sb = new StringBuilder();
+        try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.FileReader(f))) {
+            java.util.ArrayDeque<String> tail = new java.util.ArrayDeque<>();
+            for (String line; (line = r.readLine()) != null; ) {
+                tail.addLast(line);
+                if (tail.size() > 60)
+                    tail.removeFirst();
+            }
+            for (String line : tail)
+                sb.append(line).append('\n');
+        } catch (java.io.IOException e) {
+            sb.append("读不到这个日志：").append(e);
+        }
+        new android.app.AlertDialog.Builder(shell)
+                .setTitle(f.getName())
+                .setMessage(sb.length() == 0 ? "(空)" : sb.toString())
+                .setPositiveButton("关闭", null)
+                .show();
     }
 
     @Override
@@ -292,20 +541,21 @@ class SystemPage extends Page {
         if (!ready) {
             size.setText("—");
             size.setTextColor(Ui.FAINT);
-            return;
+        } else {
+            try {
+                StatFs fs = new StatFs(SessionService.rootfs(shell).getAbsolutePath());
+                long used = fs.getBlockCountLong() * fs.getBlockSizeLong();
+                size.setText(Installer.humanSize(used));
+                size.setTextColor(Ui.TEXT);
+            } catch (RuntimeException e) {
+                size.setText("读取失败");
+                size.setTextColor(Ui.WARN);
+            }
         }
-        try {
-            StatFs fs = new StatFs(SessionService.rootfs(shell).getAbsolutePath());
-            long used = fs.getBlockCountLong() * fs.getBlockSizeLong();
-            size.setText(String.format(java.util.Locale.US, "%.1f GB", used / 1024.0 / 1024 / 1024));
-            size.setTextColor(Ui.TEXT);
-        } catch (RuntimeException e) {
-            size.setText("读取失败");
-            size.setTextColor(Ui.WARN);
-        }
+        if (!installing)
+            paintSources();
     }
 }
-
 /** 应用: flatpak sandboxes (M3), Android apps in floating windows, Omarchy entries. */
 class AppsPage extends Page {
     AppsPage(ShellActivity shell) {

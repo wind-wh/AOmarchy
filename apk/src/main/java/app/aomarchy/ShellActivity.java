@@ -103,6 +103,13 @@ public class ShellActivity extends Activity {
         updateStatus();
     }
 
+    @Override
+    protected void onActivityResult(int request, int result, Intent data) {
+        super.onActivityResult(request, result, data);
+        if (current >= 0 && pages[current] != null)
+            pages[current].onActivityResult(request, result, data);
+    }
+
     private void show(int index) {
         if (current >= 0 && pages[current] != null)
             pages[current].onHidden();
