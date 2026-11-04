@@ -83,8 +83,17 @@ public class ShellActivity extends Activity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        if (intent != null && intent.getBooleanExtra(EXTRA_NEED_SYSTEM, false))
+        if (intent == null)
+            return;
+        if (intent.getBooleanExtra(EXTRA_NEED_SYSTEM, false)) {
             promptInstall(); // the desktop bounced back because there is nothing to start
+            return;
+        }
+        // The desktop's settings entries ask for a page: honour it even when the console is already on top, where
+        // a plain am start is delivered here (START_DELIVERED_TO_TOP) instead of going through onCreate.
+        int tab = intent.getIntExtra(EXTRA_TAB, -1);
+        if (tab >= 0 && tab < TITLES.length && SessionService.rootfsReady(this))
+            show(tab);
     }
 
     /** Shows the 系统 page and says why: there is no Linux system to open yet, and that page installs it. */

@@ -33,6 +33,12 @@ the desktop and a start in seconds, with scrollback, drag selection, copy/paste,
 keyboard does not have (Esc, Tab, ^C, ^D, ^Z, arrows):
 
 [<img src="docs/screenshots/terminal.jpg" width="480">](docs/screenshots/terminal.jpg)
+The rebuilt detail settings (2.2), and the same console in English:
+
+| 详细设置 | English |
+|---|---|
+| [<img src="docs/screenshots/settings-detail.jpg" width="360">](docs/screenshots/settings-detail.jpg) | [<img src="docs/screenshots/settings-english.jpg" width="360">](docs/screenshots/settings-english.jpg) |
+
 ## Requirements
 
 - Android 11 or later, with a **Qualcomm Adreno GPU** (Snapdragon).
