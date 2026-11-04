@@ -290,6 +290,23 @@ public final class Installer {
         }
     }
 
+    /** Cleanup after an install: a leftover partial tree, and the old system a replace moved aside. */
+    public static void cleanupAsync(Context ctx) {
+        Context app = ctx.getApplicationContext();
+        new Thread(() -> {
+            File files = app.getFilesDir();
+            for (String name : new String[] {"rootfs.partial", "rootfs.old"}) {
+                File f = new File(files, name);
+                if (!f.exists())
+                    continue;
+                for (int attempt = 0; attempt < 2 && f.exists(); attempt++) {
+                    if (!deleteTree(f))
+                        android.util.Log.w("Installer", "could not remove " + f + " (attempt " + (attempt + 1) + ")");
+                }
+            }
+        }, "rootfs-cleanup").start();
+    }
+
     /** Recursive delete; returns false when something could not be removed. */
     public static boolean deleteTree(File f) {
         if (f == null || !f.exists())
@@ -311,6 +328,9 @@ public final class Installer {
         } else {
             f.setWritable(true, true); // files like etc/sudoers (0440) would block a re-extraction
         }
-        return f.delete();
+        boolean ok = f.delete();
+        if (!ok && f.exists())
+            android.util.Log.w("Installer", "delete failed: " + f);
+        return ok;
     }
 }

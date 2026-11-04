@@ -35,6 +35,7 @@ public class ShellActivity extends Activity {
         super.onCreate(b);
         build();
         show(0);
+        app.aomarchy.data.Installer.cleanupAsync(this); // leftover partial / old system from an interrupted install
     }
 
     @Override
