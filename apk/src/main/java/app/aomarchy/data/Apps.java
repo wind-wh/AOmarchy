@@ -146,18 +146,39 @@ public final class Apps {
         return out;
     }
 
-    /** Asks the session's Android bridge to open this app in a floating window (same request file as Linux uses). */
-    public static void openFloating(Context ctx, String pkg) {
-        File run = SessionService.runDir(ctx);
-        run.mkdirs();
-        File tmp = new File(run, "android-request.tmp");
+    /**
+     * Opens an Android app in a floating window next to the desktop. Launched from the console activity itself
+     * (foreground), so Android/MIUI do not treat it as a background launch and ask for confirmation.
+     */
+    public static void openFloating(android.app.Activity ctx, String pkg) {
+        Intent intent = ctx.getPackageManager().getLaunchIntentForPackage(pkg);
+        if (intent == null)
+            return;
+        intent.addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+        android.app.ActivityOptions options = floatingOptions(ctx);
         try {
-            Files.write(tmp.toPath(), ("float " + pkg + "\n").getBytes());
-            if (!tmp.renameTo(new File(run, "android-request")))
-                throw new IOException("rename failed");
-        } catch (IOException e) {
-            android.util.Log.w("Apps", "float request failed for " + pkg, e);
+            ctx.startActivity(intent, options == null ? null : options.toBundle());
+        } catch (RuntimeException e) {
+            android.util.Log.w("Apps", "floating launch failed for " + pkg, e);
         }
+    }
+
+    /** Centred 40%x60% window plus freeform windowing mode (hidden API, by meta-reflection: ignored if refused). */
+    private static android.app.ActivityOptions floatingOptions(Context ctx) {
+        android.util.DisplayMetrics m = ctx.getResources().getDisplayMetrics();
+        int w = m.widthPixels * 2 / 5, h = m.heightPixels * 3 / 5;
+        int x = (m.widthPixels - w) / 2, y = (m.heightPixels - h) / 2;
+        android.app.ActivityOptions o = android.app.ActivityOptions.makeBasic()
+                .setLaunchBounds(new android.graphics.Rect(x, y, x + w, y + h));
+        try {
+            java.lang.reflect.Method lookup = Class.class.getDeclaredMethod("getDeclaredMethod", String.class, Class[].class);
+            java.lang.reflect.Method set = (java.lang.reflect.Method) lookup.invoke(android.app.ActivityOptions.class,
+                    "setLaunchWindowingMode", new Class<?>[] {int.class});
+            set.invoke(o, 5); // WINDOWING_MODE_FREEFORM
+        } catch (ReflectiveOperationException e) {
+            android.util.Log.i("Apps", "freeform windowing mode unavailable: " + e);
+        }
+        return o;
     }
 
     /** Launches a Linux application on the desktop (needs a running session). */
