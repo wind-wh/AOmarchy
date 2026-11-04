@@ -291,6 +291,34 @@ public class MainActivity extends Activity
         compatibleFdReady = false;
     }
 
+    /** Small handle over the desktop: opens the console; the Linux session keeps running behind it. */
+    private void addConsoleHandle(FrameLayout root) {
+        android.widget.TextView handle = new android.widget.TextView(this);
+        handle.setText("A");
+        handle.setTextColor(0xFFFFFFFF);
+        handle.setTextSize(15);
+        handle.setGravity(android.view.Gravity.CENTER);
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setColor(0x59000000);
+        bg.setCornerRadius(20 * mDensity);
+        bg.setStroke(Math.max(1, (int) mDensity), 0x8A7C8CFF);
+        handle.setBackground(bg);
+        handle.setAlpha(0.6f);
+        consoleHandle = handle;
+        handle.setOnClickListener(v -> {
+            v.setAlpha(0.25f);
+            startActivity(new android.content.Intent(this, ShellActivity.class));
+        });
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
+                (int) (34 * mDensity), (int) (34 * mDensity),
+                android.view.Gravity.TOP | android.view.Gravity.START);
+        lp.leftMargin = (int) (8 * mDensity);
+        lp.topMargin = (int) (44 * mDensity);
+        root.addView(handle, lp);
+    }
+
+    private View consoleHandle;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -405,6 +433,8 @@ public class MainActivity extends Activity
         // the view starts GONE and a GONE view is never measured.
 
         setContentView(root);
+        // A small semi-transparent handle in the corner: back to the AOmarchy console without losing the session.
+        addConsoleHandle(root);
         SplashScreen.showIfStarting(this);
         // Establish a focused descendant after attachment so the DecorView routes
         // input through the surface even while the extra-keys bar is hidden.
@@ -897,6 +927,8 @@ public class MainActivity extends Activity
     public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode,
             Configuration newConfig) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
+        if (consoleHandle != null)
+            consoleHandle.setVisibility(isInPictureInPictureMode ? View.GONE : View.VISIBLE);
         mPipTransitionPending = false;
 
         if (isInPictureInPictureMode) {

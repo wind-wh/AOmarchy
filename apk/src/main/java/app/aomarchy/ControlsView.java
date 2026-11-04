@@ -36,6 +36,21 @@ final class ControlsView {
         root = Ui.column(ctx);
         root.setPadding(Ui.dp(ctx, 2), 0, Ui.dp(ctx, 2), 0);
 
+        if (android.os.Build.VERSION.SDK_INT >= 33
+                && ctx.checkSelfPermission("android.permission.POST_NOTIFICATIONS")
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            LinearLayout warn = Ui.card(ctx, "通知未开启");
+            warn.addView(Ui.text(ctx, "桌面运行时靠会话通知里的「控制」回到这里；通知权限没开就看不到它。",
+                    13, Ui.DIM, false));
+            warn.addView(Ui.gap(ctx, 8));
+            warn.addView(Ui.button(ctx, "去开启通知", true, v -> {
+                android.content.Intent i = new android.content.Intent(
+                        android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, ctx.getPackageName());
+                ctx.startActivity(i);
+            }));
+            root.addView(warn);
+        }
         LinearLayout session = Ui.card(ctx, "会话");
         sessionState = Ui.text(ctx, "—", 13, Ui.DIM, false);
         session.addView(sessionState);
