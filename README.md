@@ -67,7 +67,23 @@ are untested.
 The [user guide](docs/user-guide.md) explains the touch gestures, the on-screen keyboard, the Android settings to
 change (HyperOS/MIUI take some gestures for themselves), installing apps, and the self-test.
 
+## What's new in 2.3
+
+- **The interface language now applies everywhere.** Until now 设置 → 语言 only changed the console's own strings; the
+  Android resources around the app (the session notification's title/buttons, the desktop's toasts, the orientation
+  labels) still followed the system language. The activity resources now follow `ui_lang` too, and switching languages
+  rebuilds the notification immediately instead of waiting for the next session.
+- **Accessibility pass.** Every tappable row, tile, switch and button in the console and the four detail pages now has a
+  TalkBack description (including the current value or on/off state), the touch targets are at least 48dp, and the
+  purely decorative views (sparkline, progress bars, dividers, spacers) are skipped by the screen reader.
+- **Network status is translated properly.** The overview reports a stable network code instead of Chinese display
+  text, so the label follows the interface language (and Wi-Fi names still show as they are).
+- **Picture-in-picture for the desktop is turned off.** It never rendered: the desktop's SurfaceView stays black in
+  Android's small window. The switch is gone and the 显示 page says so; use the **A** handle or the session
+  notification to get back to the console instead.
+
 ## What's new in 2.2
+
 
 - **The old settings screen is gone.** Everything it held now lives in the console as four native pages under
   **设置 → 详细设置**, built with the same cards and rows as the rest of the app:
@@ -140,6 +156,7 @@ change (HyperOS/MIUI take some gestures for themselves), installing apps, and th
 - Old games that change the screen resolution (Allegro 4 and similar) are drawn full-screen but don't receive taps
   yet. Play them in windowed mode.
 - There is no real administrator account: `sudo` installs and configures Linux software but cannot change Android.
+- Picture-in-picture does not work for the desktop: the SurfaceView-based screen stays black in Android's small window, so the option is disabled.
 
 ## Building
 

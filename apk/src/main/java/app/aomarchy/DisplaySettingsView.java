@@ -79,12 +79,11 @@ public final class DisplaySettingsView {
                         .putString(DisplayCutoutMode.KEY, DisplayCutoutMode.VALUES[which]).apply()));
         body.addView(cutout);
 
-        // ===== 画中画 =====
+        // ===== 画中画：桌面不可用（SurfaceView 在 PiP 小窗里不出画面），保留说明并清掉旧开关 =====
         LinearLayout pip = Ui.card(host, T.t("card.pip"));
-        pip.addView(toggleRow(host, T.t("display.pip_toggle"),
-                T.t("display.pip_caption"),
-                prefs.getBoolean(KEY_PIP_MODE, false),
-                value -> prefs.edit().putBoolean(KEY_PIP_MODE, value).apply()));
+        pip.addView(Ui.text(host, T.t("display.pip_note"), 12, Ui.DIM, false));
+        if (prefs.getBoolean(KEY_PIP_MODE, false))
+            prefs.edit().putBoolean(KEY_PIP_MODE, false).apply(); // Home must not drop the session into a black PiP
         body.addView(pip);
 
         // ===== 显示参数：只读现状 + 跳转，不重复实现 =====

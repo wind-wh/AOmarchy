@@ -988,17 +988,6 @@ public class MainActivity extends Activity
             }
             mVirtualKeyboardVisibleBeforePip = false;
         }
-
-        // The SurfaceView keeps the producer it had at full size when the window shrinks into picture-in-picture, and
-        // the small window came out black. Dropping and recreating the surface makes surfaceChanged hand the renderer
-        // the PiP size; the same happens on the way back so the desktop is not left at the tiny size.
-        if (surfaceView != null) {
-            surfaceView.setVisibility(View.INVISIBLE);
-            surfaceView.postDelayed(() -> {
-                if (surfaceView != null)
-                    surfaceView.setVisibility(View.VISIBLE);
-            }, 200);
-        }
     }
 
     @Override

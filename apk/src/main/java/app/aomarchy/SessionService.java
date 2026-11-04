@@ -216,22 +216,7 @@ public class SessionService extends Service {
         HostGestures.apply(this); // HyperOS 3-finger gestures off again after a restart, if allowed
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Session", NotificationManager.IMPORTANCE_LOW));
-        PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class),
-                PendingIntent.FLAG_IMMUTABLE);
-        PendingIntent controls = PendingIntent.getActivity(this, 1, new Intent(this, ControlsActivity.class),
-                PendingIntent.FLAG_IMMUTABLE);
-        PendingIntent console = PendingIntent.getActivity(this, 2, new Intent(this, ShellActivity.class),
-                PendingIntent.FLAG_IMMUTABLE);
-        Notification n = new Notification.Builder(this, CHANNEL)
-                .setSmallIcon(android.R.drawable.ic_menu_view)
-                .setContentTitle("AOmarchy")
-                .setContentText(T.t("session.content"))
-                .setContentIntent(open)
-                .addAction(new Notification.Action.Builder(null, T.t("session.action_controls"), controls).build())
-                .addAction(new Notification.Action.Builder(null, T.t("session.action_console"), console).build())
-                .setOngoing(true)
-                .build();
-        startForeground(NOTIFICATION_ID, n);
+        startForeground(NOTIFICATION_ID, buildNotification(this));
 
         PowerManager pm = getSystemService(PowerManager.class);
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "andromarchy:session");
@@ -259,6 +244,37 @@ public class SessionService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         return START_STICKY; // the processes belong to this service: started once, in onCreate
+    }
+
+    /** The ongoing session notification, in the console's current language. */
+    private static Notification buildNotification(Context ctx) {
+        PendingIntent open = PendingIntent.getActivity(ctx, 0, new Intent(ctx, MainActivity.class),
+                PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent controls = PendingIntent.getActivity(ctx, 1, new Intent(ctx, ControlsActivity.class),
+                PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent console = PendingIntent.getActivity(ctx, 2, new Intent(ctx, ShellActivity.class),
+                PendingIntent.FLAG_IMMUTABLE);
+        return new Notification.Builder(ctx, CHANNEL)
+                .setSmallIcon(android.R.drawable.ic_menu_view)
+                .setContentTitle("AOmarchy")
+                .setContentText(T.t("session.content"))
+                .setContentIntent(open)
+                .addAction(new Notification.Action.Builder(null, T.t("session.action_controls"), controls).build())
+                .addAction(new Notification.Action.Builder(null, T.t("session.action_console"), console).build())
+                .setOngoing(true)
+                .build();
+    }
+
+    /**
+     * Rebuilds the notification after the console's ui_lang changed: the copy is fixed when the service starts, so a
+     * running session would otherwise keep the old language in the shade until the session restarts.
+     */
+    static void refreshNotification(Context ctx) {
+        if (!started)
+            return;
+        NotificationManager nm = ctx.getSystemService(NotificationManager.class);
+        if (nm != null)
+            nm.notify(NOTIFICATION_ID, buildNotification(ctx));
     }
 
     private void startSession() throws IOException {
