@@ -132,6 +132,15 @@ public class ShellActivity extends Activity {
     }
 
     @Override
+    public void onConfigurationChanged(android.content.res.Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        // The console is laid out for the current orientation (four stat cards in one row in landscape), so rebuild.
+        int tab = Math.max(0, current);
+        java.util.Arrays.fill(pages, null);
+        build();
+        show(tab);
+    }
+    @Override
     protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
         if (current >= 0 && pages[current] != null)

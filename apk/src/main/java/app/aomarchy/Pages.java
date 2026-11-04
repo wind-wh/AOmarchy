@@ -119,8 +119,7 @@ class OverviewPage extends Page {
         hero.addView(actions);
         body.addView(hero);
 
-        // CPU with its little history line, then the plain numbers. Every card has the same height so the grid
-        // stays dense and aligned: title, big value, one detail line (CPU also keeps its 24 pt history line).
+        // Cards: in landscape all four numbers share one row (denser, matches the wide screen); in portrait 2x2.
         LinearLayout cpuCard = card("CPU");
         cpuValue = big("—");
         cpuCard.addView(cpuValue);
@@ -128,43 +127,51 @@ class OverviewPage extends Page {
         cpuCard.addView(cpuSub);
         sparkline = new Sparkline(shell);
         LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(shell, 24));
-        slp.topMargin = Ui.dp(shell, 4);
+                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(shell, 22));
+        slp.topMargin = Ui.dp(shell, 3);
         cpuCard.addView(sparkline, slp);
-        LinearLayout row1 = Ui.row(shell);
-        row1.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        LinearLayout.LayoutParams l1 = new LinearLayout.LayoutParams(0, Ui.dp(shell, 116), 1f);
-        l1.rightMargin = Ui.dp(shell, 10);
-        row1.addView(cpuCard, l1);
+
         LinearLayout memCard = card("内存");
         memValue = big("—");
         memCard.addView(memValue);
         memSub = Ui.text(shell, "", 12, Ui.DIM, false);
         memCard.addView(memSub);
-        row1.addView(memCard, new LinearLayout.LayoutParams(0, Ui.dp(shell, 116), 1f));
-        body.addView(row1);
-        body.addView(Ui.gap(shell, 9));
 
-        LinearLayout row2 = Ui.row(shell);
-        row2.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         LinearLayout diskCard = card("磁盘 · 系统");
         diskValue = big("—");
         diskCard.addView(diskValue);
         diskSub = Ui.text(shell, "", 12, Ui.DIM, false);
         diskCard.addView(diskSub);
-        LinearLayout.LayoutParams l2 = new LinearLayout.LayoutParams(0, Ui.dp(shell, 116), 1f);
-        l2.rightMargin = Ui.dp(shell, 10);
-        row2.addView(diskCard, l2);
+
         LinearLayout batCard = card("电量");
         batteryValue = big("—");
         batCard.addView(batteryValue);
         batterySub = Ui.text(shell, "", 12, Ui.DIM, false);
         batCard.addView(batterySub);
-        row2.addView(batCard, new LinearLayout.LayoutParams(0, Ui.dp(shell, 116), 1f));
-        body.addView(row2);
-        body.addView(Ui.gap(shell, 9));
+
+        boolean wide = shell.getResources().getConfiguration().orientation
+                == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+        LinearLayout[] cards = {cpuCard, memCard, diskCard, batCard};
+        if (wide) {
+            LinearLayout row = Ui.row(shell);
+            for (int i = 0; i < cards.length; i++) {
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Ui.dp(shell, 126), 1f);
+                if (i < cards.length - 1)
+                    lp.rightMargin = Ui.dp(shell, 9);
+                row.addView(cards[i], lp);
+            }
+            body.addView(row);
+        } else {
+            for (int r = 0; r < 2; r++) {
+                LinearLayout row = Ui.row(shell);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Ui.dp(shell, 126), 1f);
+                lp.rightMargin = Ui.dp(shell, 9);
+                row.addView(cards[r * 2], lp);
+                row.addView(cards[r * 2 + 1], new LinearLayout.LayoutParams(0, Ui.dp(shell, 126), 1f));
+                body.addView(row);
+                body.addView(Ui.gap(shell, 9));
+            }
+        }
 
         // One wide card for the things that are two short lines each: less blank space than two half-empty cards.
         LinearLayout netGpu = card("网络与图形");
@@ -186,7 +193,7 @@ class OverviewPage extends Page {
 
     private TextView big(String text) {
         TextView v = value(text, Ui.TEXT);
-        v.setTextSize(22);
+        v.setTextSize(20);
         return v;
     }
 
