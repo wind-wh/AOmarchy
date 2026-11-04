@@ -59,6 +59,9 @@ public final class SettingsExportView {
         export.addView(Ui.text(host, tr("settings.export_desc",
                 "把控制台的全部设置写成 JSON 文件。不包含 Linux 系统、应用或备份文件。"),
                 11, Ui.FAINT, false));
+        export.addView(Ui.text(host, tr("settings.export_privacy",
+                "导出的是明文 JSON，包含姓名、邮箱等设置，请保存到你信任的位置。"),
+                11, Ui.FAINT, false));
         export.addView(Ui.gap(host, 8));
         export.addView(Ui.button(host, tr("btn.export_settings", "导出配置…"), true, v -> startExport()));
         exportStatus = statusLine();

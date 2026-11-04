@@ -4,7 +4,7 @@
          exported=false): TAB picks the console page and ACTION=terminal forwards straight to the terminal. -->
     <shortcut
         android:enabled="true"
-        android:icon="@android:drawable/ic_menu_view"
+        android:icon="@drawable/ic_shortcut_console"
         android:shortcutId="console"
         android:shortcutLongLabel="@string/shortcut_console"
         android:shortcutShortLabel="@string/shortcut_console">
@@ -20,7 +20,7 @@
     </shortcut>
     <shortcut
         android:enabled="true"
-        android:icon="@android:drawable/ic_menu_manage"
+        android:icon="@drawable/ic_shortcut_system"
         android:shortcutId="system"
         android:shortcutLongLabel="@string/shortcut_system"
         android:shortcutShortLabel="@string/shortcut_system">
@@ -36,7 +36,7 @@
     </shortcut>
     <shortcut
         android:enabled="true"
-        android:icon="@android:drawable/ic_menu_preferences"
+        android:icon="@drawable/ic_shortcut_settings"
         android:shortcutId="settings"
         android:shortcutLongLabel="@string/shortcut_settings"
         android:shortcutShortLabel="@string/shortcut_settings">
@@ -52,7 +52,7 @@
     </shortcut>
     <shortcut
         android:enabled="true"
-        android:icon="@android:drawable/ic_menu_edit"
+        android:icon="@drawable/ic_shortcut_terminal"
         android:shortcutId="terminal"
         android:shortcutLongLabel="@string/shortcut_terminal"
         android:shortcutShortLabel="@string/shortcut_terminal">

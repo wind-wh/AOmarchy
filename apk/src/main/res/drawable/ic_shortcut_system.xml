@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher shortcut 系统: the install/backup/logs page, drawn as a hard disk (shell + platter divider + status LED).
+     24dp viewport with a 2dp safe inset. See res/xml/shortcuts.xml. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#14171F"
+        android:pathData="M7,2 H17 A5,5 0 0 1 22,7 V17 A5,5 0 0 1 17,22 H7 A5,5 0 0 1 2,17 V7 A5,5 0 0 1 7,2 Z" />
+    <path
+        android:fillColor="#0A0C10"
+        android:pathData="M7.5,6 H16.5 A2.5,2.5 0 0 1 19,8.5 V15.5 A2.5,2.5 0 0 1 16.5,18 H7.5 A2.5,2.5 0 0 1 5,15.5 V8.5 A2.5,2.5 0 0 1 7.5,6 Z"
+        android:strokeColor="#7C8CFF"
+        android:strokeWidth="2" />
+    <path
+        android:pathData="M5,12 H19"
+        android:strokeColor="#7C8CFF"
+        android:strokeWidth="1.6" />
+    <path
+        android:fillColor="#5FE1B4"
+        android:pathData="M9.6,15 A1.1,1.1 0 1 1 7.4,15 A1.1,1.1 0 1 1 9.6,15 Z" />
+    <path
+        android:pathData="M12,15 H16"
+        android:strokeColor="#5FE1B4"
+        android:strokeLineCap="round"
+        android:strokeWidth="1.6" />
+</vector>

@@ -67,7 +67,19 @@ are untested.
 The [user guide](docs/user-guide.md) explains the touch gestures, the on-screen keyboard, the Android settings to
 change (HyperOS/MIUI take some gestures for themselves), installing apps, and the self-test.
 
+## What's new in 2.5
+
+- **Back up from the overview.** The 概览 backup card now has **立即备份 / Back up now**: one tap snapshots the system
+  with the progress in the card's own line, and **管理备份** jumps to the System page for restoring, exporting or
+  deleting. The card still shows how old the newest backup is and turns red when there is none or it is over 30 days.
+- **The settings export says what it contains**: the file is plain JSON, including your name and email, so the page
+  now tells you to save it somewhere you trust.
+- **Launcher shortcuts got brand icons** instead of the generic system ones (console / system / settings / terminal).
+- The resources left behind by the deleted 2.2 settings screen (unused strings, styles, colours in the three locales)
+  were removed.
+
 ## What's new in 2.4
+
 
 - **Settings backup file.** 设置 → 详细设置 → 配置备份 exports every console setting to a JSON file (through the
   system file picker) and imports it back — the quick way to move to a new tablet, recover after a reinstall, or send

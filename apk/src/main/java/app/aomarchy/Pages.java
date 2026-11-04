@@ -106,6 +106,8 @@ class OverviewPage extends Page {
     private int lastCpu = -1, lastMem = -1, lastDisk = -1, lastBat = -1;
     private TextView heroEntry;
     private TextView backupHint;
+    private TextView backupAction;
+    private boolean backupRunning;
 
     OverviewPage(ShellActivity shell) {
         super(shell);
@@ -203,12 +205,22 @@ class OverviewPage extends Page {
         netGpu.addView(Ui.text(shell, T.t("overview.net_gpu_note"), 11, Ui.FAINT, false));
         body.addView(netGpu);
 
-        // Data safety at a glance: the newest backup's age, one tap away from creating another one.
+        // Data safety at a glance: the newest backup's age, and one tap to make another one.
         LinearLayout backupStatus = card(T.t("card.backup_status"));
         backupHint = Ui.text(shell, T.t("overview.backup_never"), 12, Ui.DIM, false);
         backupStatus.addView(backupHint);
-        backupStatus.setOnClickListener(v -> shell.showTab(1));
-        backupStatus.setClickable(true);
+        backupStatus.addView(Ui.gap(shell, 8));
+        LinearLayout backupRow = Ui.row(shell);
+        backupAction = button(T.t("btn.backup_now"), false, v -> startQuickBackup());
+        backupAction.setContentDescription(T.t("btn.backup_now"));
+        backupRow.addView(backupAction);
+        backupRow.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
+        TextView manage = Ui.text(shell, T.t("btn.backup_manage"), 13, Ui.ACCENT, true);
+        manage.setPadding(Ui.dp(shell, 8), Ui.dp(shell, 8), Ui.dp(shell, 8), Ui.dp(shell, 8));
+        manage.setMinimumHeight(Ui.dp(shell, 48));
+        manage.setOnClickListener(v -> shell.showTab(1));
+        backupRow.addView(manage);
+        backupStatus.addView(backupRow);
         body.addView(backupStatus);
 
         LinearLayout tips = Ui.card(shell, T.t("card.tips"));
@@ -261,6 +273,45 @@ class OverviewPage extends Page {
                         : T.t("overview.tagline"));
         updateBackupHint();
         poll();
+    }
+
+    /** One tap: snapshot the system from the overview, with the progress in the card's own line. */
+    private void startQuickBackup() {
+        if (backupRunning || backupAction == null)
+            return;
+        backupRunning = true;
+        backupAction.setEnabled(false);
+        backupAction.setText(T.t("state.backing_up"));
+        app.aomarchy.data.Backup.create(shell, new app.aomarchy.data.Backup.Callback() {
+            @Override
+            public void progress(int permille, String text) {
+                shell.runOnUiThread(() -> {
+                    if (backupHint != null && text != null)
+                        backupHint.setText(text);
+                });
+            }
+
+            @Override
+            public void done(String message) {
+                shell.runOnUiThread(() -> finishQuickBackup(message));
+            }
+
+            @Override
+            public void failed(String message) {
+                shell.runOnUiThread(() -> finishQuickBackup(message));
+            }
+        });
+    }
+
+    private void finishQuickBackup(String message) {
+        backupRunning = false;
+        if (backupAction != null) {
+            backupAction.setEnabled(true);
+            backupAction.setText(T.t("btn.backup_now"));
+        }
+        if (message != null && !message.isEmpty())
+            shell.toast(message);
+        updateBackupHint();
     }
 
     /** "Last backup: 3 h ago", or a nudge when there is none / it is older than a month. */
