@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="settings_short_label">設定</string>
 
     <!-- Titles / section headers -->
     <string name="settings_title">設定</string>

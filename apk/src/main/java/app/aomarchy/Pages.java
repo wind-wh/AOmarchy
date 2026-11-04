@@ -105,6 +105,7 @@ class OverviewPage extends Page {
     private Sparkline sparkline;
     private int lastCpu = -1, lastMem = -1, lastDisk = -1, lastBat = -1;
     private TextView heroEntry;
+    private TextView backupHint;
 
     OverviewPage(ShellActivity shell) {
         super(shell);
@@ -202,6 +203,14 @@ class OverviewPage extends Page {
         netGpu.addView(Ui.text(shell, T.t("overview.net_gpu_note"), 11, Ui.FAINT, false));
         body.addView(netGpu);
 
+        // Data safety at a glance: the newest backup's age, one tap away from creating another one.
+        LinearLayout backupStatus = card(T.t("card.backup_status"));
+        backupHint = Ui.text(shell, T.t("overview.backup_never"), 12, Ui.DIM, false);
+        backupStatus.addView(backupHint);
+        backupStatus.setOnClickListener(v -> shell.showTab(1));
+        backupStatus.setClickable(true);
+        body.addView(backupStatus);
+
         LinearLayout tips = Ui.card(shell, T.t("card.tips"));
         tips.addView(Ui.text(shell, T.t("overview.tips"), 12, Ui.DIM, false));
         body.addView(tips);
@@ -250,7 +259,40 @@ class OverviewPage extends Page {
                 : SessionService.started
                         ? T.t("overview.running_for", duration(System.currentTimeMillis() - SessionService.startedAt))
                         : T.t("overview.tagline"));
+        updateBackupHint();
         poll();
+    }
+
+    /** "Last backup: 3 h ago", or a nudge when there is none / it is older than a month. */
+    private void updateBackupHint() {
+        if (backupHint == null)
+            return;
+        long newest = 0;
+        for (java.io.File f : app.aomarchy.data.Backup.list(shell))
+            newest = Math.max(newest, f.lastModified());
+        if (newest <= 0) {
+            backupHint.setText(T.t("overview.backup_never"));
+            backupHint.setTextColor(Ui.WARN);
+            return;
+        }
+        String ago = ago(newest);
+        boolean stale = System.currentTimeMillis() - newest > 30L * 24 * 60 * 60 * 1000;
+        backupHint.setText(T.t(stale ? "overview.backup_stale" : "overview.backup_last", ago));
+        backupHint.setTextColor(stale ? Ui.WARN : Ui.DIM);
+    }
+
+    /** Human age for the backup line (the generic duration() is too verbose for "3 h ago"). */
+    private static String ago(long millis) {
+        long delta = Math.max(0, System.currentTimeMillis() - millis);
+        long minutes = delta / 60000;
+        if (minutes < 1)
+            return T.t("time.just_now");
+        if (minutes < 60)
+            return T.t("time.minutes_ago", minutes);
+        long hours = minutes / 60;
+        if (hours < 24)
+            return T.t("time.hours_ago", hours);
+        return T.t("time.days_ago", hours / 24);
     }
 
     private void poll() {
@@ -1121,6 +1163,7 @@ class SettingsPage extends Page {
     private TextView emailValue;
     private TextView kbValue;
     private TextView modeValue;
+    private SettingsExportView exportView; // the 配置备份 sheet, while it is open
     private TextView langValue;
     /** The rows whose value changes after a pick: their TalkBack description is rebuilt in {@link #refresh()}. */
     private LinearLayout nameRow;
@@ -1212,6 +1255,11 @@ class SettingsPage extends Page {
         detailed.addView(divider());
         detailed.addView(row(T.t("page.audio"), value("›", Ui.FAINT),
                 () -> openPage(T.t("page.audio"), AudioSettingsView.build(shell))));
+        detailed.addView(divider());
+        detailed.addView(row(T.t("page.settings_io"), value("›", Ui.FAINT), () -> {
+            exportView = SettingsExportView.create(shell);
+            openPage(T.t("page.settings_io"), exportView.view(), this::dropExportView);
+        }));
         body.addView(detailed);
 
         LinearLayout about = Ui.card(shell, T.t("card.about"));
@@ -1332,6 +1380,11 @@ class SettingsPage extends Page {
 
     /** Opens a native detail page (the rebuilt 详细设置 sub-pages) as a full-screen sheet over the console. */
     private void openPage(String title, View content) {
+        openPage(title, content, null);
+    }
+
+    /** The same sheet, with something to release when it closes (a page holding a file-picker instance). */
+    private void openPage(String title, View content, Runnable onDismiss) {
         android.app.Dialog dialog = new android.app.Dialog(shell,
                 android.R.style.Theme_Black_NoTitleBar_Fullscreen);
 
@@ -1359,13 +1412,32 @@ class SettingsPage extends Page {
         wrap.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
         dialog.setContentView(wrap);
-        dialog.setOnDismissListener(d -> refresh());
+        dialog.setOnDismissListener(d -> {
+            if (onDismiss != null)
+                onDismiss.run();
+            refresh();
+        });
         dialog.show();
         android.view.Window w = dialog.getWindow();
         if (w != null) {
             w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Ui.BG));
             w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
         }
+    }
+
+    /** Releases the file-picker page when its sheet closes, so a late result cannot touch a dead view. */
+    private void dropExportView() {
+        if (exportView != null) {
+            exportView.dispose();
+            exportView = null;
+        }
+    }
+
+    @Override
+    void onActivityResult(int request, int result, android.content.Intent data) {
+        if (exportView != null && exportView.onActivityResult(request, result, data))
+            return;
+        super.onActivityResult(request, result, data);
     }
 
     @Override

@@ -1,14 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Launcher long-press entries. All four go through the exported ShellActivity (TerminalActivity stays
+         exported=false): TAB picks the console page and ACTION=terminal forwards straight to the terminal. -->
+    <shortcut
+        android:enabled="true"
+        android:icon="@android:drawable/ic_menu_view"
+        android:shortcutId="console"
+        android:shortcutLongLabel="@string/shortcut_console"
+        android:shortcutShortLabel="@string/shortcut_console">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:category="android.intent.category.LAUNCHER"
+            android:targetClass="app.aomarchy.ShellActivity"
+            android:targetPackage="app.aomarchy">
+            <extra
+                android:name="app.aomarchy.TAB"
+                android:value="0" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@android:drawable/ic_menu_manage"
+        android:shortcutId="system"
+        android:shortcutLongLabel="@string/shortcut_system"
+        android:shortcutShortLabel="@string/shortcut_system">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:category="android.intent.category.LAUNCHER"
+            android:targetClass="app.aomarchy.ShellActivity"
+            android:targetPackage="app.aomarchy">
+            <extra
+                android:name="app.aomarchy.TAB"
+                android:value="1" />
+        </intent>
+    </shortcut>
     <shortcut
         android:enabled="true"
         android:icon="@android:drawable/ic_menu_preferences"
         android:shortcutId="settings"
-        android:shortcutLongLabel="@string/settings_short_label"
-        android:shortcutShortLabel="@string/settings_short_label">
+        android:shortcutLongLabel="@string/shortcut_settings"
+        android:shortcutShortLabel="@string/shortcut_settings">
         <intent
             android:action="android.intent.action.MAIN"
             android:category="android.intent.category.LAUNCHER"
-            android:targetClass="app.aomarchy.SettingsActivity"
-            android:targetPackage="app.aomarchy"/>
+            android:targetClass="app.aomarchy.ShellActivity"
+            android:targetPackage="app.aomarchy">
+            <extra
+                android:name="app.aomarchy.TAB"
+                android:value="4" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@android:drawable/ic_menu_edit"
+        android:shortcutId="terminal"
+        android:shortcutLongLabel="@string/shortcut_terminal"
+        android:shortcutShortLabel="@string/shortcut_terminal">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:category="android.intent.category.LAUNCHER"
+            android:targetClass="app.aomarchy.ShellActivity"
+            android:targetPackage="app.aomarchy">
+            <extra
+                android:name="app.aomarchy.ACTION"
+                android:value="terminal" />
+        </intent>
     </shortcut>
 </shortcuts>

@@ -29,6 +29,10 @@ public class ShellActivity extends Activity {
     static final String EXTRA_NEED_SYSTEM = "app.aomarchy.NEED_SYSTEM";
     /** Which page to land on (0-based, see TITLES): the desktop's settings links use 4. */
     static final String EXTRA_TAB = "app.aomarchy.TAB";
+    /** The static launcher shortcuts (res/xml/shortcuts.xml) can also ask for an action, not just a page. */
+    static final String EXTRA_ACTION = "app.aomarchy.ACTION";
+    /** {@link #EXTRA_ACTION} value of the 终端模式 shortcut: skip the console and open the terminal. */
+    private static final String ACTION_TERMINAL = "terminal";
 
     /** Intent that opens the console on one page, from the desktop's settings entries. */
     static Intent intent(Context c, int tab) {
@@ -74,8 +78,16 @@ public class ShellActivity extends Activity {
         super.onCreate(b);
         T.init(this); // the saved ui_lang, before any view asks for a string
         build();
-        int startTab = getIntent() != null ? getIntent().getIntExtra(EXTRA_TAB, -1) : -1;
-        if (SessionService.rootfsReady(this)) {
+        Intent intent = getIntent();
+        boolean terminal = isTerminalShortcut(intent);
+        int startTab = readTab(intent);
+        if (terminal) {
+            // The 终端模式 launcher shortcut: the console is built behind the terminal first, so the terminal's
+            // back-to-console button has somewhere to return to. No system: openTerminal() prompts on the 系统 page.
+            if (SessionService.rootfsReady(this))
+                show(0);
+            openTerminal();
+        } else if (SessionService.rootfsReady(this)) {
             show(startTab >= 0 && startTab < TITLES.length ? startTab : 0);
         } else {
             // No system yet: the 系统 page (tab 1) owns installing it now that the WebView installer is gone.
@@ -83,9 +95,36 @@ public class ShellActivity extends Activity {
         }
         app.aomarchy.data.Installer.cleanupAsync(this); // leftover partial / old system from an interrupted install
         requestNotificationPermission();
-        if (getSharedPreferences(Prefs.NAME, MODE_PRIVATE).getBoolean("open_desktop_on_start", false)
+        // A shortcut decides where to go itself; the open-desktop startup preference must not run on top of it.
+        if (!terminal
+                && getSharedPreferences(Prefs.NAME, MODE_PRIVATE).getBoolean("open_desktop_on_start", false)
                 && SessionService.rootfsReady(this))
             openDesktop(); // the startup preference: skip the console and show the desktop
+    }
+
+    /**
+     * The page the intent asks for, or -1. In-app intents (see {@link #intent(Context, int)}) put an int extra; a
+     * static launcher shortcut can only carry a string, so both spellings are accepted.
+     */
+    private static int readTab(Intent intent) {
+        if (intent == null || intent.getExtras() == null)
+            return -1;
+        Object raw = intent.getExtras().get(EXTRA_TAB);
+        if (raw instanceof Integer)
+            return (Integer) raw;
+        if (raw instanceof String) {
+            try {
+                return Integer.parseInt(((String) raw).trim());
+            } catch (NumberFormatException ignored) {
+                // not a page: fall through to -1
+            }
+        }
+        return -1;
+    }
+
+    /** True for the 终端模式 launcher shortcut (res/xml/shortcuts.xml). */
+    private static boolean isTerminalShortcut(Intent intent) {
+        return intent != null && ACTION_TERMINAL.equals(intent.getStringExtra(EXTRA_ACTION));
     }
 
     @Override
@@ -94,13 +133,17 @@ public class ShellActivity extends Activity {
         setIntent(intent);
         if (intent == null)
             return;
+        if (isTerminalShortcut(intent)) {
+            openTerminal(); // the 终端模式 shortcut while the console is already running (singleTop)
+            return;
+        }
         if (intent.getBooleanExtra(EXTRA_NEED_SYSTEM, false)) {
             promptInstall(); // the desktop bounced back because there is nothing to start
             return;
         }
         // The desktop's settings entries ask for a page: honour it even when the console is already on top, where
         // a plain am start is delivered here (START_DELIVERED_TO_TOP) instead of going through onCreate.
-        int tab = intent.getIntExtra(EXTRA_TAB, -1);
+        int tab = readTab(intent);
         if (tab >= 0 && tab < TITLES.length && SessionService.rootfsReady(this))
             show(tab);
     }
@@ -330,6 +373,18 @@ public class ShellActivity extends Activity {
         }
         SessionService.start(this);
         startActivity(new Intent(this, MainActivity.class));
+    }
+
+    /**
+     * The 终端模式 launcher shortcut: one pty, no desktop, whatever the session_mode preference says. Without a
+     * system the 系统 page installs it first — the same prompt the entry button uses.
+     */
+    private void openTerminal() {
+        if (!SessionService.rootfsReady(this)) {
+            promptInstall();
+            return;
+        }
+        startActivity(new Intent(this, TerminalActivity.class));
     }
 
     /** The big button follows the startup mode chosen in Settings (and is an install button until there is a system). */

@@ -4,6 +4,6 @@
     android:accessibilityEventTypes=""
     android:accessibilityFlags=""
     android:canRetrieveWindowContent="false"
-    android:settingsActivity=".SettingsActivity"
+    android:settingsActivity=".ShellActivity"
     android:packageNames="@null"
     android:canRequestFilterKeyEvents="true" />
