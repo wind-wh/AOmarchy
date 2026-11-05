@@ -515,6 +515,7 @@ class SystemPage extends Page {
     private LinearLayout backupProgressBox;
     private TextView backupText;
     private TextView backupStats;
+    private LinearLayout logsBox;
     private app.aomarchy.ui.SpringBar backupBar;
     private File pendingExport;
     private boolean importing;
@@ -643,19 +644,49 @@ class SystemPage extends Page {
         body.addView(backup);
         paintBackups();
         LinearLayout logs = Ui.card(shell, T.t("card.logs"));
-        logs.addView(Ui.text(shell, T.t("system.logs_desc"), 13, Ui.DIM, false));
-        logs.addView(Ui.gap(shell, 6));
+        LinearLayout logsHead = Ui.row(shell);
+        logsHead.addView(Ui.text(shell, T.t("system.logs_desc"), 13, Ui.DIM, false),
+                new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView clearLogsBtn = Ui.text(shell, T.t("btn.clear_logs"), 13, Ui.ACCENT, true);
+        clearLogsBtn.setPadding(Ui.dp(shell, 6), Ui.dp(shell, 8), Ui.dp(shell, 6), Ui.dp(shell, 8));
+        clearLogsBtn.setMinimumHeight(Ui.dp(shell, 48));
+        clearLogsBtn.setContentDescription(T.t("btn.clear_logs"));
+        clearLogsBtn.setOnClickListener(v -> clearLogs());
+        logsHead.addView(clearLogsBtn);
+        logs.addView(logsHead);
+        logsBox = Ui.column(shell);
+        logs.addView(logsBox);
+        body.addView(logs);
+        paintLogs();
+    }
+
+    /** The run directory's logs, newest first; one row opens the last lines. */
+    private void paintLogs() {
+        if (logsBox == null)
+            return;
+        logsBox.removeAllViews();
+        logsBox.addView(Ui.gap(shell, 6));
         File[] files = SessionService.runDir(shell).listFiles((d, n) -> n.endsWith(".log"));
         if (files == null || files.length == 0) {
-            logs.addView(Ui.text(shell, T.t("system.no_logs"), 13, Ui.FAINT, false));
-        } else {
-            java.util.Arrays.sort(files, (x, y) -> Long.compare(y.lastModified(), x.lastModified()));
-            for (int i = 0; i < Math.min(6, files.length); i++) {
-                File f = files[i];
-                logs.addView(row(f.getName(), f.length(), () -> showLog(f)));
-            }
+            logsBox.addView(Ui.text(shell, T.t("system.no_logs"), 13, Ui.FAINT, false));
+            return;
         }
-        body.addView(logs);
+        java.util.Arrays.sort(files, (x, y) -> Long.compare(y.lastModified(), x.lastModified()));
+        for (int i = 0; i < Math.min(6, files.length); i++) {
+            File f = files[i];
+            logsBox.addView(row(f.getName(), f.length(), () -> showLog(f)));
+        }
+    }
+
+    private void clearLogs() {
+        File[] files = SessionService.runDir(shell).listFiles((d, n) -> n.endsWith(".log"));
+        int removed = 0;
+        if (files != null)
+            for (File f : files)
+                if (f.delete())
+                    removed++;
+        toast(removed > 0 ? T.t("toast.logs_cleared", String.valueOf(removed)) : T.t("toast.logs_empty"));
+        paintLogs();
     }
 
     private static final int EXPORT_BACKUP = 42;
@@ -1544,7 +1575,41 @@ class SettingsPage extends Page {
         about.addView(Ui.kv(shell, T.t("label.package"), value(shell.getPackageName(), Ui.DIM)));
         about.addView(Ui.kv(shell, "Android", value(android.os.Build.VERSION.RELEASE + " (API "
                 + android.os.Build.VERSION.SDK_INT + ")", Ui.DIM)));
+        about.addView(divider());
+        about.addView(row(T.t("btn.check_update"), value("", Ui.FAINT), this::checkForUpdates));
         body.addView(about);
+    }
+
+    /** Asks GitHub for the newest release and offers the download page when this build is older. */
+    private void checkForUpdates() {
+        toast(T.t("btn.checking_update"));
+        app.aomarchy.UpdateCheck.check(shell, new app.aomarchy.UpdateCheck.Callback() {
+            @Override
+            public void onResult(boolean newer, String version, String url) {
+                if (!newer) {
+                    toast(T.t("toast.up_to_date", versionName()));
+                    return;
+                }
+                new android.app.AlertDialog.Builder(shell)
+                        .setTitle(T.t("dialog.update_available_title", version))
+                        .setMessage(T.t("dialog.update_available_message", versionName()))
+                        .setPositiveButton(T.t("btn.open_download"), (d, w) -> {
+                            try {
+                                shell.startActivity(new android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)));
+                            } catch (RuntimeException ignored) {
+                                // no browser: nothing else to do
+                            }
+                        })
+                        .setNegativeButton(T.t("btn.cancel"), null)
+                        .show();
+            }
+
+            @Override
+            public void onError(String message) {
+                toast(T.t("toast.update_failed", message));
+            }
+        });
     }
 
     /** 界面语言: one of 跟随系统 / 中文 / English, saved as {@code ui_lang}, then the shell rebuilds itself. */

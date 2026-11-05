@@ -80,15 +80,21 @@ final class TerminalCommandsView extends LinearLayout {
     private LinearLayout header() {
         LinearLayout head = Ui.row(host);
         head.setPadding(Ui.dp(host, 2), Ui.dp(host, 8), Ui.dp(host, 2), Ui.dp(host, 2));
-        head.addView(Ui.text(host, TerminalPresets.text("panel.title", "快捷命令"), 15, Ui.TEXT, true));
-        head.addView(new View(host), new LinearLayout.LayoutParams(0, 1, 1f));
+        // The title owns the leftover width and wraps instead of squeezing the buttons out: at very large system font
+        // sizes a fixed-width title + right-aligned buttons would clip "编辑" / "+ 新增" off the panel.
+        TextView title = Ui.text(host, TerminalPresets.text("panel.title", "快捷命令"), 15, Ui.TEXT, true);
+        title.setSingleLine(false);
+        head.addView(title, new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         editButton = Ui.text(host, TerminalPresets.text("panel.edit", "编辑"), 13, Ui.ACCENT, false);
+        editButton.setSingleLine(false);
         editButton.setPadding(Ui.dp(host, 10), Ui.dp(host, 4), Ui.dp(host, 10), Ui.dp(host, 4));
         editButton.setOnClickListener(v -> toggleEditing());
         head.addView(editButton);
 
         TextView add = Ui.text(host, TerminalPresets.text("panel.add", "+ 新增"), 13, Ui.ACCENT, false);
+        add.setSingleLine(false);
         add.setPadding(Ui.dp(host, 10), Ui.dp(host, 4), Ui.dp(host, 4), Ui.dp(host, 4));
         add.setOnClickListener(v -> presetDialog(-1));
         head.addView(add);
@@ -115,16 +121,20 @@ final class TerminalCommandsView extends LinearLayout {
         List<TerminalPresets.Preset> presets = TerminalPresets.load(host);
         empty.setVisibility(presets.isEmpty() ? VISIBLE : GONE);
         for (int i = 0; i < presets.size(); i++) {
+            // WRAP_CONTENT + a 40dp minimum inside chip(): the height becomes max(40dp, label height + 12dp), so a
+            // very large system font grows the chip instead of clipping the label.
             row.addView(chip(presets.get(i), i),
-                    new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Ui.dp(host, 40)));
+                    new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT));
         }
     }
 
-    /** A compact chip: 40dp tall, 12dp side padding, 13sp label — its width is the label's width, never a full column. */
+    /** A compact chip: at least 40dp tall (grows with the font), 12dp side padding, 13sp label, width = label width. */
     private View chip(final TerminalPresets.Preset preset, final int index) {
         LinearLayout cell = Ui.row(host);
         cell.setBackground(Ui.surface(host, 12));
         cell.setPadding(Ui.dp(host, 12), Ui.dp(host, 6), Ui.dp(host, 12), Ui.dp(host, 6));
+        cell.setMinimumHeight(Ui.dp(host, 40));
         Motion.pressable(cell);
 
         final TextView name = Ui.text(host, preset.name, 13, Ui.TEXT, false);

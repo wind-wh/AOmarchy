@@ -31,6 +31,10 @@ import app.aomarchy.ui.Wallpaper;
  * {@link Wallpaper#behind(Activity, android.widget.FrameLayout)} on its own background frame (it replaces the previous
  * layers, so it is safe to call again) or rebuilds the console; without a listener the new choice simply shows up the
  * next time the console is built.
+ *
+ * <p>When the ROM refuses to hand the wallpaper over ({@link Wallpaper#systemWallpaperAvailable(Activity)}), the page
+ * keeps the same three-way choice but warns under the "系统壁纸" row and offers the custom image as the working
+ * alternative, so a user does not sit on a mode that can only show the brand gradient.
  */
 public final class BackgroundPickerView {
     /** Request code for {@link Intent#ACTION_OPEN_DOCUMENT}, kept unique among the settings pages' pickers. */
@@ -52,6 +56,10 @@ public final class BackgroundPickerView {
     private final LinearLayout[] rows = new LinearLayout[MODES.length];
     private final TextView[] checks = new TextView[MODES.length];
     private final TextView hint;
+    /** Warning under the "系统壁纸" row while the ROM refuses to hand the wallpaper over. */
+    private TextView systemWarn;
+    /** Top-of-page shortcut to a custom image, shown for the same reason. */
+    private TextView customShortcut;
     private Listener listener;
     private boolean disposed;
 
@@ -66,6 +74,14 @@ public final class BackgroundPickerView {
 
         LinearLayout card = Ui.card(host, T.t("card.console_bg"));
         card.addView(Ui.text(host, T.t("bg.desc"), 12, Ui.DIM, false));
+        // When the wallpaper cannot be read, the top description points straight at the working alternative: the
+        // same "›" link affordance the rest of the console uses.
+        customShortcut = Ui.text(host, T.t("bg.mode_custom") + " ›", 12, Ui.ACCENT, true);
+        customShortcut.setPadding(0, Ui.dp(host, 6), 0, Ui.dp(host, 6));
+        customShortcut.setMinimumHeight(Ui.dp(host, 44));
+        customShortcut.setVisibility(View.GONE);
+        customShortcut.setOnClickListener(v -> pickCustomFromShortcut());
+        card.addView(customShortcut);
         card.addView(Ui.gap(host, 6));
 
         labels[0] = T.t("bg.mode_system");
@@ -126,17 +142,27 @@ public final class BackgroundPickerView {
 
     // ---- rows ----------------------------------------------------------------------------------------------------
 
-    /** One radio-style row: the mode label on the left, a ✓ on the right when it is the current mode. */
+    /** One radio-style row: the mode label on the left (plus the wallpaper warning for the system row), ✓ on the right. */
     private LinearLayout modeRow(int index) {
         LinearLayout row = Ui.row(host);
         row.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         row.setPadding(0, Ui.dp(host, 7), 0, Ui.dp(host, 7));
         row.setMinimumHeight(Ui.dp(host, 48));
+
+        LinearLayout texts = Ui.column(host);
         TextView label = Ui.text(host, labels[index], 14, Ui.TEXT, false);
         label.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        row.addView(label);
-        row.addView(new View(host), new LinearLayout.LayoutParams(0, 1, 1f));
+        texts.addView(label);
+        if (index == 0) {
+            systemWarn = Ui.text(host, T.t("bg.system_unavailable"), 11, Ui.WARN, false);
+            systemWarn.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            systemWarn.setVisibility(View.GONE);
+            texts.addView(systemWarn);
+        }
+        row.addView(texts, new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
         checks[index] = Ui.text(host, "", 14, Ui.ACCENT, true);
         checks[index].setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         row.addView(checks[index]);
@@ -145,19 +171,27 @@ public final class BackgroundPickerView {
         return row;
     }
 
-    /** Redraws the ✓ marks and the mode hint from the stored prefs. */
+    /** Redraws the ✓ marks, the wallpaper warning and the mode hint from the stored prefs. */
     private void update() {
         String current = Wallpaper.mode(host);
+        boolean wallpaperAvailable = Wallpaper.systemWallpaperAvailable(host);
         for (int i = 0; i < MODES.length; i++) {
             boolean selected = MODES[i].equals(current);
             checks[i].setText(selected ? "✓" : "");
             checks[i].setTextColor(selected ? Ui.ACCENT : Ui.FAINT);
-            rows[i].setContentDescription(
-                    selected ? labels[i] + "，" + T.t("state.on") : labels[i]);
+            String description = selected ? labels[i] + "，" + T.t("state.on") : labels[i];
+            if (i == 0 && !wallpaperAvailable)
+                description += "，" + T.t("bg.system_unavailable");
+            rows[i].setContentDescription(description);
         }
+        // The three-way choice keeps working as before; the warning only explains why "系统壁纸" may not show a photo.
+        systemWarn.setVisibility(wallpaperAvailable ? View.GONE : View.VISIBLE);
+        customShortcut.setVisibility(wallpaperAvailable ? View.GONE : View.VISIBLE);
         boolean system = Wallpaper.MODE_SYSTEM.equals(current);
-        hint.setText(system ? T.t("bg.restricted") : "");
-        hint.setVisibility(system ? View.VISIBLE : View.GONE);
+        // The "falls back to the brand gradient" note only helps while the wallpaper can be read; when it cannot, the
+        // warning below the system row says it, and the shortcut points at a custom image instead.
+        hint.setText(system && wallpaperAvailable ? T.t("bg.restricted") : "");
+        hint.setVisibility(system && wallpaperAvailable ? View.VISIBLE : View.GONE);
     }
 
     /** Saves the mode; picking "自定义图片" with no picture yet goes straight to the document picker. */
@@ -184,6 +218,16 @@ public final class BackgroundPickerView {
         } catch (RuntimeException ignored) {
             // no document picker on this ROM: the wallpaper and solid modes still work
         }
+    }
+
+    /** Top-of-page shortcut for the "wallpaper unreadable" case: switch to a custom image and open the picker. */
+    private void pickCustomFromShortcut() {
+        if (disposed)
+            return;
+        Wallpaper.setMode(host, Wallpaper.MODE_CUSTOM);
+        update();
+        changed();
+        pickImage();
     }
 
     /** 「恢复默认」: forget the picture (and its grant) and go back to the system wallpaper. */

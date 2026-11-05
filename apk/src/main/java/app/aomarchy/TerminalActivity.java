@@ -62,7 +62,7 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
         // through TerminalView.onSizeChanged.
         LinearLayout content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(0, Ui.dp(this, 58), 0, Ui.dp(this, 48));
+        content.setPadding(0, Ui.dp(this, 58), 0, 0);
 
         terminal = new TerminalView(this);
         terminal.setFontSp(getSharedPreferences(Prefs.NAME, MODE_PRIVATE).getFloat("term_font", 13f));
@@ -74,8 +74,8 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
         content.addView(commands, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 0.45f));
 
-        root.addView(content, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        // content is added below together with the key strip, so the strip takes real space instead of covering the
+        // panel (the strip grows with the system font size, so a fixed padding would overlap at large scales).
 
         // Keys a soft keyboard does not offer but a shell needs: Esc/Tab, the control letters, and the arrows.
         LinearLayout keys = new LinearLayout(this);
@@ -96,13 +96,18 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
         addKey(keys, "↑", "\u001b[A");
         addKey(keys, "↓", "\u001b[B");
         addKey(keys, "→", "\u001b[C");
-        FrameLayout.LayoutParams klp = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.BOTTOM);
+        LinearLayout column = new LinearLayout(this);
+        column.setOrientation(LinearLayout.VERTICAL);
+        column.setPadding(0, 0, 0, Ui.dp(this, 6));
+        column.addView(content, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        LinearLayout.LayoutParams klp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         klp.leftMargin = Ui.dp(this, 6);
         klp.rightMargin = Ui.dp(this, 6);
-        klp.bottomMargin = Ui.dp(this, 6);
-        root.addView(keys, klp);
+        column.addView(keys, klp);
+        root.addView(column, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         LinearLayout bar = new LinearLayout(this);
         bar.setOrientation(LinearLayout.HORIZONTAL);

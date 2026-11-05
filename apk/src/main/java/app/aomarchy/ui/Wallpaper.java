@@ -15,6 +15,7 @@ import android.graphics.drawable.LayerDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
+import android.os.SystemClock;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
@@ -74,6 +75,12 @@ public final class Wallpaper {
     /** Marks the backdrop layers so a repeated apply can replace them instead of stacking another set. */
     private static final Object BACKDROP_TAG = new Object();
 
+    /** The settings page asks whether the wallpaper is readable; probe once and reuse the answer for a short while. */
+    private static final long AVAILABLE_TTL_MS = 30_000L;
+    private static final Object AVAILABLE_LOCK = new Object();
+    private static boolean wallpaperAvailable;
+    private static long wallpaperAvailableCheckedAt;
+
     private Wallpaper() {
     }
 
@@ -125,6 +132,31 @@ public final class Wallpaper {
     /** True when a custom image is configured (whatever the current mode: the URI is remembered when switching away). */
     public static boolean hasCustom(Activity activity) {
         return customUri(activity) != null;
+    }
+
+    /**
+     * Whether the system wallpaper can actually be read on this device. Several ROMs (Android 13+ / MIUI) refuse
+     * {@link WallpaperManager#getDrawable()} and may also refuse {@link WallpaperManager#getWallpaperFile(int)}; then
+     * the console shows the brand gradient instead and the settings page should say so.
+     *
+     * <p>Either probe succeeding counts as available. The answer is cached for {@value #AVAILABLE_TTL_MS} ms so
+     * opening the settings sheet repeatedly does not hit the wallpaper service every time; the probe itself does no
+     * bitmap decode beyond what {@code getDrawable()} already does.
+     */
+    public static boolean systemWallpaperAvailable(Activity activity) {
+        if (activity == null)
+            return false;
+        long now = SystemClock.elapsedRealtime();
+        synchronized (AVAILABLE_LOCK) {
+            if (wallpaperAvailableCheckedAt != 0 && now - wallpaperAvailableCheckedAt < AVAILABLE_TTL_MS)
+                return wallpaperAvailable;
+        }
+        boolean available = probeSystemWallpaper(activity);
+        synchronized (AVAILABLE_LOCK) {
+            wallpaperAvailable = available;
+            wallpaperAvailableCheckedAt = SystemClock.elapsedRealtime();
+        }
+        return available;
     }
 
     /** The stored {@code console_bg_mode}: {@link #MODE_SYSTEM} when unset or unrecognised. */
@@ -252,6 +284,37 @@ public final class Wallpaper {
         if (bitmap == null)
             throw new IOException("could not decode " + uri);
         return bitmap;
+    }
+
+    /** Availability probe with the same two public paths as {@link #systemWallpaper}, keeping no bitmap. */
+    private static boolean probeSystemWallpaper(Activity activity) {
+        WallpaperManager manager;
+        try {
+            manager = WallpaperManager.getInstance(activity);
+        } catch (Throwable ignored) {
+            return false;
+        }
+        try {
+            if (manager.getDrawable() != null)
+                return true;
+        } catch (Throwable ignored) {
+            // refused on Android 13+/MIUI: try the wallpaper file below
+        }
+        ParcelFileDescriptor descriptor = null;
+        try {
+            descriptor = manager.getWallpaperFile(WallpaperManager.FLAG_SYSTEM);
+            return descriptor != null;
+        } catch (Throwable ignored) {
+            return false;
+        } finally {
+            if (descriptor != null) {
+                try {
+                    descriptor.close();
+                } catch (IOException ignored) {
+                    // nothing to do at this point
+                }
+            }
+        }
     }
 
     /** The device wallpaper: public Drawable first, then the wallpaper file (some ROMs only block the first path). */

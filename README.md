@@ -67,7 +67,20 @@ are untested.
 The [user guide](docs/user-guide.md) explains the touch gestures, the on-screen keyboard, the Android settings to
 change (HyperOS/MIUI take some gestures for themselves), installing apps, and the self-test.
 
+## What's new in 2.9.2
+
+- **检查更新 / Check for updates** in 设置 → 关于: asks GitHub for the newest release and offers the download page when
+  this build is older (version compare is numeric, so 2.9.9 < 2.9.10).
+- **清理日志 / Clear logs** on the System page removes the session's `run/*.log` files and repaints the list.
+- **The terminal's key strip no longer covers the quick-command panel** when the system font is large: the panel and
+  the strip are now laid out in one column instead of the strip floating over the panel, and chips grow with the font
+  instead of clipping (`max(40dp, text + 12dp)`).
+- **The console background page is honest** when Android refuses to hand over the wallpaper: it says so under
+  "系统壁纸" and offers a one-tap shortcut to pick a custom image (MIUI / Android 13 reject `WallpaperManager`).
+- The update check is anonymous (`api.github.com`, no token); a 403 rate limit simply shows "检查更新失败".
+
 ## What's new in 2.9.1
+
 
 - **The glass actually works now.** 2.9's cards were drawn with an opaque black fill (the fill colour was never set),
   so the translucent values never took effect. With that fixed, cards are genuinely frosted: a diagonal sheen, a 1dp
