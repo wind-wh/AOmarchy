@@ -1,11 +1,11 @@
 package app.aomarchy;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.os.Handler;
 import android.os.Looper;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -26,6 +26,10 @@ import java.nio.charset.StandardCharsets;
  * {@code .} and compared segment by segment as numbers ({@code 2.9} vs {@code 2.10}: 10 > 9), missing segments count as
  * 0 ({@code 2.6} == {@code 2.6.0}) and a non-numeric suffix is cut at its first non-digit ({@code 2.9.1-beta} → 2.9.1).
  * GitHub's {@code /releases/latest} already excludes drafts and prereleases.
+ *
+ * <p>The last successful result is cached in the app preferences ({@code update_last_check}, {@code update_latest},
+ * {@code update_latest_url}) so {@link #maybeAutoCheck(Context, long, Callback)} can answer background checks from the
+ * cache instead of hitting the API on every launch; a failed check never updates the timestamp, so it is retried.
  */
 public final class UpdateCheck {
     /** Main-thread callbacks. */
@@ -44,6 +48,11 @@ public final class UpdateCheck {
     private static final int TIMEOUT_MS = 8000;
     private static final int MAX_RESPONSE_CHARS = 1 << 20; // a release JSON is a few KB: guard against a wild response
     private static final String TAG = "UpdateCheck";
+
+    // Cache of the last successful check (same preferences file as the console's settings).
+    private static final String PREF_LAST_CHECK = "update_last_check";
+    private static final String PREF_LATEST = "update_latest";
+    private static final String PREF_LATEST_URL = "update_latest_url";
 
     private UpdateCheck() {
     }
@@ -66,12 +75,65 @@ public final class UpdateCheck {
                 if (version.isEmpty())
                     throw new IOException("the release has no tag_name");
                 final boolean newer = isNewer(current, version);
+                rememberResult(app, version, url); // a manual check also feeds the auto-check cache
                 post(() -> cb.onResult(newer, version, url));
             } catch (Exception e) {
                 final String message = describe(e);
                 post(() -> cb.onError(message));
             }
         }, "update-check").start();
+    }
+
+    /**
+     * Background-friendly check with caching and throttling (for the console's overview suggestion):
+     * <ul>
+     *   <li>If a successful check is younger than {@code minIntervalMs}, the cached release is reported immediately on
+     *       the main thread — no network. {@code minIntervalMs <= 0} disables the cache and always checks.</li>
+     *   <li>Otherwise it runs the normal network check: a success stores the cache (and moves the timestamp), a failure
+     *       only calls {@link Callback#onError(String)} and leaves the timestamp alone, so the next call retries.</li>
+     * </ul>
+     */
+    public static void maybeAutoCheck(Context ctx, long minIntervalMs, final Callback cb) {
+        if (ctx == null || cb == null)
+            return;
+        final Context app = ctx.getApplicationContext();
+        final long last = lastCheckMillis(app);
+        final String cachedVersion = normalize(prefs(app).getString(PREF_LATEST, ""));
+        final String cachedUrl = prefs(app).getString(PREF_LATEST_URL, "");
+        final long elapsed = System.currentTimeMillis() - last;
+        boolean fresh = hasCache(cachedVersion) && last > 0 && minIntervalMs > 0
+                && elapsed >= 0 && elapsed < minIntervalMs;
+        if (fresh) {
+            final boolean newer = isNewer(currentVersion(app), cachedVersion);
+            post(() -> cb.onResult(newer, cachedVersion, cachedUrl == null ? "" : cachedUrl));
+            return;
+        }
+        // Stale or no cache: the normal check writes the cache on success (and leaves it untouched on failure).
+        check(app, cb);
+    }
+
+    /** When the last successful check happened (0 when there has never been one). */
+    public static long lastCheckMillis(Context ctx) {
+        if (ctx == null)
+            return 0L;
+        return prefs(ctx).getLong(PREF_LAST_CHECK, 0L);
+    }
+
+    /**
+     * Stores the last successful release (manual checks do this themselves; exposed for callers that get the data from
+     * elsewhere). {@code tag} may carry a leading "v": it is normalized before being cached.
+     */
+    public static void rememberResult(Context ctx, String tag, String url) {
+        if (ctx == null)
+            return;
+        String version = normalize(tag);
+        if (version.isEmpty())
+            return; // never cache an empty release version: it would make maybeAutoCheck answer nonsense
+        prefs(ctx).edit()
+                .putLong(PREF_LAST_CHECK, System.currentTimeMillis())
+                .putString(PREF_LATEST, version)
+                .putString(PREF_LATEST_URL, url == null ? "" : url.trim())
+                .apply();
     }
 
     /** The installed versionName (without a leading "v"), or "" when the package manager cannot report it. */
@@ -106,6 +168,14 @@ public final class UpdateCheck {
     }
 
     // ---- internals -------------------------------------------------------------------------------------------------
+
+    private static SharedPreferences prefs(Context ctx) {
+        return ctx.getSharedPreferences(Prefs.NAME, Context.MODE_PRIVATE);
+    }
+
+    private static boolean hasCache(String version) {
+        return version != null && !version.isEmpty();
+    }
 
     /** "v2.9.1" → "2.9.1"; null/blank → "". */
     private static String normalize(String version) {

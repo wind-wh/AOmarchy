@@ -67,7 +67,21 @@ are untested.
 The [user guide](docs/user-guide.md) explains the touch gestures, the on-screen keyboard, the Android settings to
 change (HyperOS/MIUI take some gestures for themselves), installing apps, and the self-test.
 
+## What's new in 2.9.3
+
+- **Clear glass, no frost.** The console background is no longer blurred: the picture shows as-is under a lighter
+  scrim, and cards / rail / bars are more transparent with brighter edges, so the background reads through them.
+- **The console uses the Linux desktop wallpaper**, not Android's: Omarchy's active theme background, a wallpaper path
+  from `hyprpaper.conf` / `hyprland.conf`, theme folders, or the usual picture folders inside the rootfs. Android 13 /
+  MIUI wallpapers are no longer read at all — they were unreadable anyway and not what the console belongs to. When
+  the rootfs has no wallpaper file yet, the built-in brand gradient is used.
+- **Storage breakdown** on the System page: Linux system, backups, logs and cache, measured in the background, with
+  one-tap cache clearing.
+- **The update check now runs by itself** (at most weekly): a newer release shows up as the first suggestion on the
+  overview, and 关于 shows when the feed was last read. Manual 「检查更新」 still works and fills the same cache.
+
 ## What's new in 2.9.2
+
 
 - **检查更新 / Check for updates** in 设置 → 关于: asks GitHub for the newest release and offers the download page when
   this build is older (version compare is numeric, so 2.9.9 < 2.9.10).

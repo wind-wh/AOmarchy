@@ -26,10 +26,10 @@ import android.view.animation.OvershootInterpolator;
  */
 public final class CardBackground extends Drawable {
     /** 10% white at the top-left corner, fading to nothing by 55% of the diagonal. */
-    private static final int SHEEN_START = 0x1AFFFFFF;
+    private static final int SHEEN_START = 0x24FFFFFF;
     private static final int SHEEN_END = 0x00FFFFFF;
     /** 15% white 1dp rim inset from the outer edge: the "thickness" of the glass edge. */
-    private static final int INNER_RIM = 0x26FFFFFF;
+    private static final int INNER_RIM = 0x33FFFFFF;
     /** The sheen is gone by this fraction of the diagonal (0.55 = 55%). */
     private static final float SHEEN_EXTENT = 0.55f;
 

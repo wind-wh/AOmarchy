@@ -23,12 +23,12 @@ public final class Ui {
     public static final int SURFACE_HI = 0xFF1C2230;
     public static final int LINE = 0xFF262C3A;
     /** Frosted glass: translucent dark panels over the blurred wallpaper, with a light edge. */
-    public static final int GLASS = 0x8014171F;
+    public static final int GLASS = 0x5914171F;
     /** The rail is the largest glass slab: a touch more opaque than a card so the labels stay calm, but light enough
      *  (55%) that the wallpaper still reads through it. */
-    public static final int GLASS_STRONG = 0x8C14171F;
-    public static final int GLASS_LINE = 0x38FFFFFF;
-    public static final int GLASS_LINE_SOFT = 0x1FFFFFFF;
+    public static final int GLASS_STRONG = 0x6B14171F;
+    public static final int GLASS_LINE = 0x4DFFFFFF;
+    public static final int GLASS_LINE_SOFT = 0x2EFFFFFF;
     public static final int ACCENT = 0xFF7C8CFF;
     public static final int MINT = 0xFF5FE1B4;
     public static final int WARN = 0xFFFF6B6B;

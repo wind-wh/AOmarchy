@@ -2,6 +2,7 @@ package app.aomarchy.ui;
 
 import android.app.Activity;
 import android.app.WallpaperManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -21,22 +22,27 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
+import java.io.File;
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.InputStream;
 
+import app.aomarchy.data.LinuxWallpaper;
 import app.aomarchy.i18n.T;
 
 /**
- * The console's backdrop, in three levels of reliability.
+ * The console's backdrop, in four levels of reliability.
  *
  * <ol>
  *   <li>A custom picture the user picked in Settings → 控制台背景 (prefs {@code console_bg_uri}, a content URI whose
  *       read grant is persisted by SAF).</li>
  *   <li>The device wallpaper. {@link WallpaperManager#getDrawable()} is tried first; several ROMs (Android 13+ and
  *       MIUI in particular) refuse it, so {@link WallpaperManager#getWallpaperFile(int)} is tried as a second chance.</li>
+ *   <li>The Linux desktop's own wallpaper inside the rootfs ({@link LinuxWallpaper}: Omarchy's active theme background,
+ *       the path the Hyprland/Hyprpaper/swww config points at, any theme background, then a bounded directory scan).
+ *       It reuses the same ImageView/blur/scrim as the Android wallpaper, so nothing about the rendering changes.</li>
  *   <li>The brand gradient (not a flat fill): {@code #0A0C10 → #14171F} with a diagonal {@code #1F7C8CFF} highlight,
- *       so the console still has depth when neither picture can be read.</li>
+ *       so the console still has depth when no picture can be read.</li>
  * </ol>
  *
  * <p>The picture is drawn CENTER_CROP, blurred on API 31+, and covered by a 70% brand scrim, so the
@@ -53,7 +59,7 @@ public final class Wallpaper {
      * add their own ~50% fill on top — worst case (a near-white photo) still leaves body text at ≈10:1 and secondary
      * text at ≈4.7:1, so the scrim does not need to be any darker for readability.
      */
-    private static final int SCRIM = 0xB30A0C10;
+    private static final int SCRIM = 0x9E0A0C10; // 62%: clear glass, the picture stays recognisable
     /** Longest decoded side of a picture: enough for a tablet panel at 2x, small enough to stay cheap. */
     private static final int MAX_IMAGE_SIDE = 2000;
     /** Brand gradient endpoints (keep in sync with {@link Ui}). */
@@ -81,6 +87,11 @@ public final class Wallpaper {
     private static boolean wallpaperAvailable;
     private static long wallpaperAvailableCheckedAt;
 
+    /** Generation of the latest apply; a stale loader must not overwrite {@link #lastSourceWasLinux}. */
+    private static int backdropGeneration;
+    /** True when the picture the latest apply put behind the console came from the Linux desktop, not Android. */
+    private static volatile boolean lastSourceWasLinux;
+
     private Wallpaper() {
     }
 
@@ -101,6 +112,8 @@ public final class Wallpaper {
         if (activity == null || host == null)
             return;
         removeBackdrop(host);
+        final int generation = ++backdropGeneration;
+        lastSourceWasLinux = false; // set again when this apply's picture actually lands
 
         String mode = mode(activity);
         if (MODE_OFF.equals(mode))
@@ -126,7 +139,18 @@ public final class Wallpaper {
         decorate(scrim);
         host.addView(scrim, 2, fullscreen());
 
-        load(activity, picture, scrim, mode);
+        load(activity, picture, scrim, mode, generation);
+    }
+
+    /**
+     * True when the picture behind the console (from the latest {@link #apply}) came from the Linux desktop's own
+     * wallpaper inside the rootfs instead of from Android. The settings page uses it to word the "system wallpaper"
+     * explanation: a ROM can refuse Android's wallpaper while the Linux side still has a usable background.
+     *
+     * <p>The flag is process-wide; the context argument only mirrors the other accessors.
+     */
+    public static boolean lastSourceWasLinux(Context context) {
+        return lastSourceWasLinux;
     }
 
     /** True when a custom image is configured (whatever the current mode: the URI is remembered when switching away). */
@@ -219,11 +243,12 @@ public final class Wallpaper {
     // ---- loading -------------------------------------------------------------------------------------------------
 
     /**
-     * Loads the best available picture off the UI thread: custom image first (in custom mode), then the system
-     * wallpaper, otherwise the gradient stays. A custom image that cannot be read reports {@code bg.failed} and then
-     * still falls back, so a revoked permission never leaves a blank background.
+     * Loads the best available picture off the UI thread: custom image first (in custom mode), then the Android
+     * wallpaper, then the Linux desktop's wallpaper inside the rootfs, otherwise the gradient stays. A custom image that
+     * cannot be read reports {@code bg.failed} and then still falls back, so a revoked permission never leaves a blank
+     * background.
      */
-    private static void load(Activity activity, ImageView picture, View scrim, String mode) {
+    private static void load(Activity activity, ImageView picture, View scrim, String mode, int generation) {
         if (activity.isFinishing())
             return;
         Uri custom = MODE_CUSTOM.equals(mode) ? customUri(activity) : null;
@@ -231,6 +256,7 @@ public final class Wallpaper {
         new Thread(() -> {
             Object source = null;
             boolean customFailed = false;
+            boolean fromLinux = false;
             if (custom != null) {
                 try {
                     source = decodeCustom(activity, custom);
@@ -238,14 +264,22 @@ public final class Wallpaper {
                     customFailed = true;
                 }
             }
-            if (source == null && allowSystem)
-                source = systemWallpaper(activity);
+            if (source == null && allowSystem) {
+                // Only the Linux desktop's own wallpaper is used: the console belongs to that desktop, and Android's
+                // wallpaper is both hard to read (13+/MIUI) and not what the user asked for.
+                source = linuxWallpaper(activity);
+                fromLinux = source != null;
+                android.util.Log.i("ConsoleBg", "source=" + (fromLinux ? "linux" : "none") + " mode=" + mode);
+            }
 
             Object loaded = source;
             boolean reportFailure = customFailed;
+            boolean loadedFromLinux = fromLinux;
             activity.runOnUiThread(() -> {
                 if (picture.getParent() == null || activity.isFinishing() || activity.isDestroyed())
                     return; // the console was rebuilt or closed while decoding
+                if (generation == backdropGeneration)
+                    lastSourceWasLinux = loadedFromLinux;
                 if (reportFailure)
                     Toasts.show(activity, T.t("bg.failed"));
                 if (loaded == null)
@@ -260,6 +294,34 @@ public final class Wallpaper {
                 scrim.animate().alpha(1f).setDuration(260).start();
             });
         }, "console-background").start();
+    }
+
+    /** The Linux desktop's wallpaper from inside the rootfs, decoded like any other picture on the same ImageView. */
+    private static Object linuxWallpaper(Activity activity) {
+        try {
+            File file = LinuxWallpaper.find(activity);
+            if (file == null)
+                return null;
+            return decodeFile(file);
+        } catch (Throwable ignored) {
+            return null; // an unreadable theme file simply leaves the gradient
+        }
+    }
+
+    /** Decodes a picture on disk, downsampled so neither side exceeds {@link #MAX_IMAGE_SIDE}. */
+    private static Bitmap decodeFile(File file) throws IOException {
+        String path = file.getAbsolutePath();
+        BitmapFactory.Options bounds = new BitmapFactory.Options();
+        bounds.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(path, bounds);
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0)
+            throw new IOException("not a bitmap: " + path);
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inSampleSize = sampleSize(bounds.outWidth, bounds.outHeight);
+        Bitmap bitmap = BitmapFactory.decodeFile(path, options);
+        if (bitmap == null)
+            throw new IOException("could not decode " + path);
+        return bitmap;
     }
 
     /** The custom picture, downsampled so neither side exceeds {@link #MAX_IMAGE_SIDE}. */
@@ -381,10 +443,10 @@ public final class Wallpaper {
         return new LayerDrawable(new Drawable[] {base, glow});
     }
 
-    /** A blurred picture: the wallpaper becomes texture, not a readable photo under the scrim. */
+    /** Clear glass: the picture is shown as-is (no blur); the scrim alone keeps text readable. */
     private static void blur(Activity activity, ImageView picture) {
         if (Build.VERSION.SDK_INT >= 31) {
-            float radius = 30f * activity.getResources().getDisplayMetrics().density;
+            float radius = 0f; // clear glass: no frosted blur, the wallpaper stays recognisable
             picture.setRenderEffect(RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP));
         }
     }

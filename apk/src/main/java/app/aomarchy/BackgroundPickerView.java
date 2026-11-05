@@ -155,7 +155,10 @@ public final class BackgroundPickerView {
         label.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         texts.addView(label);
         if (index == 0) {
-            systemWarn = Ui.text(host, T.t("bg.system_unavailable"), 11, Ui.WARN, false);
+            // MIUI/Android 13 refuse the wallpaper: say whether the Linux desktop wallpaper is standing in for it.
+            boolean fromLinux = app.aomarchy.ui.Wallpaper.lastSourceWasLinux(host);
+            systemWarn = Ui.text(host, T.t(fromLinux ? "bg.linux_used" : "bg.system_unavailable"), 11,
+                    fromLinux ? Ui.DIM : Ui.WARN, false);
             systemWarn.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             systemWarn.setVisibility(View.GONE);
             texts.addView(systemWarn);
@@ -181,7 +184,8 @@ public final class BackgroundPickerView {
             checks[i].setTextColor(selected ? Ui.ACCENT : Ui.FAINT);
             String description = selected ? labels[i] + "，" + T.t("state.on") : labels[i];
             if (i == 0 && !wallpaperAvailable)
-                description += "，" + T.t("bg.system_unavailable");
+                description += "，" + T.t(app.aomarchy.ui.Wallpaper.lastSourceWasLinux(host)
+                        ? "bg.linux_used" : "bg.system_unavailable");
             rows[i].setContentDescription(description);
         }
         // The three-way choice keeps working as before; the warning only explains why "系统壁纸" may not show a photo.

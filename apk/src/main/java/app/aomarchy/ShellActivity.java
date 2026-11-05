@@ -165,6 +165,42 @@ public class ShellActivity extends Activity {
         if (!SessionService.rootfsReady(this))
             handler.postDelayed(statusTicker, 1000); // the install finishes in the background: follow it
         if (pages[current] != null) pages[current].refresh();
+        checkForUpdateQuietly();
+    }
+
+    /** Latest release known to be newer than this build, for the overview's suggestion row (null when up to date). */
+    static String updateVersion;
+    static String updateUrl;
+
+    private long lastQuietCheck;
+
+    /**
+     * Runs at most once a week: asks GitHub for the newest release, then lets the overview suggest it. A failure is
+     * ignored on purpose — this is a background nicety, not a foreground action.
+     */
+    private void checkForUpdateQuietly() {
+        long now = System.currentTimeMillis();
+        if (now - lastQuietCheck < 60_000L) // at most once a minute in one process lifetime
+            return;
+        lastQuietCheck = now;
+        try {
+            app.aomarchy.UpdateCheck.maybeAutoCheck(this, 7L * 24 * 3600 * 1000, new app.aomarchy.UpdateCheck.Callback() {
+                @Override
+                public void onResult(boolean newer, String version, String url) {
+                    updateVersion = newer ? version : null;
+                    updateUrl = newer ? url : null;
+                    if (pages[0] != null)
+                        pages[0].refreshInsights();
+                }
+
+                @Override
+                public void onError(String message) {
+                    // offline or rate limited: keep the old suggestion, if any
+                }
+            });
+        } catch (RuntimeException ignored) {
+            // never let a background nicety crash the console
+        }
     }
 
     @Override

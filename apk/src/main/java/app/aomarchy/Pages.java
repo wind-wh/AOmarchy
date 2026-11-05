@@ -55,6 +55,10 @@ abstract class Page {
     void refresh() {
     }
 
+    /** Called by the shell when a background check (e.g. for a newer release) found something to suggest. */
+    void refreshInsights() {
+    }
+
     TextView value(String text, int color) {
         return Ui.mono(shell, text, 15, color);
     }
@@ -244,6 +248,11 @@ class OverviewPage extends Page {
     private String insightSignature;
 
     /** One suggestion row: a colored dot, the text, and a tappable action at the end. */
+    @Override
+    void refreshInsights() {
+        updateInsights();
+    }
+
     private LinearLayout insightRow(String text, String action, Runnable onClick) {
         LinearLayout row = Ui.row(shell);
         row.setPadding(0, Ui.dp(shell, 6), 0, Ui.dp(shell, 6));
@@ -276,6 +285,9 @@ class OverviewPage extends Page {
             return;
         boolean ready = SessionService.rootfsReady(shell);
         java.util.List<String[]> found = new java.util.ArrayList<>(); // {signature, text, action, kind}
+        if (ShellActivity.updateVersion != null)
+            found.add(new String[]{"update", T.t("insight.update_available", ShellActivity.updateVersion),
+                    T.t("insight.update_action"), "update"});
         if (!ready) {
             found.add(new String[]{"nosys", T.t("insight.no_system"), T.t("insight.install"), "install"});
         } else {
@@ -318,6 +330,15 @@ class OverviewPage extends Page {
                         break;
                     case "desktop":
                         shell.openDesktop();
+                        break;
+                    case "update":
+                        if (ShellActivity.updateUrl != null)
+                            try {
+                                shell.startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse(ShellActivity.updateUrl)));
+                            } catch (RuntimeException ignored) {
+                                // no browser installed
+                            }
                         break;
                     default:
                         break;
@@ -658,6 +679,56 @@ class SystemPage extends Page {
         logs.addView(logsBox);
         body.addView(logs);
         paintLogs();
+
+        // Storage breakdown: the rootfs is the big one, backups next; logs and cache are what "清理" can reclaim.
+        LinearLayout storage = Ui.card(shell, T.t("card.storage"));
+        storage.addView(Ui.text(shell, T.t("storage.computing"), 13, Ui.DIM, false));
+        LinearLayout storageRows = Ui.column(shell);
+        storage.addView(storageRows);
+        body.addView(storage);
+        loadStorage(storageRows);
+    }
+
+    private void loadStorage(LinearLayout rows) {
+        app.aomarchy.data.StorageStats.computeAsync(shell, new app.aomarchy.data.StorageStats.Callback() {
+            @Override
+            public void onResult(app.aomarchy.data.StorageStats.Snapshot s) {
+                rows.removeAllViews();
+                rows.addView(Ui.kv(shell, T.t("storage.rootfs"),
+                        value(app.aomarchy.data.Installer.humanSize(s.rootfsBytes), Ui.TEXT)));
+                rows.addView(Ui.kv(shell, T.t("storage.backups"),
+                        value(s.backupCount + " · " + app.aomarchy.data.Installer.humanSize(s.backupBytes), Ui.DIM)));
+                rows.addView(Ui.kv(shell, T.t("storage.logs"),
+                        value(s.logCount + " · " + app.aomarchy.data.Installer.humanSize(s.logBytes), Ui.DIM)));
+                rows.addView(Ui.kv(shell, T.t("storage.cache"),
+                        value(app.aomarchy.data.Installer.humanSize(s.cacheBytes), Ui.DIM)));
+                View line = new View(shell);
+                line.setBackgroundColor(Ui.GLASS_LINE_SOFT);
+                rows.addView(line, new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, Ui.dp(shell, 1))));
+                LinearLayout clear = Ui.row(shell);
+                clear.setMinimumHeight(Ui.dp(shell, 48));
+                clear.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                clear.addView(Ui.text(shell, T.t("storage.clear_cache"), 14, Ui.ACCENT, true),
+                        new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                clear.setContentDescription(T.t("storage.clear_cache"));
+                clear.setOnClickListener(v -> clearCache());
+                rows.addView(clear);
+            }
+
+            @Override
+            public void onError(String message) {
+                rows.removeAllViews();
+                rows.addView(Ui.text(shell, T.t("storage.failed"), 13, Ui.WARN, false));
+            }
+        });
+    }
+
+    private void clearCache() {
+        long freed = app.aomarchy.data.StorageStats.clearCache(shell);
+        toast(freed > 0 ? T.t("storage.cache_cleared", app.aomarchy.data.Installer.humanSize(freed))
+                : T.t("storage.cache_empty"));
+        shell.relanguage(); // rebuilds the pages so the storage numbers are measured again
     }
 
     /** The run directory's logs, newest first; one row opens the last lines. */
@@ -1577,7 +1648,24 @@ class SettingsPage extends Page {
                 + android.os.Build.VERSION.SDK_INT + ")", Ui.DIM)));
         about.addView(divider());
         about.addView(row(T.t("btn.check_update"), value("", Ui.FAINT), this::checkForUpdates));
+        about.addView(Ui.kv(shell, T.t("label.last_check"), value(lastCheckText(), Ui.DIM)));
         body.addView(about);
+    }
+
+    /** How long ago the release feed was last read, in the same relative wording as the rest of the console. */
+    private String lastCheckText() {
+        long ms = app.aomarchy.UpdateCheck.lastCheckMillis(shell);
+        if (ms <= 0)
+            return T.t("label.never");
+        long minutes = Math.max(0, (System.currentTimeMillis() - ms) / 60000L);
+        if (minutes < 1)
+            return T.t("time.just_now");
+        if (minutes < 60)
+            return T.t("time.minutes_ago", String.valueOf(minutes));
+        long hours = minutes / 60;
+        if (hours < 24)
+            return T.t("time.hours_ago", String.valueOf(hours));
+        return T.t("time.days_ago", String.valueOf(hours / 24));
     }
 
     /** Asks GitHub for the newest release and offers the download page when this build is older. */
@@ -1586,6 +1674,7 @@ class SettingsPage extends Page {
         app.aomarchy.UpdateCheck.check(shell, new app.aomarchy.UpdateCheck.Callback() {
             @Override
             public void onResult(boolean newer, String version, String url) {
+                app.aomarchy.UpdateCheck.rememberResult(shell, version, url);
                 if (!newer) {
                     toast(T.t("toast.up_to_date", versionName()));
                     return;
@@ -1767,7 +1856,7 @@ class SettingsPage extends Page {
             app.aomarchy.ui.Toasts.useSheet((ViewGroup) dialog.getWindow().getDecorView());
         android.view.Window w = dialog.getWindow();
         if (w != null) {
-            w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0xB30A0C10));
+            w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0x990A0C10));
             w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
         }
     }
