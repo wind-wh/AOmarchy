@@ -87,7 +87,16 @@ change (HyperOS/MIUI take some gestures for themselves), installing apps, and th
   设置 → 控制台背景 now offers 内置底图 / Linux 桌面壁纸 / 自定义图片 / 纯色.
 - Everything from 2.9.5 stays: Linux-wallpaper scanner, clear glass, apps catalog, storage breakdown, weekly updates.
 
+## What's new in 2.9.10
+
+- **The rail joined the glass set.** It now uses the same surface as the cards — dark translucent fill with the gradient
+  luminous border (bright top-left, fading along the diagonal) — instead of a plain slab with a uniform stroke, so the
+  navigation and the content read as one material.
+- Everything from 2.9.9 stays: darker glass panels with the gradient border, the four console backgrounds, the
+  bundled desktop still, apps catalog, storage breakdown, weekly update check.
+
 ## What's new in 2.9.9
+
 
 - **Glass, refined on request.** Panels are darker (37% opaque) so the picture reads as texture rather than text, and
   the border is now one even, luminous hairline whose colour is a gradient — bright white at the top-left, fading along

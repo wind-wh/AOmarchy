@@ -28,6 +28,8 @@ public final class Ui {
      *  (55%) that the wallpaper still reads through it. */
     public static final int GLASS_STRONG = 0x6B14171F;
     /** The rail is a night slab, not a card: deep and almost opaque so it never looks washed out. */
+    /** The rail fill: darker than a card so the console keeps its night frame, translucent enough to read as glass. */
+    public static final int RAIL_GLASS = 0xD90C0F14;
     public static final int RAIL_TOP = 0xF211141B;
     public static final int RAIL_BOTTOM = 0xE80B0D13;
     public static final int GLASS_LINE = 0xB0FFFFFF;

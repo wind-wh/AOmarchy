@@ -224,7 +224,8 @@ public class ShellActivity extends Activity {
 
         FrameLayout railFrame = new FrameLayout(this);
         // Frosted-glass rail: the same sheen + inner rim as the cards (radius 0 keeps it a straight slab).
-        railFrame.setBackground(Ui.rail(this)); // night slab: a bright backdrop must not wash the rail out
+        // Same glass language as the cards: dark fill with the gradient luminous border, so the rail belongs to the set.
+        railFrame.setBackground(new app.aomarchy.ui.CardBackground(this, Ui.RAIL_GLASS, Ui.GLASS_LINE, 1.2f, 22));
         LinearLayout rail = Ui.column(this);
         rail.setPadding(Ui.dp(this, 8), Ui.dp(this, 24), Ui.dp(this, 8), Ui.dp(this, 16));
         for (int i = 0; i < TITLES.length; i++) {
