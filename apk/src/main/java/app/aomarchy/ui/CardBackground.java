@@ -26,10 +26,14 @@ import android.view.animation.OvershootInterpolator;
  */
 public final class CardBackground extends Drawable {
     /** 10% white at the top-left corner, fading to nothing by 55% of the diagonal. */
-    private static final int SHEEN_START = 0x24FFFFFF;
+    private static final int SHEEN_START = 0x14FFFFFF;
     private static final int SHEEN_END = 0x00FFFFFF;
     /** 15% white 1dp rim inset from the outer edge: the "thickness" of the glass edge. */
-    private static final int INNER_RIM = 0x33FFFFFF;
+    private static final int INNER_RIM = 0x1AFFFFFF;
+    /** Top-inner highlight: light comes from above, so the bevel catches it. */
+    private static final int BEVEL_LIGHT = 0x2EFFFFFF;
+    /** Bottom-inner shadow: the thickness of the slab, so the panel reads as a solid piece of glass. */
+    private static final int BEVEL_SHADOW = 0x4A000000;
     /** The sheen is gone by this fraction of the diagonal (0.55 = 55%). */
     private static final float SHEEN_EXTENT = 0.55f;
 
@@ -37,7 +41,11 @@ public final class CardBackground extends Drawable {
     private final Paint sheen = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint glint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint ring = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint border = new Paint(Paint.ANTI_ALIAS_FLAG);
+    /** The outline is a gradient (bright top-left → dim bottom-right), rebuilt only when the bounds change. */
+    private LinearGradient borderShader;
+    private final RectF borderBounds = new RectF();
     private final Path clip = new Path();
     private final RectF rect = new RectF();
     private final RectF rimRect = new RectF();
@@ -46,6 +54,7 @@ public final class CardBackground extends Drawable {
     private final int baseColor;
     private final int strokeColor;
     private final float strokeWidth;
+    private final float density;
     private float hotX = -1, hotY = -1;
     private float hotAlpha;
     /** Ambient colour sampled from the backdrop; drives the soft coloured sheen inside the glass. */
@@ -56,6 +65,7 @@ public final class CardBackground extends Drawable {
         this.baseColor = baseColor;
         this.strokeColor = strokeColor;
         this.strokeWidth = Ui.dp(c, strokeDp);
+        this.density = c.getResources().getDisplayMetrics().density;
         this.radiusPx = Ui.dp(c, radiusDp);
         this.rimPx = Math.max(1f, Ui.dp(c, 1f));
         // The card's translucent glass fill. This was never assigned before, so Paint's default opaque black won and
@@ -135,6 +145,7 @@ public final class CardBackground extends Drawable {
         canvas.save();
         canvas.clipPath(clip);
         canvas.drawRect(r, fill);
+        drawBevel(canvas, r);
         drawSheen(canvas, r);
         drawAmbient(canvas, r);
         if (hotAlpha > 0 && hotX >= 0) {
@@ -151,7 +162,42 @@ public final class CardBackground extends Drawable {
         float rimRadius = Math.max(0f, radiusPx - rimPx);
         canvas.drawRoundRect(rimRect, rimRadius, rimRadius, rim);
         canvas.restore();
+        drawGradientBorder(canvas, r);
+    }
+
+    /** One hairline, but lit: bright at the top-left, fading along the diagonal, so the edge looks like real glass. */
+    private void drawGradientBorder(Canvas canvas, RectF r) {
+        if (borderShader == null || !borderBounds.equals(r)) {
+            borderBounds.set(r);
+            borderShader = new LinearGradient(r.left, r.top, r.right, r.bottom,
+                    new int[] {0xF2FFFFFF, 0x8CFFFFFF, 0x2EFFFFFF},
+                    new float[] {0f, 0.42f, 1f}, Shader.TileMode.CLAMP);
+            border.setShader(borderShader);
+        }
         canvas.drawRoundRect(r, radiusPx, radiusPx, border);
+    }
+
+    /**
+     * The 3D part of the glass: a bright band under the top edge and a dark band above the bottom edge, both inside the
+     * clip. Together with the brighter rim this makes the panel read as a thick slab lit from above, not a flat tint.
+     */
+    private void drawBevel(Canvas canvas, RectF r) {
+        if (r.height() <= 0)
+            return;
+        // Reference look: one even luminous edge, no top band. A soft 3dp ring just inside the stroke gives the outline
+        // a gentle fall-off so it glows instead of reading as a drawn hairline.
+        float corner = Math.max(0f, radiusPx - rimPx);
+        ring.setStyle(Paint.Style.STROKE);
+        float[] widths = {3f, 6f};
+        int[] alphas = {0x1EFFFFFF, 0x0CFFFFFF};
+        for (int i = 0; i < widths.length; i++) {
+            ring.setStrokeWidth(widths[i] * density);
+            ring.setColor(alphas[i]);
+            rimRect.set(r);
+            rimRect.inset(rimPx + widths[i] * density * 0.5f, rimPx + widths[i] * density * 0.5f);
+            canvas.drawRoundRect(rimRect, Math.max(0f, corner - widths[i] * density * 0.5f),
+                    Math.max(0f, corner - widths[i] * density * 0.5f), ring);
+        }
     }
 
     /** Diagonal glass sheen: bright at the top-left corner, transparent by {@link #SHEEN_EXTENT} of the diagonal. */
@@ -205,7 +251,7 @@ public final class CardBackground extends Drawable {
 
     /** A soft wash of the backdrop colour, so the glass looks lit by the picture behind it. */
     private void drawAmbient(Canvas canvas, RectF r) {
-        int start = (tint & 0x00FFFFFF) | 0x3D000000;
+        int start = (tint & 0x00FFFFFF) | 0x15000000;
         int end = tint & 0x00FFFFFF;
         glint.setShader(new LinearGradient(r.left, r.top, r.right, r.bottom, start, end, Shader.TileMode.CLAMP));
         glint.setAlpha(255);

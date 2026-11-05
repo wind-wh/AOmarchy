@@ -206,6 +206,7 @@ public final class T {
         {"widget_status_background", "后台运行中", "Background"},
         {"keepalive.auto_off", "关机或重启会同时关闭后台运行", "Shutting down or restarting also stops background running"},
         {"bg.linux_used", "正在使用 Linux 桌面的壁纸。", "Using the Linux desktop wallpaper."},
+        {"bg.linux_hint", "壁纸来自 Linux 桌面（根文件系统里的主题图片）；找不到时会退回内置底图。", "The picture comes from the Linux desktop (theme images inside the root filesystem); it falls back to the built-in picture when none is found."},
         {"bg.system_unavailable", "没有找到 Linux 桌面壁纸，现在显示内置背景；可以选一张自定义图片，或在桌面里设置壁纸。",
             "No Linux desktop wallpaper was found, so the built-in background is shown; pick your own image or set a wallpaper in the desktop."},
         {"btn.check_update", "检查更新", "Check for updates"},

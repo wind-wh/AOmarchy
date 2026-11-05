@@ -155,8 +155,8 @@ public final class BackgroundPickerView {
         TextView label = Ui.text(host, labels[index], 14, Ui.TEXT, false);
         label.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         texts.addView(label);
-        if (index == 0) {
-            // MIUI/Android 13 refuse the wallpaper: say whether the Linux desktop wallpaper is standing in for it.
+        if (index == 1) {
+            // The Linux row explains whether the desktop wallpaper was actually found.
             boolean fromLinux = app.aomarchy.ui.Wallpaper.lastSourceWasLinux(host);
             systemWarn = Ui.text(host, T.t(fromLinux ? "bg.linux_used" : "bg.system_unavailable"), 11,
                     fromLinux ? Ui.DIM : Ui.WARN, false);
@@ -178,25 +178,24 @@ public final class BackgroundPickerView {
     /** Redraws the ✓ marks, the wallpaper warning and the mode hint from the stored prefs. */
     private void update() {
         String current = Wallpaper.mode(host);
-        boolean wallpaperAvailable = Wallpaper.systemWallpaperAvailable(host);
+        boolean fromLinux = app.aomarchy.ui.Wallpaper.lastSourceWasLinux(host);
+        boolean linuxMode = Wallpaper.MODE_LINUX.equals(current);
         for (int i = 0; i < MODES.length; i++) {
             boolean selected = MODES[i].equals(current);
             checks[i].setText(selected ? "✓" : "");
             checks[i].setTextColor(selected ? Ui.ACCENT : Ui.FAINT);
             String description = selected ? labels[i] + "，" + T.t("state.on") : labels[i];
-            if (i == 1 && !wallpaperAvailable)
-                description += "，" + T.t(app.aomarchy.ui.Wallpaper.lastSourceWasLinux(host)
-                        ? "bg.linux_used" : "bg.system_unavailable");
+            if (i == 1)
+                description += "，" + T.t(fromLinux ? "bg.linux_used" : "bg.system_unavailable");
             rows[i].setContentDescription(description);
         }
-        // The three-way choice keeps working as before; the warning only explains why "系统壁纸" may not show a photo.
-        systemWarn.setVisibility(wallpaperAvailable ? View.GONE : View.VISIBLE);
-        customShortcut.setVisibility(wallpaperAvailable ? View.GONE : View.VISIBLE);
-        boolean system = Wallpaper.MODE_LINUX.equals(current);
-        // The "falls back to the brand gradient" note only helps while the wallpaper can be read; when it cannot, the
-        // warning below the system row says it, and the shortcut points at a custom image instead.
-        hint.setText(system && wallpaperAvailable ? T.t("bg.restricted") : "");
-        hint.setVisibility(system && wallpaperAvailable ? View.VISIBLE : View.GONE);
+        // The Linux row explains itself: "using the desktop wallpaper" or "none found, the built-in one is shown".
+        systemWarn.setText(T.t(fromLinux ? "bg.linux_used" : "bg.system_unavailable"));
+        systemWarn.setTextColor(fromLinux ? Ui.DIM : Ui.WARN);
+        systemWarn.setVisibility(linuxMode ? View.VISIBLE : View.GONE);
+        customShortcut.setVisibility(linuxMode && !fromLinux ? View.VISIBLE : View.GONE);
+        hint.setText(linuxMode && fromLinux ? T.t("bg.linux_hint") : "");
+        hint.setVisibility(linuxMode && fromLinux ? View.VISIBLE : View.GONE);
     }
 
     /** Saves the mode; picking "自定义图片" with no picture yet goes straight to the document picker. */
@@ -206,7 +205,7 @@ public final class BackgroundPickerView {
         Wallpaper.setMode(host, MODES[index]);
         update();
         changed();
-        if (index == 1 && !Wallpaper.hasCustom(host))
+        if (Wallpaper.MODE_CUSTOM.equals(MODES[index]) && !Wallpaper.hasCustom(host))
             pickImage();
     }
 

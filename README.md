@@ -87,7 +87,20 @@ change (HyperOS/MIUI take some gestures for themselves), installing apps, and th
   设置 → 控制台背景 now offers 内置底图 / Linux 桌面壁纸 / 自定义图片 / 纯色.
 - Everything from 2.9.5 stays: Linux-wallpaper scanner, clear glass, apps catalog, storage breakdown, weekly updates.
 
+## What's new in 2.9.9
+
+- **Glass, refined on request.** Panels are darker (37% opaque) so the picture reads as texture rather than text, and
+  the border is now one even, luminous hairline whose colour is a gradient — bright white at the top-left, fading along
+  the diagonal to a faint edge at the bottom-right — with a soft 3/6dp glow just inside it. The earlier top highlight
+  band and bottom shadow band are gone.
+- **Linux desktop wallpaper works again in 设置 → 控制台背景.** While adding the built-in picture in 2.9.8 the mode
+  handler slipped a row: the warning was attached to the wrong row and choosing a mode could open the file picker. The
+  four modes now behave: 内置底图 / Linux 桌面壁纸 / 自定义图片 / 纯色.
+- Everything from 2.9.8 stays: dark rounded rail, ambient glass glow, bundled desktop still as default, apps catalog,
+  storage breakdown, weekly update check.
+
 ## What's new in 2.9.8
+
 
 - **The rail reads as night again, with rounded corners.** It was a translucent card full of the bright backdrop and
   looked washed out; it is now a near-opaque dark slab (`#11141B → #0B0D13`) with a 22dp radius, floating 8/12dp off the
