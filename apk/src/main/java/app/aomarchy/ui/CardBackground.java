@@ -48,6 +48,8 @@ public final class CardBackground extends Drawable {
     private final float strokeWidth;
     private float hotX = -1, hotY = -1;
     private float hotAlpha;
+    /** Ambient colour sampled from the backdrop; drives the soft coloured sheen inside the glass. */
+    private int tint = GlassTint.DEFAULT;
     private ValueAnimator fade;
 
     public CardBackground(Context c, int baseColor, int strokeColor, float strokeDp, float radiusDp) {
@@ -134,6 +136,7 @@ public final class CardBackground extends Drawable {
         canvas.clipPath(clip);
         canvas.drawRect(r, fill);
         drawSheen(canvas, r);
+        drawAmbient(canvas, r);
         if (hotAlpha > 0 && hotX >= 0) {
             float radius = Math.max(r.width(), r.height()) * 0.55f;
             glint.setShader(new RadialGradient(hotX, hotY, radius,
@@ -192,5 +195,20 @@ public final class CardBackground extends Drawable {
 
     public int strokeColor() {
         return strokeColor;
+    }
+
+    /** Ambient colour from the backdrop (see {@link GlassTint}); the sheen and rim pick it up. */
+    public void setTint(int rgb) {
+        this.tint = rgb;
+        invalidateSelf();
+    }
+
+    /** A soft wash of the backdrop colour, so the glass looks lit by the picture behind it. */
+    private void drawAmbient(Canvas canvas, RectF r) {
+        int start = (tint & 0x00FFFFFF) | 0x3D000000;
+        int end = tint & 0x00FFFFFF;
+        glint.setShader(new LinearGradient(r.left, r.top, r.right, r.bottom, start, end, Shader.TileMode.CLAMP));
+        glint.setAlpha(255);
+        canvas.drawRect(r, glint);
     }
 }

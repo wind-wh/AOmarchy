@@ -117,6 +117,7 @@ public final class Wallpaper {
         removeBackdrop(host);
         final int generation = ++backdropGeneration;
         lastSourceWasLinux = false; // set again when this apply's picture actually lands
+        GlassTint.reset(); // panels start from the brand colour; a decoded picture re-lights them below
 
         String mode = mode(activity);
         if (MODE_OFF.equals(mode))
@@ -287,6 +288,7 @@ public final class Wallpaper {
             Object loaded = source;
             boolean reportFailure = customFailed;
             boolean loadedFromLinux = fromLinux;
+            int ambient = loaded instanceof Bitmap ? sampleAmbient((Bitmap) loaded) : 0;
             activity.runOnUiThread(() -> {
                 if (picture.getParent() == null || activity.isFinishing() || activity.isDestroyed())
                     return; // the console was rebuilt or closed while decoding
@@ -296,10 +298,14 @@ public final class Wallpaper {
                     Toasts.show(activity, T.t("bg.failed"));
                 if (loaded == null)
                     return; // the brand gradient is the fallback and is already visible
-                if (loaded instanceof Bitmap)
+                if (loaded instanceof Bitmap) {
                     picture.setImageBitmap((Bitmap) loaded);
-                else
+                    if (ambient != 0)
+                        GlassTint.dispatch(ambient); // the glass panels glow with the picture's own colour
+                } else {
                     picture.setImageDrawable((Drawable) loaded);
+                    GlassTint.reset();
+                }
                 picture.setVisibility(View.VISIBLE);
                 scrim.setVisibility(View.VISIBLE);
                 picture.animate().alpha(1f).setDuration(260).start();
@@ -327,6 +333,35 @@ public final class Wallpaper {
             return BitmapFactory.decodeResource(activity.getResources(), id, options);
         } catch (Throwable t) {
             return null;
+        }
+    }
+
+    /**
+     * The one colour the picture contributes to the glass: a saturation-weighted average of a tiny downscale, so a photo
+     * glows with its dominant hue instead of grey. Runs on the loading thread, never the UI thread.
+     */
+    private static int sampleAmbient(Bitmap bitmap) {
+        try {
+            Bitmap small = Bitmap.createScaledBitmap(bitmap, 24, 14, true);
+            double r = 0, g = 0, b = 0, weight = 0;
+            for (int y = 0; y < small.getHeight(); y++)
+                for (int x = 0; x < small.getWidth(); x++) {
+                    int px = small.getPixel(x, y);
+                    int pr = (px >> 16) & 0xFF, pg = (px >> 8) & 0xFF, pb = px & 0xFF;
+                    int max = Math.max(pr, Math.max(pg, pb));
+                    int min = Math.min(pr, Math.min(pg, pb));
+                    double saturation = max == 0 ? 0 : (max - min) / (double) max;
+                    double w = 0.2 + saturation * 1.6; // colourful pixels glow, grey ones stay quiet
+                    r += pr * w;
+                    g += pg * w;
+                    b += pb * w;
+                    weight += w;
+                }
+            if (weight <= 0)
+                return 0;
+            return 0xFF000000 | ((int) (r / weight) << 16) | ((int) (g / weight) << 8) | (int) (b / weight);
+        } catch (Throwable t) {
+            return 0;
         }
     }
 

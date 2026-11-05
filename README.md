@@ -76,7 +76,19 @@ change (HyperOS/MIUI take some gestures for themselves), installing apps, and th
 - Everything from 2.9.5 stays: the Linux-wallpaper scanner (Omarchy `themes/*/backgrounds/`), clear glass, apps
   catalog, storage breakdown, weekly update check.
 
+## What's new in 2.9.7
+
+- **Glass panels glow with the backdrop's colour.** The wallpaper is sampled once (saturation-weighted average of a tiny
+  downscale) and every card picks that colour up: a soft sheen inside the glass plus a coloured elevation shadow, so the
+  panels look lit by the picture behind them. When the backdrop changes (built-in picture, Linux wallpaper, custom image)
+  the glow follows; with 纯色 it falls back to the brand indigo.
+- **New default backdrop: a real desktop picture** (carried over from 2.9.6, which was folded into this build). The
+  console ships with a 1920×1080 still of an AOmarchy desktop (btop, tmux, fastfetch) as the default background, and
+  设置 → 控制台背景 now offers 内置底图 / Linux 桌面壁纸 / 自定义图片 / 纯色.
+- Everything from 2.9.5 stays: Linux-wallpaper scanner, clear glass, apps catalog, storage breakdown, weekly updates.
+
 ## What's new in 2.9.5
+
 
 
 - **The console now really shows the Linux desktop wallpaper.** The scanner missed Omarchy's actual layout

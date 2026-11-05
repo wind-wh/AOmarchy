@@ -121,6 +121,7 @@ public final class Ui {
         card.setBackground(bg);
         card.setElevation(dp(c, 6));
         CardBackground.attach(card, bg);
+        GlassTint.register(card); // the backdrop's colour becomes this card's glow
         int pad = dp(c, 14);
         card.setPadding(pad, pad, pad, pad);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
