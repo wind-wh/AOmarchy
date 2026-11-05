@@ -117,7 +117,7 @@ public final class CardBackground extends Drawable {
         }
         // A faint top edge keeps cards readable on the very dark background.
         LinearGradient edge = new LinearGradient(r.left, r.top, r.left, r.top + strokeWidth * 3,
-                0x22FFFFFF, 0x00000000, Shader.TileMode.CLAMP);
+                0x44FFFFFF, 0x00000000, Shader.TileMode.CLAMP);
         glint.setShader(edge);
         glint.setAlpha(255);
         canvas.drawRect(r.left, r.top, r.right, r.top + strokeWidth * 3, glint);

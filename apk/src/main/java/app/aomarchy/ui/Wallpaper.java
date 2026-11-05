@@ -38,7 +38,7 @@ import app.aomarchy.i18n.T;
  *       so the console still has depth when neither picture can be read.</li>
  * </ol>
  *
- * <p>The picture is drawn CENTER_CROP, blurred on API 31+, and covered by the same 88% brand scrim as before, so the
+ * <p>The picture is drawn CENTER_CROP, blurred on API 31+, and covered by a 78% brand scrim, so the
  * console keeps its fixed dark look and white-on-dark text stays readable over any photo. Decoding runs off the UI
  * thread (downsampled to {@link #MAX_IMAGE_SIDE} px, memory friendly) and the layers never intercept touches.
  *
@@ -48,7 +48,7 @@ import app.aomarchy.i18n.T;
  */
 public final class Wallpaper {
     /** Brand background at 88% — enough to keep white-on-dark text readable over any photo. */
-    private static final int SCRIM = 0xE60A0C10;
+    private static final int SCRIM = 0xC80A0C10; // 78%: the blur shows through, text contrast still holds
     /** Longest decoded side of a picture: enough for a tablet panel at 2x, small enough to stay cheap. */
     private static final int MAX_IMAGE_SIDE = 2000;
     /** Brand gradient endpoints (keep in sync with {@link Ui}). */
@@ -317,7 +317,7 @@ public final class Wallpaper {
     /** A blurred picture: the wallpaper becomes texture, not a readable photo under the scrim. */
     private static void blur(Activity activity, ImageView picture) {
         if (Build.VERSION.SDK_INT >= 31) {
-            float radius = 24f * activity.getResources().getDisplayMetrics().density;
+            float radius = 30f * activity.getResources().getDisplayMetrics().density;
             picture.setRenderEffect(RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP));
         }
     }

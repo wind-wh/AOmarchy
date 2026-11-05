@@ -23,8 +23,8 @@ public final class Ui {
     public static final int SURFACE_HI = 0xFF1C2230;
     public static final int LINE = 0xFF262C3A;
     /** Frosted glass: translucent dark panels over the blurred wallpaper, with a light edge. */
-    public static final int GLASS = 0x8C14171F;
-    public static final int GLASS_STRONG = 0xA614171F;
+    public static final int GLASS = 0x8014171F;
+    public static final int GLASS_STRONG = 0x9914171F;
     public static final int GLASS_LINE = 0x38FFFFFF;
     public static final int GLASS_LINE_SOFT = 0x1FFFFFFF;
     public static final int ACCENT = 0xFF7C8CFF;
