@@ -78,6 +78,10 @@ change (HyperOS/MIUI take some gestures for themselves), installing apps, and th
   the plain brand colour. The image is blurred and dimmed under the console so text stays readable, and when Android
   refuses to hand over the wallpaper the app now shows the brand gradient instead of a flat colour (2.8 only tried
   `WallpaperManager.getDrawable()`, which Android 13/MIUI reject).
+- **A glass console.** Cards, the navigation rail, the settings sheets and the terminal's bars are now translucent
+  frosted-glass panels with a light hairline and a soft shadow, floating over the blurred wallpaper; primary buttons
+  keep their solid accent so they stay obvious. Text contrast is unchanged (the wallpaper layer is dimmed and blurred
+  first).
 - Everything from 2.8 stays: wallpaper-backed console, terminal quick-command panel.
 
 ## What's new in 2.8
