@@ -67,7 +67,15 @@ are untested.
 The [user guide](docs/user-guide.md) explains the touch gestures, the on-screen keyboard, the Android settings to
 change (HyperOS/MIUI take some gestures for themselves), installing apps, and the self-test.
 
+## What's new in 2.9.4
+
+- **A common-apps catalog on the Apps page.** Firefox, Kitty, Waybar, Nautilus, VS Code, Fastfetch, Neovim, Git,
+  Python, Node.js, mpv, GIMP, btop and 7-Zip are listed with one-tap **安装**: the terminal opens with the
+  `pacman -S --needed` command already typed and running, so you confirm the prompt yourself (nothing installs silently).
+- Everything from 2.9.3 stays: clear glass, Linux desktop wallpaper, storage breakdown, weekly update check.
+
 ## What's new in 2.9.3
+
 
 - **Clear glass, no frost.** The console background is no longer blurred: the picture shows as-is under a lighter
   scrim, and cards / rail / bars are more transparent with brighter edges, so the background reads through them.

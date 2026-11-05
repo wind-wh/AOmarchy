@@ -32,6 +32,8 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
 
     private static final float MIN_FONT = 9f, MAX_FONT = 24f;
 
+    /** Optional command to type automatically, e.g. the install line from the apps catalog. */
+    public static final String EXTRA_COMMAND = "app.aomarchy.extra.COMMAND";
     private TerminalView terminal;
     private TerminalCommandsView commands;
     private TextView copyButton, scrollHint, panelButton;
@@ -171,6 +173,9 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
         } else {
             terminal.start(SessionService.ptyArgv(this, "exec bash -l"), SessionService.ptyEnv(this),
                     SessionService.ptyCwd(this).getPath());
+            String initial = getIntent() == null ? null : getIntent().getStringExtra(EXTRA_COMMAND);
+            if (initial != null && !initial.isEmpty())
+                terminal.postDelayed(() -> terminal.write(initial + "\r"), 900); // let bash draw its prompt first
         }
         terminal.requestFocus();
         terminal.postDelayed(() -> {

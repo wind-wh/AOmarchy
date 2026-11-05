@@ -92,27 +92,23 @@ jobs:
           fail_on_unmatched_files: true
           files: dist/*
           body: |
-            **AOmarchy 2.9.3** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
+            **AOmarchy 2.9.4** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
 
             This release was built and signed by GitHub Actions from the repository source.
 
-            ## What is new in 2.9.3
+            ## What is new in 2.9.4
 
-            - **Clear glass, no frost.** The console background is no longer blurred: the picture shows as-is under a
-              lighter scrim, and the cards, rail and bars are more transparent with brighter edges, so the background
-              reads through them. Text contrast is kept by the scrim, not by blur.
-            - **The console uses the Linux desktop wallpaper**, not Android's: Omarchy's active theme background, a
-              wallpaper path from `hyprpaper.conf` / `hyprland.conf`, theme folders, or the usual picture folders inside
-              the rootfs. Android 13 / MIUI wallpapers are no longer read at all. When the rootfs has no wallpaper file
-              yet, the built-in brand gradient is used.
-            - **Storage breakdown** on the System page (Linux system, backups, logs, cache) measured off the UI thread,
-              with one-tap cache clearing.
-            - **The update check runs by itself** at most once a week: a newer release appears as the first suggestion
-              on the overview, and 关于 shows when the feed was last read.
+            - **A common-apps catalog on the Apps page.** Firefox, Kitty, Waybar, Nautilus, VS Code, Fastfetch, Neovim,
+              Git, Python, Node.js, mpv, GIMP, btop and 7-Zip are listed with one-tap 安装: the terminal opens with the
+              `pacman -S --needed` command already typed and running, so the user confirms the prompt themselves —
+              nothing installs silently.
+            - **Clear glass, no frost** (2.9.3): the console background is no longer blurred, cards/rail/bars are more
+              transparent, and the Linux desktop wallpaper is read from inside the rootfs instead of Android's.
+            - **Storage breakdown** and **weekly automatic update check** (2.9.3) stay as they were.
 
             ## Upgrading
 
-            - From **2.9.2 / earlier**: install over it, nothing else to do.
+            - From **2.9.3 / earlier**: install over it, nothing else to do.
             - From **1.x**: the package is `app.aomarchy`; save what you need from the desktop, uninstall the old app,
               install AOmarchy and set the system up again (a local archive makes that work offline).
 

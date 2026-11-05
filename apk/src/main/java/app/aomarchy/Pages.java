@@ -1347,6 +1347,20 @@ class AppsPage extends Page {
         head.addView(row);
         body.addView(head);
 
+        // Curated catalog: the install command is typed into the terminal, so nothing runs behind the user's back.
+        LinearLayout catalog = Ui.card(shell, T.t("catalog.title"));
+        catalog.addView(Ui.text(shell, T.t("catalog.desc"), 12, Ui.DIM, false));
+        String catalogGroup = null;
+        for (app.aomarchy.data.AppCatalog.Entry entry : app.aomarchy.data.AppCatalog.all()) {
+            if (!entry.groupKey.equals(catalogGroup)) {
+                catalogGroup = entry.groupKey;
+                catalog.addView(Ui.gap(shell, 6));
+                catalog.addView(Ui.text(shell, T.t(entry.groupKey), 12, Ui.FAINT, true));
+            }
+            catalog.addView(catalogRow(entry));
+        }
+        body.addView(catalog);
+
         flatBox = Ui.card(shell, T.t("card.flatpak"));
         body.addView(flatBox);
 
@@ -1405,6 +1419,23 @@ class AppsPage extends Page {
             linuxBox.addView(appRow(apps.get(i)));
         if (apps.isEmpty())
             linuxBox.addView(Ui.text(shell, T.t("apps.no_linux"), 13, Ui.FAINT, false));
+    }
+
+    private View catalogRow(app.aomarchy.data.AppCatalog.Entry entry) {
+        LinearLayout r = Ui.row(shell);
+        r.setPadding(0, Ui.dp(shell, 6), 0, Ui.dp(shell, 6));
+        r.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        LinearLayout texts = Ui.column(shell);
+        texts.addView(Ui.text(shell, T.t(entry.labelKey), 15, Ui.TEXT, false));
+        texts.addView(Ui.text(shell, T.t(entry.hintKey), 11, Ui.DIM, false));
+        r.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView install = Ui.text(shell, T.t("catalog.install"), 13, Ui.ACCENT, true);
+        install.setPadding(Ui.dp(shell, 12), 0, 0, 0);
+        install.setMinimumHeight(Ui.dp(shell, 48));
+        install.setContentDescription(T.t("catalog.install") + " " + T.t(entry.labelKey));
+        install.setOnClickListener(v -> shell.openTerminalWith(entry.command));
+        r.addView(install);
+        return r;
     }
 
     private View appRow(Apps.LinuxApp app) {

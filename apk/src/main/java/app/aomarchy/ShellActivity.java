@@ -464,6 +464,17 @@ public class ShellActivity extends Activity {
         startActivity(new Intent(this, TerminalActivity.class));
     }
 
+    /** Opens the terminal and types {@code command} once the shell is ready (used by the apps catalog). */
+    void openTerminalWith(String command) {
+        if (!SessionService.rootfsReady(this)) {
+            promptInstall();
+            return;
+        }
+        Intent intent = new Intent(this, TerminalActivity.class);
+        intent.putExtra(TerminalActivity.EXTRA_COMMAND, command);
+        startActivity(intent);
+    }
+
     /** The big button follows the startup mode chosen in Settings (and is an install button until there is a system). */
     void updateEntryLabel() {
         if (entryButton == null)
