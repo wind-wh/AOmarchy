@@ -187,7 +187,7 @@ public class ShellActivity extends Activity {
         root.setBackgroundColor(Ui.BG);
 
         FrameLayout railFrame = new FrameLayout(this);
-        railFrame.setBackgroundColor(Ui.SURFACE);
+        railFrame.setBackgroundColor(Ui.GLASS_STRONG); // frosted glass rail over the wallpaper
         LinearLayout rail = Ui.column(this);
         rail.setPadding(Ui.dp(this, 8), Ui.dp(this, 24), Ui.dp(this, 8), Ui.dp(this, 16));
         for (int i = 0; i < TITLES.length; i++) {
@@ -241,7 +241,7 @@ public class ShellActivity extends Activity {
         root.addView(railFrame, new LinearLayout.LayoutParams(Ui.dp(this, 88), ViewGroup.LayoutParams.MATCH_PARENT));
 
         View divider = new View(this);
-        divider.setBackgroundColor(Ui.LINE);
+        divider.setBackgroundColor(Ui.GLASS_LINE_SOFT);
         root.addView(divider, new LinearLayout.LayoutParams(Ui.dp(this, 1), ViewGroup.LayoutParams.MATCH_PARENT));
 
         LinearLayout content = Ui.column(this);

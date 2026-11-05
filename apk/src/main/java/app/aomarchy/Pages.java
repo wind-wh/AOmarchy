@@ -1667,7 +1667,7 @@ class SettingsPage extends Page {
                 android.R.style.Theme_Black_NoTitleBar_Fullscreen);
 
         LinearLayout wrap = Ui.column(shell);
-        wrap.setBackgroundColor(Ui.BG);
+        wrap.setBackgroundColor(android.graphics.Color.TRANSPARENT); // the dimmed console stays visible behind
 
         LinearLayout bar = Ui.row(shell);
         bar.setPadding(Ui.dp(shell, 12), Ui.dp(shell, 10), Ui.dp(shell, 12), Ui.dp(shell, 10));
@@ -1702,7 +1702,7 @@ class SettingsPage extends Page {
             app.aomarchy.ui.Toasts.useSheet((ViewGroup) dialog.getWindow().getDecorView());
         android.view.Window w = dialog.getWindow();
         if (w != null) {
-            w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Ui.BG));
+            w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0xB30A0C10));
             w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
         }
     }

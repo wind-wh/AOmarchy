@@ -22,6 +22,11 @@ public final class Ui {
     public static final int SURFACE = 0xFF14171F;
     public static final int SURFACE_HI = 0xFF1C2230;
     public static final int LINE = 0xFF262C3A;
+    /** Frosted glass: translucent dark panels over the blurred wallpaper, with a light edge. */
+    public static final int GLASS = 0x8C14171F;
+    public static final int GLASS_STRONG = 0xA614171F;
+    public static final int GLASS_LINE = 0x38FFFFFF;
+    public static final int GLASS_LINE_SOFT = 0x1FFFFFFF;
     public static final int ACCENT = 0xFF7C8CFF;
     public static final int MINT = 0xFF5FE1B4;
     public static final int WARN = 0xFFFF6B6B;
@@ -71,8 +76,9 @@ public final class Ui {
         return d;
     }
 
+    /** A frosted-glass panel: translucent surface, light hairline, for the rail and the floating bars. */
     public static GradientDrawable surface(Context c, float radiusDp) {
-        return rounded(c, SURFACE, LINE, radiusDp);
+        return rounded(c, GLASS_STRONG, GLASS_LINE, radiusDp);
     }
 
     public static LinearLayout column(Context c) {
@@ -108,8 +114,10 @@ public final class Ui {
     /** A section card: rounded surface, optional title, children in a vertical list. */
     public static LinearLayout card(Context c, String title) {
         LinearLayout card = column(c);
-        CardBackground bg = new CardBackground(c, SURFACE, LINE, 1, 20);
+        // Glass card: translucent over the blurred wallpaper, light hairline and a soft shadow so it floats.
+        CardBackground bg = new CardBackground(c, GLASS, GLASS_LINE, 1, 22);
         card.setBackground(bg);
+        card.setElevation(dp(c, 4));
         CardBackground.attach(card, bg);
         int pad = dp(c, 14);
         card.setPadding(pad, pad, pad, pad);
@@ -138,7 +146,7 @@ public final class Ui {
     public static TextView button(Context c, String s, boolean primary, View.OnClickListener onClick) {
         TextView t = text(c, s, 14, primary ? 0xFF0A0C10 : TEXT, true);
         t.setGravity(Gravity.CENTER);
-        t.setBackground(rounded(c, primary ? ACCENT : SURFACE_HI, primary ? 0 : LINE, 14));
+        t.setBackground(rounded(c, primary ? ACCENT : 0x9E1C2230, primary ? 0 : GLASS_LINE, 14));
         Motion.pressable(t);
         int v = dp(c, 12), h = dp(c, 18);
         t.setPadding(h, v, h, v);
@@ -199,7 +207,7 @@ public final class Ui {
     /** 1dp separator, for rows inside a card. */
     public static View divider(Context c) {
         View v = new View(c);
-        v.setBackgroundColor(LINE);
+        v.setBackgroundColor(GLASS_LINE_SOFT);
         v.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(c, 1)));
         return v;
     }

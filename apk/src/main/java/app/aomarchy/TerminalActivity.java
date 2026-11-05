@@ -83,7 +83,8 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
         keys.setGravity(Gravity.CENTER_VERTICAL);
         keys.setPadding(Ui.dp(this, 6), Ui.dp(this, 4), Ui.dp(this, 6), Ui.dp(this, 4));
         GradientDrawable keysBg = new GradientDrawable();
-        keysBg.setColor(0xCC14171F);
+        keysBg.setColor(0xA614171F);
+        keysBg.setStroke(Ui.dp(this, 1), 0x38FFFFFF);
         keysBg.setCornerRadius(Ui.dp(this, 12));
         keys.setBackground(keysBg);
         addKey(keys, "Esc", "\u001b");
@@ -108,7 +109,8 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
         bar.setGravity(Gravity.CENTER_VERTICAL);
         bar.setPadding(Ui.dp(this, 10), Ui.dp(this, 6), Ui.dp(this, 10), Ui.dp(this, 6));
         GradientDrawable barBg = new GradientDrawable();
-        barBg.setColor(0xCC14171F);
+        barBg.setColor(0xA614171F);
+        barBg.setStroke(Ui.dp(this, 1), 0x38FFFFFF);
         barBg.setCornerRadius(Ui.dp(this, 14));
         bar.setBackground(barBg);
 
