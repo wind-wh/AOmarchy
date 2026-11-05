@@ -205,7 +205,7 @@ public final class T {
         {"tile_background", "后台运行中", "Background"},
         {"widget_status_background", "后台运行中", "Background"},
         {"keepalive.auto_off", "关机或重启会同时关闭后台运行", "Shutting down or restarting also stops background running"},
-        {"bg.linux_used", "读取不到 Android 壁纸，已改用 Linux 桌面壁纸。", "Android wallpaper is unavailable; using the Linux desktop wallpaper."},
+        {"bg.linux_used", "正在使用 Linux 桌面的壁纸。", "Using the Linux desktop wallpaper."},
         {"bg.system_unavailable", "没有找到 Linux 桌面壁纸，现在显示内置背景；可以选一张自定义图片，或在桌面里设置壁纸。",
             "No Linux desktop wallpaper was found, so the built-in background is shown; pick your own image or set a wallpaper in the desktop."},
         {"btn.check_update", "检查更新", "Check for updates"},

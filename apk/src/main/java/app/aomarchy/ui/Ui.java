@@ -33,7 +33,7 @@ public final class Ui {
     public static final int MINT = 0xFF5FE1B4;
     public static final int WARN = 0xFFFF6B6B;
     public static final int TEXT = 0xFFE6E9F0;
-    public static final int DIM = 0xFF98A2B3;
+    public static final int DIM = 0xFFA8B3C4; // brighter: clear glass shows the picture, secondary text needs more contrast
     public static final int FAINT = 0xFF5C6675;
 
     private static Typeface cjk;

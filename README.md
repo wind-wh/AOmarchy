@@ -67,7 +67,18 @@ are untested.
 The [user guide](docs/user-guide.md) explains the touch gestures, the on-screen keyboard, the Android settings to
 change (HyperOS/MIUI take some gestures for themselves), installing apps, and the self-test.
 
+## What's new in 2.9.5
+
+- **The console now really shows the Linux desktop wallpaper.** The scanner missed Omarchy's actual layout
+  (`themes/<theme>/backgrounds/*.jpg`), so it fell back to the built-in gradient even when a wallpaper existed. It now
+  covers `current/theme/backgrounds/`, `themes/*/backgrounds/` and `/usr/share/omarchy/themes/*/backgrounds/`, picking
+  the highest-resolution file (2560 → 1920 → 1440 → 1366) and remembering the path for next time.
+- **Secondary text is a little brighter** (`#A8B3C4`) so it stays readable now that the background is clear instead of
+  frosted.
+- Everything from 2.9.4 stays: the common-apps catalog, clear glass, storage breakdown, weekly update check.
+
 ## What's new in 2.9.4
+
 
 - **A common-apps catalog on the Apps page.** Firefox, Kitty, Waybar, Nautilus, VS Code, Fastfetch, Neovim, Git,
   Python, Node.js, mpv, GIMP, btop and 7-Zip are listed with one-tap **安装**: the terminal opens with the
