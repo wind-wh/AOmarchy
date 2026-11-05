@@ -261,6 +261,9 @@ change (HyperOS/MIUI take some gestures for themselves), installing apps, and th
 `build/build-inside.sh` (Mesa, XWayland, Hyprland, Squeekboard, fakechroot, Omarchy). The APK builds with Gradle in
 `apk/`. The patches to upstream projects are in `patches/`.
 
+For iteration, `tools/build-local.ps1` builds the same signed APK inside WSL in about ten seconds (and can install it
+with `-Install`); [docs/local-build.md](docs/local-build.md) lists the one-time toolchain setup and its limits.
+
 ### CI builds and releases
 
 - `.github/workflows/build.yml` builds a **debug APK** on every push to `main`/PR (artifact on the run page).
