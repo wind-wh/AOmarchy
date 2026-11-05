@@ -167,6 +167,9 @@ public final class T {
         {"keepalive.title", "后台运行", "Run in background"},
         {"keepalive.battery_card", "电池与 ADB 保活", "Battery & ADB keep-alive"},
         {"keepalive.battery_settings", "电池设置", "Battery settings"},
+        {"tile_background", "后台运行中", "Background"},
+        {"widget_status_background", "后台运行中", "Background"},
+        {"keepalive.auto_off", "关机或重启会同时关闭后台运行", "Shutting down or restarting also stops background running"},
         {"keepalive.desc", "开启后 AOmarchy 会常驻通知栏；切到别的 App，Linux 也继续运行。", "When on, AOmarchy keeps a persistent notification and Linux keeps running while you use other apps."},
         {"keepalive.toggle", "常驻通知与保活", "Persistent notification and keep-alive"},
         // ===== console background =====

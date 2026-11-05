@@ -67,7 +67,20 @@ are untested.
 The [user guide](docs/user-guide.md) explains the touch gestures, the on-screen keyboard, the Android settings to
 change (HyperOS/MIUI take some gestures for themselves), installing apps, and the self-test.
 
+## What's new in 2.9.1
+
+- **The glass actually works now.** 2.9's cards were drawn with an opaque black fill (the fill colour was never set),
+  so the translucent values never took effect. With that fixed, cards are genuinely frosted: a diagonal sheen, a 1dp
+  inner rim, a softer 6dp shadow, and the wallpaper shows through at 70% scrim. The rail uses the same treatment.
+- **The terminal's quick-command chips size themselves** to their text and wrap onto new lines instead of stretching
+  across a grid, so the panel is compact. Edit mode appends a small × instead of resizing the chips.
+- **Background running shows up everywhere**: the Quick Settings tile and the home-screen widget say 后台运行中, 关机 /
+  重启 stop it automatically, and the notification's 停止 action refreshes the widget immediately.
+- **Pages slide in** from the side they come from when you switch tabs, with the same fade as before.
+- Everything from 2.9 stays: glass console, power menu wording, keep-alive notification, console background modes.
+
 ## What's new in 2.9
+
 
 - **The power menu speaks plainly now.** The rail's power button opens **挂起 / 后台运行 / 重启 / 关机 / 退出 App**, the words
   people see in Android's own power menu, instead of the old "close session" wording.

@@ -3,15 +3,11 @@ package app.aomarchy;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
 import android.text.InputType;
 import android.text.TextUtils;
-import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
-import android.widget.FrameLayout;
-import android.widget.GridLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -19,16 +15,18 @@ import android.widget.TextView;
 import java.util.List;
 
 import app.aomarchy.i18n.T;
+import app.aomarchy.ui.FlowRow;
+import app.aomarchy.ui.Motion;
 import app.aomarchy.ui.Toasts;
 import app.aomarchy.ui.Ui;
 
 /**
- * The quick-command panel under the terminal: a header (title + 编辑 / + 新增) and a scrollable chip grid.
+ * The quick-command panel under the terminal: a header (title + 编辑 / + 新增) and a scrollable row of compact chips.
  *
- * <p>Chip grid: 2 columns in portrait, 3 in landscape (the activity keeps its views on rotation, so the column count
- * is re-applied from {@link #updateColumns()} in {@code onConfigurationChanged}). Tapping a chip sends its command;
- * long-pressing one (or tapping × in edit mode) asks before deleting it; in edit mode a tap edits the entry. Entries
- * live in {@link TerminalPresets} ({@code terminal_presets} in the app preferences).
+ * <p>Chips are as wide as their label and wrap to the next row when the panel runs out of width ({@link FlowRow}), so
+ * a short command no longer gets a huge equal-width cell. Tapping a chip sends its command; long-pressing one (or
+ * tapping the × that appears in edit mode) asks before deleting it; in edit mode a tap edits the entry. Entries live
+ * in {@link TerminalPresets} ({@code terminal_presets} in the app preferences).
  */
 final class TerminalCommandsView extends LinearLayout {
     /** How chip taps leave the panel: the activity checks the terminal state and appends the Enter. */
@@ -38,7 +36,7 @@ final class TerminalCommandsView extends LinearLayout {
 
     private final Activity host;
     private final Listener listener;
-    private final GridLayout grid;
+    private final FlowRow row;
     private final TextView empty;
     private TextView editButton;
     private final ScrollView scroll;
@@ -62,9 +60,8 @@ final class TerminalCommandsView extends LinearLayout {
         LinearLayout body = Ui.column(host);
         body.setPadding(0, 0, 0, Ui.dp(host, 4));
 
-        grid = new GridLayout(host);
-        grid.setAlignmentMode(GridLayout.ALIGN_BOUNDS);
-        body.addView(grid, new LinearLayout.LayoutParams(
+        row = new FlowRow(host); // gap is 8dp both ways: a chip is never stretched, it wraps to the next line
+        body.addView(row, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         empty = Ui.text(host, TerminalPresets.text("panel.empty", "还没有快捷命令，点「+ 新增」添加一条"),
@@ -98,7 +95,7 @@ final class TerminalCommandsView extends LinearLayout {
         return head;
     }
 
-    /** Re-applies the column count for the current orientation (called from the activity's config change). */
+    /** Orientation changes reflow the FlowRow by themselves; this rebuilds the copy (and is what the activity calls). */
     void updateColumns() {
         rebuild();
     }
@@ -111,65 +108,49 @@ final class TerminalCommandsView extends LinearLayout {
         rebuild();
     }
 
-    private int columns() {
-        return host.getResources().getConfiguration().orientation
-                == android.content.res.Configuration.ORIENTATION_LANDSCAPE ? 3 : 2;
-    }
-
     private void rebuild() {
-        if (grid == null)
+        if (row == null)
             return;
-        grid.removeAllViews();
-        grid.setColumnCount(columns());
+        row.removeAllViews();
         List<TerminalPresets.Preset> presets = TerminalPresets.load(host);
         empty.setVisibility(presets.isEmpty() ? VISIBLE : GONE);
         for (int i = 0; i < presets.size(); i++) {
-            View chip = chip(presets.get(i), i);
-            GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
-            lp.width = 0;
-            lp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
-            lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-            int margin = Ui.dp(host, 3);
-            lp.setMargins(margin, margin, margin, margin);
-            grid.addView(chip, lp);
+            row.addView(chip(presets.get(i), i),
+                    new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Ui.dp(host, 40)));
         }
     }
 
+    /** A compact chip: 40dp tall, 12dp side padding, 13sp label — its width is the label's width, never a full column. */
     private View chip(final TerminalPresets.Preset preset, final int index) {
-        FrameLayout cell = new FrameLayout(host);
+        LinearLayout cell = Ui.row(host);
+        cell.setBackground(Ui.surface(host, 12));
+        cell.setPadding(Ui.dp(host, 12), Ui.dp(host, 6), Ui.dp(host, 12), Ui.dp(host, 6));
+        Motion.pressable(cell);
 
         final TextView name = Ui.text(host, preset.name, 13, Ui.TEXT, false);
-        name.setGravity(Gravity.CENTER);
-        name.setMaxLines(1);
+        name.setSingleLine(true);
         name.setEllipsize(TextUtils.TruncateAt.END);
-        int right = Ui.dp(host, editing ? 26 : 8);
-        name.setPadding(Ui.dp(host, 8), Ui.dp(host, 10), right, Ui.dp(host, 10));
-        GradientDrawable background = Ui.surface(host, 12);
-        name.setBackground(background);
-        name.setOnClickListener(v -> {
+        cell.addView(name);
+
+        if (editing) {
+            // Edit mode: the delete target sits inline after the label (no absolute corner overlay to size against).
+            TextView remove = Ui.text(host, "×", 13, Ui.WARN, true);
+            remove.setPadding(Ui.dp(host, 10), 0, 0, 0);
+            remove.setContentDescription(T.t("btn.delete"));
+            remove.setOnClickListener(v -> confirmDelete(index));
+            cell.addView(remove);
+        }
+
+        cell.setOnClickListener(v -> {
             if (editing)
                 presetDialog(index); // edit mode: tap opens the entry for renaming/rewriting
             else
                 listener.send(preset.cmd);
         });
-        name.setOnLongClickListener(v -> {
+        cell.setOnLongClickListener(v -> {
             confirmDelete(index);
             return true;
         });
-        cell.addView(name, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        if (editing) {
-            TextView remove = Ui.text(host, "×", 14, Ui.WARN, true);
-            remove.setGravity(Gravity.CENTER);
-            remove.setContentDescription(T.t("btn.delete"));
-            FrameLayout.LayoutParams removeParams = new FrameLayout.LayoutParams(
-                    Ui.dp(host, 24), Ui.dp(host, 24), Gravity.TOP | Gravity.END);
-            removeParams.topMargin = Ui.dp(host, 1);
-            removeParams.rightMargin = Ui.dp(host, 1);
-            remove.setOnClickListener(v -> confirmDelete(index));
-            cell.addView(remove, removeParams);
-        }
         return cell;
     }
 
@@ -247,4 +228,3 @@ final class TerminalCommandsView extends LinearLayout {
         });
     }
 }
-

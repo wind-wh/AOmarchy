@@ -13,10 +13,12 @@ import app.aomarchy.i18n.T;
 /**
  * Home-screen widget: the session's state plus one-tap 控制台 / 终端 entries.
  *
- * <p>The state is the same one the console's top chip shows: no system → 未安装; startup mode terminal → 终端模式
- * (checked before "running", exactly like {@link ShellActivity}); session service alive → 运行中; otherwise 就绪.
- * {@link #refresh(Context)} is called by {@link SessionService} when a session starts or stops — the widget requests
- * no periodic updates ({@code updatePeriodMillis="0"}), so nothing polls in the background.
+ * <p>The state, in order: no system → 未安装; keep-alive service on → 后台运行中 ({@link KeepAliveService}, wins over
+ * the session states); startup mode terminal → 终端模式; session service alive → 运行中; otherwise 就绪 — the last
+ * three exactly like {@link ShellActivity}'s top chip.
+ * {@link #refresh(Context)} is called by {@link SessionService} when a session starts or stops and by
+ * {@link KeepAliveService} when the keep-alive is toggled — the widget requests no periodic updates
+ * ({@code updatePeriodMillis="0"}), so nothing polls in the background.
  *
  * <p>Views and ids are resolved through {@code getIdentifier} instead of {@code R}: the project's offline javac
  * check only sees a stale generated R (no R.layout / R.id inner classes at all), while at runtime the ids come from
@@ -74,6 +76,7 @@ public class SessionWidget extends AppWidgetProvider {
     }
 
     private static RemoteViews build(Context context) {
+        T.init(context); // so T.t() below resolves the saved ui_lang (the resource strings use the wrapped Context)
         Context ui = T.wrap(context); // resource strings follow ui_lang like the tile and the console
         String packageName = context.getPackageName();
         int layout = res(ui, "widget_session", "layout");
@@ -112,10 +115,15 @@ public class SessionWidget extends AppWidgetProvider {
         return views;
     }
 
-    /** "未安装" / "终端模式" / "运行中" / "就绪", the same precedence as ShellActivity.updateStatus(). */
+    /**
+     * 未安装 / 后台运行中 / 终端模式 / 运行中 / 就绪 — the keep-alive wins over the session states, exactly the order the
+     * settings page describes; the remaining states match ShellActivity.updateStatus().
+     */
     private static String statusText(Context context) {
         if (!SessionService.rootfsReady(context))
             return str(context, "widget_status_not_installed");
+        if (KeepAliveService.isRunning(context))
+            return T.t("widget_status_background"); // no resource string for this state yet: T has the copy
         if (MODE_TERMINAL.equals(sessionMode(context)))
             return str(context, "widget_status_terminal");
         return str(context, SessionService.started ? "widget_status_running" : "widget_status_ready");

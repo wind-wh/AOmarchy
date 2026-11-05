@@ -24,7 +24,9 @@ public final class Ui {
     public static final int LINE = 0xFF262C3A;
     /** Frosted glass: translucent dark panels over the blurred wallpaper, with a light edge. */
     public static final int GLASS = 0x8014171F;
-    public static final int GLASS_STRONG = 0x9914171F;
+    /** The rail is the largest glass slab: a touch more opaque than a card so the labels stay calm, but light enough
+     *  (55%) that the wallpaper still reads through it. */
+    public static final int GLASS_STRONG = 0x8C14171F;
     public static final int GLASS_LINE = 0x38FFFFFF;
     public static final int GLASS_LINE_SOFT = 0x1FFFFFFF;
     public static final int ACCENT = 0xFF7C8CFF;
@@ -117,7 +119,7 @@ public final class Ui {
         // Glass card: translucent over the blurred wallpaper, light hairline and a soft shadow so it floats.
         CardBackground bg = new CardBackground(c, GLASS, GLASS_LINE, 1, 22);
         card.setBackground(bg);
-        card.setElevation(dp(c, 4));
+        card.setElevation(dp(c, 6));
         CardBackground.attach(card, bg);
         int pad = dp(c, 14);
         card.setPadding(pad, pad, pad, pad);

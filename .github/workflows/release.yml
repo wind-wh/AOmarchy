@@ -92,32 +92,29 @@ jobs:
           fail_on_unmatched_files: true
           files: dist/*
           body: |
-            **AOmarchy 2.9** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
+            **AOmarchy 2.9.1** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
 
             This release was built and signed by GitHub Actions from the repository source.
 
-            ## What is new in 2.9
+            ## What is new in 2.9.1
 
-            - **The power menu speaks plainly.** The rail's power button opens **挂起 / 后台运行 / 重启 / 关机 / 退出 App**,
-              the words Android's own power menu uses, instead of the old "close the session" phrasing. 挂起 sends the app
-              to the background and keeps Linux running; 关机 stops Linux; 重启 restarts it.
-            - **Run in the background.** 后台运行 keeps a persistent notification (控制台 / 停止 actions) so the session is
-              less likely to be reclaimed while you use other apps. 设置 → 后台运行 explains the battery setting, links to
-              it, and shows a copyable ADB command for the Doze allow-list (`dumpsys deviceidle whitelist +app.aomarchy`).
-            - **A glass console.** Cards, the navigation rail, the settings sheets and the terminal's bars are now
-              translucent frosted-glass panels with a light hairline and a soft shadow, floating over the blurred
-              wallpaper. Primary buttons keep their solid accent so they stay obvious, and text contrast is unchanged
-              (the wallpaper is blurred and dimmed first). The Chinese copy was also rewritten for context rather than
-              translated word by word.
-            - **A console background you can choose.** 设置 → 控制台背景 offers the system wallpaper, an image from your
-              files, or the plain brand colour; pictures are blurred and dimmed under the UI. Android 13 / MIUI refuse
-              `WallpaperManager.getDrawable()`, so the app now falls back through the wallpaper file and finally to a
-              brand gradient instead of a flat colour — the 2.8 console could stay plain because of exactly that.
-            - Everything from 2.8 stays: the wallpaper-backed console and the terminal quick-command panel.
+            - **The glass actually works now.** 2.9's cards were painted with an opaque black fill (the fill colour was
+              never set), so the translucent values never took effect and the console stayed flat. With that fixed the
+              cards are genuinely frosted: a diagonal sheen, a 1dp inner rim, a softer 6dp shadow and a 70% scrim so the
+              wallpaper reads through. The navigation rail gets the same treatment, and text contrast was checked against
+              a white wallpaper (body ≈10:1, secondary ≈4.7:1).
+            - **Terminal quick-command chips size themselves** to their text and wrap onto new lines instead of stretching
+              across an equal-width grid, so the panel is compact. Edit mode appends a small × to a chip instead of
+              resizing it.
+            - **Background running is visible everywhere.** The Quick Settings tile and the home-screen widget show
+              后台运行中, 关机 / 重启 stop the keep-alive automatically, and the notification's 停止 action updates the
+              widget right away.
+            - **Pages slide in** from the side they come from when you switch tabs (the fade stays).
+            - Everything from 2.9 stays: glass console, the familiar power menu, the console background modes.
 
             ## Upgrading
 
-            - From **2.8 and earlier**: install over it, nothing else to do.
+            - From **2.9 / earlier**: install over it, nothing else to do.
             - From **1.x**: the package is `app.aomarchy`; save what you need from the desktop, uninstall the old app,
               install AOmarchy and set the system up again (a local archive makes that work offline).
 

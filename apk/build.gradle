@@ -22,8 +22,8 @@ android {
         // Gradle warning; Android installs and runs such apps.
         minSdk = 30
         targetSdk = 28
-        versionCode = 15
-        versionName = "2.9.0"
+        versionCode = 16
+        versionName = "2.9.1"
         // The imported code also has a "compatible" transport (Binder bridge from a separate Termux); here the
         // daemon runs in this app, so the display connects to its socket directly.
         buildConfigField "boolean", "COMPATIBLE", "false"

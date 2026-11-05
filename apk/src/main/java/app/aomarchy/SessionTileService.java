@@ -32,18 +32,32 @@ public class SessionTileService extends TileService {
     }
 
     /**
-     * The shade shows what a tap will do: install (nothing installed yet), console, or terminal. INACTIVE only dims
-     * the tile until the Linux side exists; it stays tappable.
+     * The shade shows the most useful state: 后台运行中 while the keep-alive notification is up, otherwise install
+     * (nothing installed yet), terminal, or console. INACTIVE only dims the tile until the Linux side exists; it
+     * stays tappable. A tap still opens the console/terminal, exactly as before.
      */
     private void updateTile() {
         Tile tile = getQsTile();
         if (tile == null)
             return;
+        T.init(this); // tile_background is a T string, so it must follow the console's ui_lang as well
+        boolean keepAlive = keepAliveRunning();
         boolean ready = SessionService.rootfsReady(this);
-        tile.setLabel(getString(!ready ? R.string.tile_uninstalled
-                : MODE_TERMINAL.equals(sessionMode()) ? R.string.tile_terminal : R.string.tile_console));
-        tile.setState(ready ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
+        tile.setLabel(keepAlive ? T.t("tile_background")
+                : !ready ? getString(R.string.tile_uninstalled)
+                : MODE_TERMINAL.equals(sessionMode()) ? getString(R.string.tile_terminal)
+                : getString(R.string.tile_console));
+        tile.setState(keepAlive || ready ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
         tile.updateTile();
+    }
+
+    /** The keep-alive toggle lives in the console's power menu; a failure here only falls back to the usual label. */
+    private boolean keepAliveRunning() {
+        try {
+            return KeepAliveService.isRunning(this);
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 
     @Override

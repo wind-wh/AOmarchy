@@ -49,6 +49,9 @@ public class KeepAliveService extends Service {
             return;
         try {
             ctx.startForegroundService(new Intent(ctx, KeepAliveService.class));
+            // onCreate runs one main-loop turn later: claim the state now so the widget refresh below sees it.
+            running = true;
+            SessionWidget.refresh(ctx);
         } catch (RuntimeException e) {
             // Starting a foreground service is restricted in the background on Android 12+: the settings page that
             // calls this is in the foreground, so this is only a safety net.
@@ -60,7 +63,10 @@ public class KeepAliveService extends Service {
     public static void stop(Context ctx) {
         if (ctx == null)
             return;
+        // onDestroy runs one main-loop turn later, after this call returns: report the stopped state right away.
+        running = false;
         ctx.stopService(new Intent(ctx, KeepAliveService.class));
+        SessionWidget.refresh(ctx);
     }
 
     /** Rebuilds the notification with the current ui_lang. No-op when the service is not running. */
@@ -112,6 +118,7 @@ public class KeepAliveService extends Service {
         if (manager != null)
             manager.cancel(NOTIFICATION_ID);
         stopForeground(true);
+        SessionWidget.refresh(this); // the notification's 停止 action stops the service here, not via stop()
         super.onDestroy();
     }
 

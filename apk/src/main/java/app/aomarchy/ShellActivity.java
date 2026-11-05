@@ -187,7 +187,8 @@ public class ShellActivity extends Activity {
         root.setBackgroundColor(Ui.BG);
 
         FrameLayout railFrame = new FrameLayout(this);
-        railFrame.setBackgroundColor(Ui.GLASS_STRONG); // frosted glass rail over the wallpaper
+        // Frosted-glass rail: the same sheen + inner rim as the cards (radius 0 keeps it a straight slab).
+        railFrame.setBackground(new app.aomarchy.ui.CardBackground(this, Ui.GLASS_STRONG, Ui.GLASS_LINE, 1, 0));
         LinearLayout rail = Ui.column(this);
         rail.setPadding(Ui.dp(this, 8), Ui.dp(this, 24), Ui.dp(this, 8), Ui.dp(this, 16));
         for (int i = 0; i < TITLES.length; i++) {
@@ -328,6 +329,7 @@ public class ShellActivity extends Activity {
     }
 
     private void show(int index) {
+        int previous = current;
         if (current >= 0 && pages[current] != null)
             pages[current].onHidden();
         current = index;
@@ -346,7 +348,13 @@ public class ShellActivity extends Activity {
                     .setDuration(280).setInterpolator(app.aomarchy.ui.Motion.SPRING).start();
         }
         moveIndicator(index);
-        app.aomarchy.ui.Motion.appear(pages[index].root, 0);
+        // Pages slide in from the side they come from (left when going back down the rail), fading as they arrive.
+        View pageRoot = pages[index].root;
+        float shift = Ui.dp(this, 22);
+        pageRoot.setTranslationX(previous >= 0 && index < previous ? -shift : shift);
+        app.aomarchy.ui.Motion.appear(pageRoot, 0);
+        pageRoot.animate().translationX(0f).setDuration(300)
+                .setInterpolator(app.aomarchy.ui.Motion.OUT).start();
         updateStatus();
     }
 

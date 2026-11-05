@@ -38,7 +38,7 @@ import app.aomarchy.i18n.T;
  *       so the console still has depth when neither picture can be read.</li>
  * </ol>
  *
- * <p>The picture is drawn CENTER_CROP, blurred on API 31+, and covered by a 78% brand scrim, so the
+ * <p>The picture is drawn CENTER_CROP, blurred on API 31+, and covered by a 70% brand scrim, so the
  * console keeps its fixed dark look and white-on-dark text stays readable over any photo. Decoding runs off the UI
  * thread (downsampled to {@link #MAX_IMAGE_SIDE} px, memory friendly) and the layers never intercept touches.
  *
@@ -47,8 +47,12 @@ import app.aomarchy.i18n.T;
  * after the user changes the setting without rebuilding the console.
  */
 public final class Wallpaper {
-    /** Brand background at 88% — enough to keep white-on-dark text readable over any photo. */
-    private static final int SCRIM = 0xC80A0C10; // 78%: the blur shows through, text contrast still holds
+    /**
+     * Brand background at 70%: the wallpaper (already blurred by 30dp) shows through as texture, while the glass cards
+     * add their own ~50% fill on top — worst case (a near-white photo) still leaves body text at ≈10:1 and secondary
+     * text at ≈4.7:1, so the scrim does not need to be any darker for readability.
+     */
+    private static final int SCRIM = 0xB30A0C10;
     /** Longest decoded side of a picture: enough for a tablet panel at 2x, small enough to stay cheap. */
     private static final int MAX_IMAGE_SIDE = 2000;
     /** Brand gradient endpoints (keep in sync with {@link Ui}). */

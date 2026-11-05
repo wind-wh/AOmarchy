@@ -58,9 +58,11 @@ final class PowerMenu {
         // 挂起: the console leaves the screen like Home does, and the Linux session keeps running.
         panel.addView(row(host, dialog, T.t("power.suspend"), T.t("power.suspend_hint"),
                 null, 0, true, () -> suspend(host)));
-        // 后台运行: the keep-alive notification has nothing to do with Linux, so it works without a system too.
+        // 后台运行: the keep-alive notification has nothing to do with Linux, so it works without a system too. The
+        // hint also says that 关机/重启 switch it off (the menu below stops it before ending Linux).
         boolean keepAlive = keepAliveRunning(host);
-        panel.addView(row(host, dialog, T.t("power.background"), T.t("power.background_hint"),
+        panel.addView(row(host, dialog, T.t("power.background"),
+                T.t("power.background_hint") + "\n" + T.t("keepalive.auto_off"),
                 T.t(keepAlive ? "power.background_on" : "power.background_off"),
                 keepAlive ? Ui.MINT : Ui.FAINT, true, () -> toggleBackground(host)));
         // 重启 / 关机 only make sense with a running Linux: dimmed with the reason in place otherwise.
@@ -164,9 +166,19 @@ final class PowerMenu {
         }
     }
 
+    /** 重启/关机 end Linux, so the 后台运行 keep-alive notification is switched off first (shutdown wins). */
+    private static void stopKeepAlive(ShellActivity host) {
+        try {
+            KeepAliveService.stop(host);
+        } catch (RuntimeException ignored) {
+            // keep-alive is best-effort: a failure here must never block the power action
+        }
+    }
+
     private static void restart(ShellActivity host) {
         if (!SessionService.rootfsReady(host))
             return;
+        stopKeepAlive(host);
         if (!SessionService.started) {
             start(host);
             return;
@@ -187,6 +199,7 @@ final class PowerMenu {
     }
 
     private static void stop(ShellActivity host) {
+        stopKeepAlive(host);
         host.stopService(new Intent(host, SessionService.class));
         host.toast(T.t("power.toast_stopped"));
         refreshLater(host);

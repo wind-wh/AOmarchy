@@ -15,16 +15,34 @@ import android.view.View;
 import android.view.animation.OvershootInterpolator;
 
 /**
- * The card surface plus the "glint" that follows a finger: a radial highlight drawn inside the rounded rectangle,
- * fading out on release. Also gives the card a small squash on press.
+ * The glass panel surface: a translucent fill, a diagonal sheen from the top-left corner, a 1dp bright inner rim, the
+ * finger "glint" and the press squash. Drawn inside the rounded-rectangle clip, so it works for any panel size — cards
+ * (22dp radius) and the square side rail (0dp) alike.
+ *
+ * <p>Glass layers, bottom to top: fill → diagonal sheen ({@value #SHEEN_START} at the top-left, transparent by 55% of
+ * the diagonal) → press glint → 1dp inner rim ({@value #INNER_RIM}) → outer hairline stroke. The sheen and the rim are
+ * what make the panel read as glass instead of a flat translucent box; both stay inside the clip, so the outer edge
+ * never gets a bright halo.
  */
 public final class CardBackground extends Drawable {
+    /** 10% white at the top-left corner, fading to nothing by 55% of the diagonal. */
+    private static final int SHEEN_START = 0x1AFFFFFF;
+    private static final int SHEEN_END = 0x00FFFFFF;
+    /** 15% white 1dp rim inset from the outer edge: the "thickness" of the glass edge. */
+    private static final int INNER_RIM = 0x26FFFFFF;
+    /** The sheen is gone by this fraction of the diagonal (0.55 = 55%). */
+    private static final float SHEEN_EXTENT = 0.55f;
+
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint sheen = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint glint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint border = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path clip = new Path();
     private final RectF rect = new RectF();
+    private final RectF rimRect = new RectF();
     private final float radiusPx;
+    private final float rimPx;
     private final int baseColor;
     private final int strokeColor;
     private final float strokeWidth;
@@ -37,11 +55,19 @@ public final class CardBackground extends Drawable {
         this.strokeColor = strokeColor;
         this.strokeWidth = Ui.dp(c, strokeDp);
         this.radiusPx = Ui.dp(c, radiusDp);
+        this.rimPx = Math.max(1f, Ui.dp(c, 1f));
+        // The card's translucent glass fill. This was never assigned before, so Paint's default opaque black won and
+        // every "glass" card painted as a solid black box — the main reason 2.9 read as dark and showed no backdrop.
+        fill.setColor(baseColor);
         fill.setStyle(Paint.Style.FILL);
+        sheen.setStyle(Paint.Style.FILL);
+        glint.setStyle(Paint.Style.FILL);
+        rim.setStyle(Paint.Style.STROKE);
+        rim.setStrokeWidth(rimPx);
+        rim.setColor(INNER_RIM);
         border.setStyle(Paint.Style.STROKE);
         border.setStrokeWidth(this.strokeWidth);
         border.setColor(strokeColor);
-        glint.setStyle(Paint.Style.FILL);
     }
 
     /** Adds the glint + squash behaviour to a card that uses this background. */
@@ -107,6 +133,7 @@ public final class CardBackground extends Drawable {
         canvas.save();
         canvas.clipPath(clip);
         canvas.drawRect(r, fill);
+        drawSheen(canvas, r);
         if (hotAlpha > 0 && hotX >= 0) {
             float radius = Math.max(r.width(), r.height()) * 0.55f;
             glint.setShader(new RadialGradient(hotX, hotY, radius,
@@ -115,29 +142,43 @@ public final class CardBackground extends Drawable {
             glint.setAlpha((int) (hotAlpha * 255));
             canvas.drawCircle(hotX, hotY, radius, glint);
         }
-        // A faint top edge keeps cards readable on the very dark background.
-        LinearGradient edge = new LinearGradient(r.left, r.top, r.left, r.top + strokeWidth * 3,
-                0x44FFFFFF, 0x00000000, Shader.TileMode.CLAMP);
-        glint.setShader(edge);
-        glint.setAlpha(255);
-        canvas.drawRect(r.left, r.top, r.right, r.top + strokeWidth * 3, glint);
+        // 1dp bright rim, inset so it reads as the inside of the glass edge and never pokes outside the border.
+        rimRect.set(r);
+        rimRect.inset(rimPx, rimPx);
+        float rimRadius = Math.max(0f, radiusPx - rimPx);
+        canvas.drawRoundRect(rimRect, rimRadius, rimRadius, rim);
         canvas.restore();
         canvas.drawRoundRect(r, radiusPx, radiusPx, border);
+    }
+
+    /** Diagonal glass sheen: bright at the top-left corner, transparent by {@link #SHEEN_EXTENT} of the diagonal. */
+    private void drawSheen(Canvas canvas, RectF r) {
+        if (r.width() <= 0 || r.height() <= 0)
+            return;
+        float endX = r.left + r.width() * SHEEN_EXTENT;
+        float endY = r.top + r.height() * SHEEN_EXTENT;
+        sheen.setShader(new LinearGradient(r.left, r.top, endX, endY,
+                new int[] {SHEEN_START, SHEEN_END}, null, Shader.TileMode.CLAMP));
+        canvas.drawRect(r, sheen);
     }
 
     @Override
     public void setAlpha(int alpha) {
         fill.setAlpha(alpha);
-        border.setAlpha(alpha);
+        sheen.setAlpha(alpha);
         glint.setAlpha(alpha);
+        rim.setAlpha(alpha);
+        border.setAlpha(alpha);
         invalidateSelf();
     }
 
     @Override
     public void setColorFilter(android.graphics.ColorFilter colorFilter) {
         fill.setColorFilter(colorFilter);
-        border.setColorFilter(colorFilter);
+        sheen.setColorFilter(colorFilter);
         glint.setColorFilter(colorFilter);
+        rim.setColorFilter(colorFilter);
+        border.setColorFilter(colorFilter);
     }
 
     @Override
