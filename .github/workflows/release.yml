@@ -104,6 +104,11 @@ jobs:
             - **Run in the background.** 后台运行 keeps a persistent notification (控制台 / 停止 actions) so the session is
               less likely to be reclaimed while you use other apps. 设置 → 后台运行 explains the battery setting, links to
               it, and shows a copyable ADB command for the Doze allow-list (`dumpsys deviceidle whitelist +app.aomarchy`).
+            - **A glass console.** Cards, the navigation rail, the settings sheets and the terminal's bars are now
+              translucent frosted-glass panels with a light hairline and a soft shadow, floating over the blurred
+              wallpaper. Primary buttons keep their solid accent so they stay obvious, and text contrast is unchanged
+              (the wallpaper is blurred and dimmed first). The Chinese copy was also rewritten for context rather than
+              translated word by word.
             - **A console background you can choose.** 设置 → 控制台背景 offers the system wallpaper, an image from your
               files, or the plain brand colour; pictures are blurred and dimmed under the UI. Android 13 / MIUI refuse
               `WallpaperManager.getDrawable()`, so the app now falls back through the wallpaper file and finally to a
