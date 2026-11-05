@@ -87,7 +87,20 @@ change (HyperOS/MIUI take some gestures for themselves), installing apps, and th
   设置 → 控制台背景 now offers 内置底图 / Linux 桌面壁纸 / 自定义图片 / 纯色.
 - Everything from 2.9.5 stays: Linux-wallpaper scanner, clear glass, apps catalog, storage breakdown, weekly updates.
 
+## What's new in 2.9.8
+
+- **The rail reads as night again, with rounded corners.** It was a translucent card full of the bright backdrop and
+  looked washed out; it is now a near-opaque dark slab (`#11141B → #0B0D13`) with a 22dp radius, floating 8/12dp off the
+  screen edges, so it stays dark over any picture and no longer looks like a second content column.
+- **Glass panels glow with the backdrop's colour** (2.9.7): the picture is sampled once and every card picks the colour
+  up as a soft sheen plus a coloured elevation shadow; the glow follows the background and falls back to brand indigo
+  on 纯色.
+- **The default backdrop is a real desktop still** (2.9.6/2.9.7): a 1920×1080 AOmarchy desktop shot ships inside the APK
+  and 设置 → 控制台背景 offers 内置底图 / Linux 桌面壁纸 / 自定义图片 / 纯色.
+- Everything from 2.9.5 stays: Linux-wallpaper scanner, clear glass, apps catalog, storage breakdown, weekly updates.
+
 ## What's new in 2.9.5
+
 
 
 

@@ -224,7 +224,7 @@ public class ShellActivity extends Activity {
 
         FrameLayout railFrame = new FrameLayout(this);
         // Frosted-glass rail: the same sheen + inner rim as the cards (radius 0 keeps it a straight slab).
-        railFrame.setBackground(new app.aomarchy.ui.CardBackground(this, Ui.GLASS_STRONG, Ui.GLASS_LINE, 1, 0));
+        railFrame.setBackground(Ui.rail(this)); // night slab: a bright backdrop must not wash the rail out
         LinearLayout rail = Ui.column(this);
         rail.setPadding(Ui.dp(this, 8), Ui.dp(this, 24), Ui.dp(this, 8), Ui.dp(this, 16));
         for (int i = 0; i < TITLES.length; i++) {
@@ -275,11 +275,14 @@ public class ShellActivity extends Activity {
         railFrame.addView(indicator, ilp);
         railFrame.addView(rail, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        root.addView(railFrame, new LinearLayout.LayoutParams(Ui.dp(this, 88), ViewGroup.LayoutParams.MATCH_PARENT));
-
-        View divider = new View(this);
-        divider.setBackgroundColor(Ui.GLASS_LINE_SOFT);
-        root.addView(divider, new LinearLayout.LayoutParams(Ui.dp(this, 1), ViewGroup.LayoutParams.MATCH_PARENT));
+        // The rail is a floating rounded slab: margins + corner radius so it reads as a bar, not a screen edge.
+        LinearLayout.LayoutParams railLp = new LinearLayout.LayoutParams(
+                Ui.dp(this, 88), ViewGroup.LayoutParams.MATCH_PARENT);
+        railLp.leftMargin = Ui.dp(this, 8);
+        railLp.topMargin = Ui.dp(this, 12);
+        railLp.bottomMargin = Ui.dp(this, 12);
+        root.addView(railFrame, railLp);
+        root.addView(Ui.space(this, 6));
 
         LinearLayout content = Ui.column(this);
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f);

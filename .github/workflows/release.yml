@@ -92,25 +92,26 @@ jobs:
           fail_on_unmatched_files: true
           files: dist/*
           body: |
-            **AOmarchy 2.9.7** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
+            **AOmarchy 2.9.8** — Arch Linux + Omarchy (Hyprland) on Android, in one APK. No root, no proot, no VM.
 
             This release was built and signed by GitHub Actions from the repository source.
 
-            ## What is new in 2.9.7
+            ## What is new in 2.9.8
 
-            - **Glass panels glow with the backdrop's colour.** The wallpaper is sampled once (saturation-weighted average
-              of a tiny downscale) and every card picks it up as a soft sheen inside the glass plus a coloured elevation
-              shadow, so the panels look lit by the picture behind them. Changing the backdrop changes the glow; the 纯色
-              mode falls back to the brand indigo.
-            - **New default backdrop: a real desktop picture.** The console ships with a 1920×1080 still of an AOmarchy
-              desktop (btop, tmux, fastfetch) as its default background, and 设置 → 控制台背景 offers 内置底图 /
-              Linux 桌面壁纸 / 自定义图片 / 纯色.
+            - **The rail reads as night again, with rounded corners.** It used to be a translucent card filled by a bright
+              backdrop and looked washed out; it is now a near-opaque dark slab (`#11141B → #0B0D13`), 22dp radius,
+              floating 8/12dp off the screen edges.
+            - **Glass panels glow with the backdrop's colour.** The picture is sampled once and every card picks the
+              colour up as a soft sheen plus a coloured elevation shadow, so panels look lit by the picture behind them.
+              The glow follows the background and falls back to brand indigo in 纯色 mode.
+            - **The default backdrop is a real desktop still.** A 1920×1080 AOmarchy desktop shot ships inside the APK;
+              设置 → 控制台背景 offers 内置底图 / Linux 桌面壁纸 / 自定义图片 / 纯色.
             - Everything from 2.9.5 stays: Linux-wallpaper scanner (Omarchy `themes/*/backgrounds/`), clear glass with no
               frost, the common-apps catalog with one-tap install commands, storage breakdown, weekly automatic updates.
 
             ## Upgrading
 
-            - From **2.9.5 / earlier**: install over it, nothing else to do.
+            - From **2.9.7 / earlier**: install over it, nothing else to do.
             - From **1.x**: the package is `app.aomarchy`; save what you need from the desktop, uninstall the old app,
               install AOmarchy and set the system up again (a local archive makes that work offline).
 

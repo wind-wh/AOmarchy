@@ -27,6 +27,9 @@ public final class Ui {
     /** The rail is the largest glass slab: a touch more opaque than a card so the labels stay calm, but light enough
      *  (55%) that the wallpaper still reads through it. */
     public static final int GLASS_STRONG = 0x6B14171F;
+    /** The rail is a night slab, not a card: deep and almost opaque so it never looks washed out. */
+    public static final int RAIL_TOP = 0xF211141B;
+    public static final int RAIL_BOTTOM = 0xE80B0D13;
     public static final int GLASS_LINE = 0x4DFFFFFF;
     public static final int GLASS_LINE_SOFT = 0x2EFFFFFF;
     public static final int ACCENT = 0xFF7C8CFF;
@@ -81,6 +84,15 @@ public final class Ui {
     /** A frosted-glass panel: translucent surface, light hairline, for the rail and the floating bars. */
     public static GradientDrawable surface(Context c, float radiusDp) {
         return rounded(c, GLASS_STRONG, GLASS_LINE, radiusDp);
+    }
+
+    /** The console rail: a near-opaque vertical gradient, so it reads as night even over a bright backdrop. */
+    public static GradientDrawable rail(Context c) {
+        GradientDrawable d = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[] {RAIL_TOP, RAIL_BOTTOM});
+        d.setCornerRadius(dp(c, 22));
+        d.setStroke(Math.max(1, dp(c, 1)), 0x2EFFFFFF);
+        return d;
     }
 
     public static LinearLayout column(Context c) {
