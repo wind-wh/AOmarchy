@@ -67,7 +67,17 @@ are untested.
 The [user guide](docs/user-guide.md) explains the touch gestures, the on-screen keyboard, the Android settings to
 change (HyperOS/MIUI take some gestures for themselves), installing apps, and the self-test.
 
+## What's new in 2.9.6
+
+- **New default backdrop: a real desktop picture.** The console now ships with a 1920×1080 still of an AOmarchy
+  desktop (btop, tmux panes, fastfetch) as its default background — a compressed 300 KB JPEG inside the APK, decoded
+  off the UI thread, no permissions. 设置 → 控制台背景 now offers four choices: **内置底图 / Linux 桌面壁纸 /
+  自定义图片 / 纯色**; a saved "system wallpaper" preference from older builds becomes 内置底图.
+- Everything from 2.9.5 stays: the Linux-wallpaper scanner (Omarchy `themes/*/backgrounds/`), clear glass, apps
+  catalog, storage breakdown, weekly update check.
+
 ## What's new in 2.9.5
+
 
 - **The console now really shows the Linux desktop wallpaper.** The scanner missed Omarchy's actual layout
   (`themes/<theme>/backgrounds/*.jpg`), so it fell back to the built-in gradient even when a wallpaper existed. It now

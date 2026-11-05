@@ -238,12 +238,13 @@ public final class T {
         {"keepalive.toggle", "常驻通知与保活", "Persistent notification and keep-alive"},
         // ===== console background =====
         {"card.console_bg", "控制台背景", "Console background"},
-        {"bg.mode_system", "桌面壁纸", "Desktop wallpaper"},
+        {"bg.mode_builtin", "内置底图", "Built-in picture"},
+        {"bg.mode_system", "Linux 桌面壁纸", "Linux desktop wallpaper"},
         {"bg.mode_custom", "自定义图片", "Custom image"},
         {"bg.mode_off", "纯色", "Solid colour"},
         {"bg.pick", "选择图片…", "Choose an image…"},
         {"bg.reset", "恢复默认", "Reset"},
-        {"bg.desc", "控制台后面显示 Linux 桌面的壁纸或你选的图片；通透玻璃质感，深色遮罩保证文字清晰。", "Shows the Linux desktop wallpaper, or an image you pick; clear glass with a dark scrim keeps text readable."},
+        {"bg.desc", "控制台后面显示内置底图、Linux 桌面壁纸或你选的图片；通透玻璃质感，深色遮罩保证文字清晰。", "Shows the built-in picture, the Linux desktop wallpaper, or an image you pick; clear glass with a dark scrim keeps text readable."},
         {"bg.restricted", "找不到桌面壁纸时会显示内置品牌背景。", "Shows the built-in brand background when no desktop wallpaper is found."},
         {"bg.failed", "无法读取这张图片", "Could not read that image"},
         // ===== terminal quick-command panel =====

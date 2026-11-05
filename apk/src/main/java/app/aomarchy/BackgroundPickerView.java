@@ -47,7 +47,7 @@ public final class BackgroundPickerView {
 
     /** Parallel to the mode rows and to {@code Wallpaper.MODE_*}. */
     private static final String[] MODES = {
-            Wallpaper.MODE_SYSTEM, Wallpaper.MODE_CUSTOM, Wallpaper.MODE_OFF
+            Wallpaper.MODE_BUILTIN, Wallpaper.MODE_LINUX, Wallpaper.MODE_CUSTOM, Wallpaper.MODE_OFF
     };
 
     private final Activity host;
@@ -84,9 +84,10 @@ public final class BackgroundPickerView {
         card.addView(customShortcut);
         card.addView(Ui.gap(host, 6));
 
-        labels[0] = T.t("bg.mode_system");
-        labels[1] = T.t("bg.mode_custom");
-        labels[2] = T.t("bg.mode_off");
+        labels[0] = T.t("bg.mode_builtin");
+        labels[1] = T.t("bg.mode_system");
+        labels[2] = T.t("bg.mode_custom");
+        labels[3] = T.t("bg.mode_off");
         for (int i = 0; i < MODES.length; i++) {
             rows[i] = modeRow(i);
             card.addView(rows[i]);
@@ -183,7 +184,7 @@ public final class BackgroundPickerView {
             checks[i].setText(selected ? "✓" : "");
             checks[i].setTextColor(selected ? Ui.ACCENT : Ui.FAINT);
             String description = selected ? labels[i] + "，" + T.t("state.on") : labels[i];
-            if (i == 0 && !wallpaperAvailable)
+            if (i == 1 && !wallpaperAvailable)
                 description += "，" + T.t(app.aomarchy.ui.Wallpaper.lastSourceWasLinux(host)
                         ? "bg.linux_used" : "bg.system_unavailable");
             rows[i].setContentDescription(description);
@@ -191,7 +192,7 @@ public final class BackgroundPickerView {
         // The three-way choice keeps working as before; the warning only explains why "系统壁纸" may not show a photo.
         systemWarn.setVisibility(wallpaperAvailable ? View.GONE : View.VISIBLE);
         customShortcut.setVisibility(wallpaperAvailable ? View.GONE : View.VISIBLE);
-        boolean system = Wallpaper.MODE_SYSTEM.equals(current);
+        boolean system = Wallpaper.MODE_LINUX.equals(current);
         // The "falls back to the brand gradient" note only helps while the wallpaper can be read; when it cannot, the
         // warning below the system row says it, and the shortcut points at a custom image instead.
         hint.setText(system && wallpaperAvailable ? T.t("bg.restricted") : "");

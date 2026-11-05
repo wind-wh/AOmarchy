@@ -74,9 +74,12 @@ public final class Wallpaper {
     private static final String KEY_URI = "console_bg_uri";
 
     /** The saved {@code console_bg_mode} values. */
-    public static final String MODE_SYSTEM = "system";
+    public static final String MODE_BUILTIN = "builtin"; // the shipped backdrop picture (default)
+    public static final String MODE_LINUX = "linux"; // the Linux desktop wallpaper inside the rootfs
     public static final String MODE_CUSTOM = "custom";
     public static final String MODE_OFF = "off";
+    /** Older builds stored this for "the desktop wallpaper"; it now means the built-in picture. */
+    public static final String MODE_SYSTEM = MODE_BUILTIN;
 
     /** Marks the backdrop layers so a repeated apply can replace them instead of stacking another set. */
     private static final Object BACKDROP_TAG = new Object();
@@ -183,19 +186,23 @@ public final class Wallpaper {
         return available;
     }
 
-    /** The stored {@code console_bg_mode}: {@link #MODE_SYSTEM} when unset or unrecognised. */
+    /** The stored {@code console_bg_mode}: {@link #MODE_BUILTIN} when unset or unrecognised. */
     public static String mode(Activity activity) {
         if (activity == null)
-            return MODE_SYSTEM;
-        String value = prefs(activity).getString(KEY_MODE, MODE_SYSTEM);
-        return MODE_CUSTOM.equals(value) || MODE_OFF.equals(value) ? value : MODE_SYSTEM;
+            return MODE_BUILTIN;
+        String value = prefs(activity).getString(KEY_MODE, MODE_BUILTIN);
+        if (MODE_CUSTOM.equals(value) || MODE_OFF.equals(value) || MODE_LINUX.equals(value)
+                || MODE_BUILTIN.equals(value))
+            return value;
+        return MODE_BUILTIN; // an old "system" value (or anything unknown) now means the shipped backdrop
     }
 
-    /** Stores {@code console_bg_mode}; anything but "custom" / "off" means {@link #MODE_SYSTEM}. */
+    /** Stores {@code console_bg_mode}; anything unknown means {@link #MODE_BUILTIN}. */
     public static void setMode(Activity activity, String mode) {
         if (activity == null)
             return;
-        String value = MODE_CUSTOM.equals(mode) || MODE_OFF.equals(mode) ? mode : MODE_SYSTEM;
+        String value = MODE_CUSTOM.equals(mode) || MODE_OFF.equals(mode) || MODE_LINUX.equals(mode)
+                ? mode : MODE_BUILTIN;
         prefs(activity).edit().putString(KEY_MODE, value).apply();
     }
 
@@ -264,12 +271,17 @@ public final class Wallpaper {
                     customFailed = true;
                 }
             }
-            if (source == null && allowSystem) {
-                // Only the Linux desktop's own wallpaper is used: the console belongs to that desktop, and Android's
-                // wallpaper is both hard to read (13+/MIUI) and not what the user asked for.
-                source = linuxWallpaper(activity);
-                fromLinux = source != null;
-                android.util.Log.i("ConsoleBg", "source=" + (fromLinux ? "linux" : "none") + " mode=" + mode);
+            if (source == null) {
+                if (MODE_LINUX.equals(mode)) {
+                    // Only the Linux desktop's own wallpaper: the console belongs to that desktop, and Android's
+                    // wallpaper is both hard to read (13+/MIUI) and not what the user asked for.
+                    source = linuxWallpaper(activity);
+                    fromLinux = source != null;
+                }
+                if (source == null)
+                    source = builtinImage(activity); // the shipped backdrop: always available, no permissions
+                android.util.Log.i("ConsoleBg", "source=" + (fromLinux ? "linux" : source != null ? "builtin" : "none")
+                        + " mode=" + mode);
             }
 
             Object loaded = source;
@@ -294,6 +306,28 @@ public final class Wallpaper {
                 scrim.animate().alpha(1f).setDuration(260).start();
             });
         }, "console-background").start();
+    }
+
+    /** The backdrop shipped inside the APK, decoded with the same downsampling as any other picture. */
+    private static Object builtinImage(Activity activity) {
+        try {
+            // Looked up by name: the harness R used by the compile gate does not know resources added since it was
+            // generated, and the shipped APK resolves it exactly the same way.
+            int id = activity.getResources().getIdentifier("console_default", "drawable", activity.getPackageName());
+            if (id == 0)
+                return null;
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeResource(activity.getResources(), id, bounds);
+            int sample = 1;
+            while (bounds.outWidth > 0 && Math.max(bounds.outWidth, bounds.outHeight) / sample > MAX_IMAGE_SIDE)
+                sample *= 2;
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inSampleSize = sample;
+            return BitmapFactory.decodeResource(activity.getResources(), id, options);
+        } catch (Throwable t) {
+            return null;
+        }
     }
 
     /** The Linux desktop's wallpaper from inside the rootfs, decoded like any other picture on the same ImageView. */
