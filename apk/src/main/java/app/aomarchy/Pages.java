@@ -1367,12 +1367,12 @@ class AppsPage extends Page {
         // Curated catalog: the install command is typed into the terminal, so nothing runs behind the user's back.
         LinearLayout catalog = Ui.card(shell, T.t("catalog.title"));
         catalog.addView(Ui.text(shell, T.t("catalog.desc"), 12, Ui.DIM, false));
+        catalog.addView(tableHead());
         String catalogGroup = null;
         for (app.aomarchy.data.AppCatalog.Entry entry : app.aomarchy.data.AppCatalog.all()) {
             if (!entry.groupKey.equals(catalogGroup)) {
                 catalogGroup = entry.groupKey;
-                catalog.addView(Ui.gap(shell, 6));
-                catalog.addView(Ui.text(shell, T.t(entry.groupKey), 12, Ui.FAINT, true));
+                catalog.addView(tableGroup(T.t(entry.groupKey)));
             }
             catalog.addView(catalogRow(entry));
         }
@@ -1381,8 +1381,9 @@ class AppsPage extends Page {
         flatBox = Ui.card(shell, T.t("card.flatpak"));
         linuxBox = Ui.card(shell, T.t("card.omarchy_apps"));
         androidBox = Ui.card(shell, T.t("card.android_apps"));
-        // The two app catalogues are short lists; the Android list stays full width for its longer package names.
-        body.addView(Ui.pair(shell, flatBox, linuxBox));
+        // Tables need the full width for three aligned columns, so these modules are stacked, not paired.
+        body.addView(flatBox);
+        body.addView(linuxBox);
         body.addView(androidBox);
     }
 
@@ -1416,9 +1417,81 @@ class AppsPage extends Page {
         }, "apps-list").start();
     }
 
+    /** Column weights shared by every table on this page: name / detail / action. */
+    private static final float[] TABLE_COL = {2.2f, 3f, 0.9f};
+
+    private void tableCell(LinearLayout row, View cell, int col) {
+        row.addView(cell, new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, TABLE_COL[col]));
+    }
+
+    private View hairline() {
+        View v = Ui.divider(shell);
+        decorative(v);
+        return v;
+    }
+
+    /** The same column header for every app module, with a hairline underneath. */
+    private LinearLayout tableHead() {
+        LinearLayout box = Ui.column(shell);
+        box.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout h = Ui.row(shell);
+        h.setPadding(0, Ui.dp(shell, 2), 0, Ui.dp(shell, 5));
+        tableCell(h, Ui.text(shell, T.t("apps.col_app"), 11, Ui.DIM, true), 0);
+        tableCell(h, Ui.text(shell, T.t("apps.col_detail"), 11, Ui.DIM, true), 1);
+        TextView a = Ui.text(shell, T.t("apps.col_action"), 11, Ui.DIM, true);
+        a.setGravity(android.view.Gravity.END);
+        tableCell(h, a, 2);
+        box.addView(h);
+        box.addView(hairline());
+        return box;
+    }
+
+    /** A group caption inside the catalog table. */
+    private TextView tableGroup(String title) {
+        TextView t = Ui.text(shell, title, 11, Ui.DIM, true);
+        t.setPadding(0, Ui.dp(shell, 7), 0, Ui.dp(shell, 4));
+        return t;
+    }
+
+    private TextView cellText(String s, float size, int color) {
+        TextView t = Ui.text(shell, s, size, color, false);
+        t.setSingleLine(true);
+        t.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        return t;
+    }
+
+    private TextView actionText(String label, String description, View.OnClickListener onClick) {
+        TextView t = Ui.text(shell, label, 13, Ui.ACCENT, true);
+        t.setGravity(android.view.Gravity.END);
+        t.setPadding(Ui.dp(shell, 8), Ui.dp(shell, 8), 0, Ui.dp(shell, 8));
+        t.setMinimumHeight(Ui.dp(shell, 44));
+        t.setContentDescription(description);
+        t.setOnClickListener(onClick);
+        return t;
+    }
+
+    /** One data row: three aligned columns plus a hairline separator. */
+    private LinearLayout tableRowView(View name, View detail, View action) {
+        LinearLayout box = Ui.column(shell);
+        box.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout r = Ui.row(shell);
+        r.setPadding(0, Ui.dp(shell, 5), 0, Ui.dp(shell, 5));
+        r.setMinimumHeight(Ui.dp(shell, 44));
+        tableCell(r, name, 0);
+        tableCell(r, detail, 1);
+        tableCell(r, action, 2);
+        box.addView(r);
+        box.addView(hairline());
+        return box;
+    }
+
     private void fillFlatpak(java.util.List<Apps.LinuxApp> apps) {
         flatBox.removeAllViews();
         flatBox.addView(Ui.text(shell, T.t("apps.flatpak_hint"), 12, Ui.DIM, false));
+        flatBox.addView(tableHead());
         if (apps.isEmpty()) {
             flatBox.addView(Ui.text(shell, T.t("apps.no_flatpak"), 13, Ui.FAINT, false));
             return;
@@ -1430,6 +1503,7 @@ class AppsPage extends Page {
     private void fillLinux(java.util.List<Apps.LinuxApp> apps) {
         linuxBox.removeAllViews();
         linuxBox.addView(Ui.text(shell, T.t("apps.linux_hint"), 12, Ui.DIM, false));
+        linuxBox.addView(tableHead());
         for (int i = 0; i < Math.min(apps.size(), 24); i++)
             linuxBox.addView(appRow(apps.get(i)));
         if (apps.isEmpty())
@@ -1437,95 +1511,60 @@ class AppsPage extends Page {
     }
 
     private View catalogRow(app.aomarchy.data.AppCatalog.Entry entry) {
-        LinearLayout r = Ui.row(shell);
-        r.setPadding(0, Ui.dp(shell, 6), 0, Ui.dp(shell, 6));
-        r.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        LinearLayout texts = Ui.column(shell);
-        texts.addView(Ui.text(shell, T.t(entry.labelKey), 15, Ui.TEXT, false));
-        texts.addView(Ui.text(shell, T.t(entry.hintKey), 11, Ui.DIM, false));
-        r.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        TextView install = Ui.text(shell, T.t("catalog.install"), 13, Ui.ACCENT, true);
-        install.setPadding(Ui.dp(shell, 12), 0, 0, 0);
-        install.setMinimumHeight(Ui.dp(shell, 48));
-        install.setContentDescription(T.t("catalog.install") + " " + T.t(entry.labelKey));
-        install.setOnClickListener(v -> shell.openTerminalWith(entry.command));
-        r.addView(install);
-        return r;
+        return tableRowView(
+                cellText(T.t(entry.labelKey), 14, Ui.TEXT),
+                cellText(T.t(entry.hintKey), 11, Ui.DIM),
+                actionText(T.t("catalog.install"),
+                        T.t("catalog.install") + " " + T.t(entry.labelKey),
+                        v -> shell.openTerminalWith(entry.command)));
     }
 
     private View appRow(Apps.LinuxApp app) {
-        LinearLayout r = Ui.row(shell);
-        r.setPadding(0, Ui.dp(shell, 6), 0, Ui.dp(shell, 6));
-        r.addView(Ui.text(shell, app.name, 15, Ui.TEXT, false),
-                new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        TextView id = Ui.text(shell, app.id, 11, Ui.FAINT, false);
-        id.setSingleLine(true);
-        id.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        id.setPadding(Ui.dp(shell, 10), 0, Ui.dp(shell, 8), 0);
-        r.addView(id, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        TextView open = Ui.text(shell, T.t("btn.open"), 13, Ui.ACCENT, false);
-        open.setPadding(Ui.dp(shell, 10), 0, 0, 0);
-        open.setMinimumHeight(Ui.dp(shell, 48));
-        // "打开" alone says nothing about which app: name it, with the 48dp touch target raised above.
-        open.setContentDescription(app.name + "，" + T.t("btn.open").replace("›", "").trim());
-        open.setOnClickListener(v -> {
-            if (!SessionService.rootfsReady(shell)) {
-                toast(T.t("toast.system_missing"));
-            } else if (!SessionService.started) {
-                toast(T.t("toast.start_session_first"));
-            } else {
-                Apps.launchLinux(shell, app);
-                toast(T.t("toast.opened_on_desktop", app.name));
-            }
-        });
-        r.addView(open);
-        return r;
+        return tableRowView(
+                cellText(app.name, 14, Ui.TEXT),
+                cellText(app.id, 11, Ui.DIM),
+                actionText(T.t("btn.open"),
+                        app.name + "，" + T.t("btn.open").replace("›", "").trim(),
+                        v -> {
+                            if (!SessionService.rootfsReady(shell)) {
+                                toast(T.t("toast.system_missing"));
+                            } else if (!SessionService.started) {
+                                toast(T.t("toast.start_session_first"));
+                            } else {
+                                Apps.launchLinux(shell, app);
+                                toast(T.t("toast.opened_on_desktop", app.name));
+                            }
+                        }));
     }
 
     private void fillAndroid(java.util.List<Apps.AndroidApp> apps) {
         androidBox.removeAllViews();
         androidBox.addView(Ui.text(shell, T.t("apps.android_hint"), 12, Ui.DIM, false));
+        androidBox.addView(tableHead());
         if (apps.isEmpty()) {
             androidBox.addView(Ui.text(shell, T.t("apps.no_android"), 13, Ui.FAINT, false));
             return;
         }
-        LinearLayout row = null;
-        int perRow = shell.getResources().getConfiguration().orientation
-                == android.content.res.Configuration.ORIENTATION_LANDSCAPE ? 8 : 4;
-        for (int i = 0; i < Math.min(apps.size(), 32); i++) {
-            if (i % perRow == 0) {
-                row = Ui.row(shell);
-                row.setPadding(0, Ui.dp(shell, 4), 0, Ui.dp(shell, 4));
-                androidBox.addView(row);
-            }
-            row.addView(androidTile(apps.get(i)));
-        }
+        // Android apps used to be an icon grid; they now use the same three-column table as every other module.
+        for (int i = 0; i < Math.min(apps.size(), 32); i++)
+            androidBox.addView(androidTableRow(apps.get(i)));
     }
 
-    private View androidTile(Apps.AndroidApp app) {
-        LinearLayout cell = Ui.column(shell);
-        cell.setGravity(android.view.Gravity.CENTER);
-        cell.setPadding(0, Ui.dp(shell, 4), 0, Ui.dp(shell, 4));
+    private View androidTableRow(Apps.AndroidApp app) {
+        LinearLayout nameCell = Ui.row(shell);
         android.widget.ImageView icon = new android.widget.ImageView(shell);
         icon.setImageDrawable(app.icon);
-        decorative(icon); // the label below names the app
-        cell.addView(icon, new LinearLayout.LayoutParams(Ui.dp(shell, 36), Ui.dp(shell, 36)));
-        TextView label = Ui.text(shell, app.label, 11, Ui.DIM, false);
-        label.setGravity(android.view.Gravity.CENTER);
-        label.setMaxLines(1);
-        label.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        label.setPadding(0, Ui.dp(shell, 4), 0, 0);
-        cell.addView(label, new LinearLayout.LayoutParams(Ui.dp(shell, 70), ViewGroup.LayoutParams.WRAP_CONTENT));
-        label.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO); // the cell announces the name
-        cell.setContentDescription(app.label);
-        cell.setMinimumHeight(Ui.dp(shell, 48));
-        cell.setOnClickListener(v -> {
-            Apps.openFloating(shell, app.packageName);
-            toast(T.t("toast.floating_open", app.label));
-        });
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        cell.setLayoutParams(lp);
-        return cell;
+        decorative(icon);
+        nameCell.addView(icon, new LinearLayout.LayoutParams(Ui.dp(shell, 22), Ui.dp(shell, 22)));
+        TextView label = cellText(app.label, 13, Ui.TEXT);
+        label.setPadding(Ui.dp(shell, 8), 0, 0, 0);
+        nameCell.addView(label, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        return tableRowView(nameCell,
+                cellText(app.packageName, 11, Ui.DIM),
+                actionText(T.t("btn.open"), app.label + "，" + T.t("btn.open"), v -> {
+                    Apps.openFloating(shell, app.packageName);
+                    toast(T.t("toast.floating_open", app.label));
+                }));
     }
 }
 /** 控制: the high-frequency switchboard — same view as the half-screen sheet over the desktop. */
