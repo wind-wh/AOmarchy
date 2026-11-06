@@ -1480,25 +1480,16 @@ class AppsPage extends Page {
         top.addView(label, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         cell.addView(top);
 
-        // Detail and action share one line: no empty bottom half inside each drawer.
-        LinearLayout foot = Ui.row(shell);
-        LinearLayout.LayoutParams flp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        flp.topMargin = Ui.dp(shell, 6);
-        foot.setLayoutParams(flp);
+        // One drawer = one button. A separate "打开 / 安装" label inside the cell read as a second
+        // jump target next to the card itself, so the action lives only in the cell's contentDescription.
         TextView sub = Ui.text(shell, detail, 11, Ui.DIM, false);
         sub.setSingleLine(true);
         sub.setEllipsize(android.text.TextUtils.TruncateAt.END);
         sub.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        slp.rightMargin = Ui.dp(shell, 6); // long package names must not touch the action label
-        foot.addView(sub, slp);
-        // "打开 ›" is a menu affordance; inside a drawer the whole cell is the button, so drop the arrow.
-        String shortAction = action.replace("›", "").trim();
-        TextView act = Ui.text(shell, shortAction, 11, Ui.ACCENT, true);
-        act.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        foot.addView(act);
-        cell.addView(foot);
+        LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        slp.topMargin = Ui.dp(shell, 6);
+        cell.addView(sub, slp);
         return cell;
     }
 
@@ -1583,7 +1574,8 @@ class AppsPage extends Page {
     }
 
     private View androidDrawer(Apps.AndroidApp app) {
-        return drawer(appIcon(app.icon), app.label, app.packageName, T.t("btn.open"),
+        // The cell is the only launch target: one tap, one floating window.
+        return drawer(appIcon(app.icon), app.label, app.packageName, T.t("apps.drawer_float"),
                 v -> {
                     Apps.openFloating(shell, app.packageName);
                     toast(T.t("toast.floating_open", app.label));

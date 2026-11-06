@@ -71,7 +71,7 @@ public final class T {
         {"tab.apps", "应用", "Apps"},
         // ===== apps catalog (one-tap install commands, typed into the terminal) =====
         {"catalog.title", "常用 Linux 应用", "Common Linux apps"},
-        {"catalog.desc", "点「安装」会打开终端并输入安装命令，按提示确认即可。", "Tap Install to open the terminal with the install command typed in; confirm the prompt there."},
+        {"catalog.desc", "点按应用会打开终端并输入安装命令，按提示确认即可。", "Tap an app to open the terminal with the install command typed in; confirm the prompt there."},
         {"catalog.install", "安装", "Install"},
         {"catalog.group.desktop", "桌面常用", "Desktop"},
         {"catalog.group.dev", "开发", "Development"},
@@ -405,6 +405,7 @@ public final class T {
         {"apps.no_linux", "系统未安装或没有桌面入口。", "The system is not installed, or it has no desktop entries."},
         {"apps.android_hint", "点按以浮动窗口打开，和桌面并排",
             "Tap to open it in a floating window next to the desktop"},
+        {"apps.drawer_float", "浮动打开", "Open in a floating window"},
         {"apps.no_android", "没有可启动的 Android 应用。", "No Android apps available to launch."},
 
         // ===== page 4 / desktop sheet: controls ============================================
