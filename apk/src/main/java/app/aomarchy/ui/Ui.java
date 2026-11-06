@@ -148,35 +148,68 @@ public final class Ui {
         return t;
     }
 
-    /** A section card: rounded surface, optional title, children in a vertical list. */
+    /** A section card: rounded surface, optional title, children in a vertical list. Compact by default —
+     *  the console shows many short cards at once, so padding and the gap between cards stay tight. */
     public static LinearLayout card(Context c, String title) {
         LinearLayout card = column(c);
         // Glass card: translucent over the blurred wallpaper, light hairline and a soft shadow so it floats.
-        CardBackground bg = new CardBackground(c, GLASS, GLASS_LINE, 1.2f, 24);
+        CardBackground bg = new CardBackground(c, GLASS, GLASS_LINE, 1.2f, 18);
         card.setBackground(bg);
-        card.setElevation(dp(c, 12)); // a soft, slightly deeper float so the lit bevel has something to sit on
+        card.setElevation(dp(c, 8));
         CardBackground.attach(card, bg);
         GlassTint.register(card); // the backdrop's colour becomes this card's glow
-        int pad = dp(c, 14);
+        int pad = dp(c, 10);
         card.setPadding(pad, pad, pad, pad);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.bottomMargin = dp(c, 9);
+        lp.bottomMargin = dp(c, 6);
         card.setLayoutParams(lp);
         if (title != null) {
             TextView t = text(c, title, 13, DIM, true);
             LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            tlp.bottomMargin = dp(c, 8);
+            tlp.bottomMargin = dp(c, 5);
             card.addView(t, tlp);
         }
         return card;
     }
 
+    /**
+     * Two short cards sharing one row on a wide (landscape) screen. On a narrow screen they stack, because a
+     * half-width card would squeeze the key/value rows. Each card keeps its own bottom margin from {@link #card}.
+     */
+    public static LinearLayout pair(Context c, LinearLayout a, LinearLayout b) {
+        boolean wide = c.getResources().getConfiguration().orientation
+                == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+        LinearLayout group = wide ? row(c) : column(c);
+        if (wide)
+            group.setGravity(Gravity.TOP); // unequal card heights must align at the top, not float centred
+        if (wide) {
+            // MATCH_PARENT makes both cards the same height, so a short card does not leave a bare gap
+            // beneath it. Ui.card's own bottomMargin is replaced here, so re-apply it for the next row.
+            int edge = dp(c, 6);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.MATCH_PARENT, 1f);
+            lp.rightMargin = edge;
+            lp.bottomMargin = edge;
+            group.addView(a, lp);
+            LinearLayout.LayoutParams lp2 = new LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.MATCH_PARENT, 1f);
+            lp2.bottomMargin = edge;
+            group.addView(b, lp2);
+        } else {
+            group.addView(a);
+            group.addView(b);
+        }
+        group.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        return group;
+    }
+
     public static TextView chip(Context c, String s, int color) {
         TextView t = text(c, s, 12, color, true);
         t.setBackground(rounded(c, 0x1AFFFFFF, 0, 30));
-        int h = dp(c, 6), w = dp(c, 12);
+        int h = dp(c, 5), w = dp(c, 10);
         t.setPadding(w, h, w, h);
         return t;
     }
@@ -186,15 +219,19 @@ public final class Ui {
         t.setGravity(Gravity.CENTER);
         t.setBackground(buttonSurface(c, primary ? ACCENT : 0x3D1C2230, 14));
         Motion.pressable(t);
-        int v = dp(c, 12), h = dp(c, 18);
+        int v = dp(c, 9), h = dp(c, 14);
         t.setPadding(h, v, h, v);
         t.setOnClickListener(onClick);
         return t;
     }
 
+    /** Vertical spacer. Callers still pass their intended size; the console's compact layout scales it once here. */
+    private static final float GAP_SCALE = 0.7f;
+
     public static View gap(Context c, int heightDp) {
+        int h = Math.max(2, Math.round(heightDp * GAP_SCALE));
         View v = new View(c);
-        v.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(c, heightDp)));
+        v.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(c, h)));
         return v;
     }
 
@@ -209,7 +246,7 @@ public final class Ui {
         LinearLayout r = row(c);
         r.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        r.setPadding(0, dp(c, 5), 0, dp(c, 5));
+        r.setPadding(0, dp(c, 3), 0, dp(c, 3));
         TextView k = text(c, key, 14, DIM, false);
         r.addView(k, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         View space = new View(c);
@@ -224,7 +261,7 @@ public final class Ui {
         LinearLayout r = row(c);
         r.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        r.setPadding(0, dp(c, 5), 0, dp(c, 5));
+        r.setPadding(0, dp(c, 3), 0, dp(c, 3));
         r.addView(text(c, key, 14, DIM, false),
                 new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         View space = new View(c);

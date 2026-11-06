@@ -31,8 +31,8 @@ abstract class Page {
         root.setBackgroundColor(android.graphics.Color.TRANSPARENT); // the console's wallpaper shows through
         root.setFillViewport(true);
         body = Ui.column(shell);
-        int pad = Ui.dp(shell, 18);
-        body.setPadding(pad, pad, pad, Ui.dp(shell, 18));
+        int pad = Ui.dp(shell, 12);
+        body.setPadding(pad, pad, pad, Ui.dp(shell, 12));
         root.addView(body, new ScrollView.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         build(body);
@@ -181,7 +181,7 @@ class OverviewPage extends Page {
         if (wide) {
             LinearLayout row = Ui.row(shell);
             for (int i = 0; i < cards.length; i++) {
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Ui.dp(shell, 132), 1f);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Ui.dp(shell, 100), 1f);
                 if (i < cards.length - 1)
                     lp.rightMargin = Ui.dp(shell, 9);
                 row.addView(cards[i], lp);
@@ -190,10 +190,10 @@ class OverviewPage extends Page {
         } else {
             for (int r = 0; r < 2; r++) {
                 LinearLayout row = Ui.row(shell);
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Ui.dp(shell, 132), 1f);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Ui.dp(shell, 100), 1f);
                 lp.rightMargin = Ui.dp(shell, 9);
                 row.addView(cards[r * 2], lp);
-                row.addView(cards[r * 2 + 1], new LinearLayout.LayoutParams(0, Ui.dp(shell, 132), 1f));
+                row.addView(cards[r * 2 + 1], new LinearLayout.LayoutParams(0, Ui.dp(shell, 100), 1f));
                 body.addView(row);
                 body.addView(Ui.gap(shell, 9));
             }
@@ -206,7 +206,6 @@ class OverviewPage extends Page {
         gpuValue = value("—", Ui.TEXT);
         netGpu.addView(Ui.kv2(shell, "GPU", gpuValue, "Mesa KGSL · Adreno"));
         netGpu.addView(Ui.text(shell, T.t("overview.net_gpu_note"), 11, Ui.FAINT, false));
-        body.addView(netGpu);
 
         // Data safety at a glance: the newest backup's age, and one tap to make another one.
         LinearLayout backupStatus = card(T.t("card.backup_status"));
@@ -226,7 +225,8 @@ class OverviewPage extends Page {
         manage.setOnClickListener(v -> shell.showTab(1));
         backupRow.addView(manage);
         backupStatus.addView(backupRow);
-        body.addView(backupStatus);
+        // Two short cards share the row: network/GPU details next to the backup status.
+        body.addView(Ui.pair(shell, netGpu, backupStatus));
 
         // Smart suggestions: the two most useful next actions for this device, computed from the live metrics.
         LinearLayout insights = Ui.card(shell, T.t("card.insights"));
@@ -234,11 +234,10 @@ class OverviewPage extends Page {
         insights.addView(insightsBox);
         insightsEmpty = Ui.text(shell, T.t("insights.none"), 12, Ui.DIM, false);
         insights.addView(insightsEmpty);
-        body.addView(insights);
 
         LinearLayout tips = Ui.card(shell, T.t("card.tips"));
         tips.addView(Ui.text(shell, T.t("overview.tips"), 12, Ui.DIM, false));
-        body.addView(tips);
+        body.addView(Ui.pair(shell, insights, tips));
     }
 
     private LinearLayout insightsBox;
@@ -554,7 +553,14 @@ class SystemPage extends Page {
         size = value("—", Ui.TEXT);
         sys.addView(Ui.kv(shell, T.t("label.usage"), size));
         sys.addView(Ui.kv(shell, T.t("label.path"), value("files/rootfs", Ui.DIM)));
-        body.addView(sys);
+
+        // Storage breakdown: the rootfs is the big one, backups next; logs and cache are what "清理" can reclaim.
+        LinearLayout storage = Ui.card(shell, T.t("card.storage"));
+        storage.addView(Ui.text(shell, T.t("storage.computing"), 13, Ui.DIM, false));
+        LinearLayout storageRows = Ui.column(shell);
+        storage.addView(storageRows);
+        loadStorage(storageRows);
+        body.addView(Ui.pair(shell, sys, storage));
 
         LinearLayout install = Ui.card(shell, T.t("card.install_system"));
         install.addView(Ui.text(shell, T.t("system.install_desc"), 13, Ui.DIM, false));
@@ -683,13 +689,6 @@ class SystemPage extends Page {
         body.addView(logs);
         paintLogs();
 
-        // Storage breakdown: the rootfs is the big one, backups next; logs and cache are what "清理" can reclaim.
-        LinearLayout storage = Ui.card(shell, T.t("card.storage"));
-        storage.addView(Ui.text(shell, T.t("storage.computing"), 13, Ui.DIM, false));
-        LinearLayout storageRows = Ui.column(shell);
-        storage.addView(storageRows);
-        body.addView(storage);
-        loadStorage(storageRows);
     }
 
     private void loadStorage(LinearLayout rows) {
@@ -1380,12 +1379,10 @@ class AppsPage extends Page {
         body.addView(catalog);
 
         flatBox = Ui.card(shell, T.t("card.flatpak"));
-        body.addView(flatBox);
-
         linuxBox = Ui.card(shell, T.t("card.omarchy_apps"));
-        body.addView(linuxBox);
-
         androidBox = Ui.card(shell, T.t("card.android_apps"));
+        // The two app catalogues are short lists; the Android list stays full width for its longer package names.
+        body.addView(Ui.pair(shell, flatBox, linuxBox));
         body.addView(androidBox);
     }
 
@@ -1597,7 +1594,7 @@ class SettingsPage extends Page {
         emailValue = value("—", Ui.TEXT);
         emailRow = row(T.t("label.email"), emailValue, () -> editText(T.t("label.email"), "user_email", emailValue));
         identity.addView(emailRow);
-        body.addView(identity);
+        // identity is paired with the keyboard card below
 
         LinearLayout keyboard = Ui.card(shell, T.t("card.keyboard"));
         keyboard.addView(Ui.text(shell, T.t("settings.keyboard_desc"), 12, Ui.DIM, false));
@@ -1605,7 +1602,7 @@ class SettingsPage extends Page {
         kbValue = value("—", Ui.TEXT);
         kbRow = row(T.t("label.kb_layout"), kbValue, this::pickLayout);
         keyboard.addView(kbRow);
-        body.addView(keyboard);
+        body.addView(Ui.pair(shell, identity, keyboard));
 
         LinearLayout startup = Ui.card(shell, T.t("card.startup"));
         // Startup mode now lives in the global top bar (ShellActivity); this card keeps only the launch shortcut.
@@ -1633,7 +1630,7 @@ class SettingsPage extends Page {
         });
         row.setClickable(true);
         startup.addView(row);
-        body.addView(startup);
+        // startup is paired with the language card below
 
         LinearLayout language = Ui.card(shell, T.t("card.language"));
         language.addView(Ui.text(shell, T.t("settings.language_desc"), 12, Ui.DIM, false));
@@ -1641,7 +1638,7 @@ class SettingsPage extends Page {
         langValue = value("—", Ui.TEXT);
         langRow = row(T.t("label.ui_lang"), langValue, this::pickLanguage);
         language.addView(langRow);
-        body.addView(language);
+        body.addView(Ui.pair(shell, startup, language));
 
         LinearLayout detailed = Ui.card(shell, T.t("card.detailed"));
         detailed.addView(Ui.text(shell, T.t("settings.detailed_desc"), 12, Ui.DIM, false));
@@ -1684,7 +1681,7 @@ class SettingsPage extends Page {
                 shell.refreshConsoleBackground(); // a picked image shows as soon as the sheet closes
             });
         }));
-        body.addView(detailed);
+        // detailed navigation is paired with the about card below
 
         LinearLayout about = Ui.card(shell, T.t("card.about"));
         about.addView(Ui.kv(shell, T.t("label.version"), value(versionName(), Ui.TEXT)));
@@ -1694,7 +1691,7 @@ class SettingsPage extends Page {
         about.addView(divider());
         about.addView(row(T.t("btn.check_update"), value("", Ui.FAINT), this::checkForUpdates));
         about.addView(Ui.kv(shell, T.t("label.last_check"), value(lastCheckText(), Ui.DIM)));
-        body.addView(about);
+        body.addView(Ui.pair(shell, detailed, about));
     }
 
     /** How long ago the release feed was last read, in the same relative wording as the rest of the console. */
