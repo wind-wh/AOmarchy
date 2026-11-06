@@ -87,9 +87,9 @@ static void chromium_no_sandbox(int argc, char **argv)
     // node, which libdrm only accepts through Mesa's DRM shim (LD_PRELOAD, inherited by the GPU process).
     char shim[4096];
     snprintf(shim, sizeof shim, "%s/usr/lib/libtva_drm_shim_wayland.so", rootfs_base ? rootfs_base : "");
-    // ponytail: opt-in (ANDROMARCHY_CHROMIUM_VAAPI=1) until it plays cleanly: YouTube in Brave showed green frames
+    // ponytail: opt-in (AOMARCHY_CHROMIUM_VAAPI=1) until it plays cleanly: YouTube in Brave showed green frames
     // and stalls even at 720p (copies per frame + frames late), while ffmpeg/mpv decode fine through the same bridge.
-    int va = kgsl && rootfs_base && getenv("ANDROMARCHY_CHROMIUM_VAAPI") && getenv("LIBVA_DRIVER_NAME") &&
+    int va = kgsl && rootfs_base && getenv("AOMARCHY_CHROMIUM_VAAPI") && getenv("LIBVA_DRIVER_NAME") &&
              access("/usr/lib/libtva_drm_shim_wayland.so", R_OK) == 0; // guest path: fakechroot
     if (va) {
         const char *pre = getenv("LD_PRELOAD");
@@ -103,7 +103,7 @@ static void chromium_no_sandbox(int argc, char **argv)
     int n = 0;
     av[n++] = argv[0];
     av[n++] = "--no-sandbox";
-    // Cameras are PipeWire nodes here (the Andromarchy backend's Android cameras; no /dev/video*): the portal path.
+    // Cameras are PipeWire nodes here (the AOmarchy backend's Android cameras; no /dev/video*): the portal path.
     // (one --enable-features: Chromium keeps only the last one)
     av[n++] = va ? "--enable-features=WebRtcPipeWireCamera,AcceleratedVideoDecodeLinuxGL,"
                    "AcceleratedVideoDecodeLinuxZeroCopyGL,VaapiVideoDecoder,VaapiIgnoreDriverChecks"
@@ -437,7 +437,7 @@ static int fake_sys(const char *p, char *buf, size_t sz)
     const char *dmi = strncmp(p, "class/dmi/id/", 13) == 0         ? p + 13
                       : strncmp(p, "devices/virtual/dmi/id/", 23) == 0 ? p + 23
                                                                      : NULL;
-    const char *vendor = getenv("ANDROMARCHY_VENDOR"), *model = getenv("ANDROMARCHY_MODEL");
+    const char *vendor = getenv("AOMARCHY_VENDOR"), *model = getenv("AOMARCHY_MODEL");
     if (!dmi || !vendor || !model)
         return -1;
     if (!strcmp(dmi, "sys_vendor") || !strcmp(dmi, "board_vendor") || !strcmp(dmi, "chassis_vendor"))
@@ -1386,8 +1386,8 @@ int execve(const char *path, char *const argv[], char *const envp[])
     const char *base = getenv("FAKECHROOT_BASE");
     const char *slash = path ? strrchr(path, '/') : NULL;
     if (base && strstr(base, "/bwrap-flatpak/") && strcmp(slash ? slash + 1 : path, "flatpak-spawn") == 0 &&
-        access("/run/host/andromarchy-bin/flatpak-spawn", X_OK) == 0)
-        path = "/run/host/andromarchy-bin/flatpak-spawn";
+        access("/run/host/aomarchy-bin/flatpak-spawn", X_OK) == 0)
+        path = "/run/host/aomarchy-bin/flatpak-spawn";
     return next(self_exe_target(path), argv, env);
 }
 

@@ -4,7 +4,7 @@ import qs.Ui
 
 BarWidget {
     id: root
-    moduleName: "andromarchy.squeekboard"
+    moduleName: "aomarchy.squeekboard"
 
     implicitWidth: button.implicitWidth
     implicitHeight: button.implicitHeight

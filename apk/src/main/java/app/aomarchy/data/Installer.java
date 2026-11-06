@@ -189,12 +189,12 @@ public final class Installer {
             throw e;
         }
 
-        // Any .tar.gz can be picked: only an Andromarchy rootfs has the loader rootfsReady() looks for.
+        // Any .tar.gz can be picked: only an AOmarchy rootfs has the loader rootfsReady() looks for.
         if (!new File(partial, "opt/lotfix/arch-glibc/ld-linux-aarch64.so.1").exists()) {
             deleteTree(partial);
             throw new IOException(T.t("install.not_aomarchy_image"));
         }
-        File setup = new File(partial, "root/.config/andromarchy/setup.conf");
+        File setup = new File(partial, "root/.config/aomarchy/setup.conf");
         setup.getParentFile().mkdirs();
         if (!setup.getCanonicalPath().startsWith(partial.getCanonicalPath() + File.separator)) {
             deleteTree(partial);

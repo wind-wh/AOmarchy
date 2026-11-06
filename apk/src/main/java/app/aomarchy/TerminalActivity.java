@@ -29,7 +29,7 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
     /** True while this pty session is alive; SessionService.runningMode() uses it to tell terminal from desktop. */
     static volatile boolean sRunning;
     static {
-        System.loadLibrary("andromarchy_consumer"); // the pty natives live in the same .so as the display consumer
+        System.loadLibrary("aomarchy_consumer"); // the pty natives live in the same .so as the display consumer
     }
 
     private static final float MIN_FONT = 9f, MAX_FONT = 24f;

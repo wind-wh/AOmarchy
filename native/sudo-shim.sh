@@ -1,5 +1,5 @@
 #!/bin/bash
-# /usr/local/bin/sudo for Android/Andromarchy: there is no real root (setuid does not exist for apps), but pacman
+# /usr/local/bin/sudo for Android/AOmarchy: there is no real root (setuid does not exist for apps), but pacman
 # and Omarchy's installers ("sudo pacman", yay, omarchy-pkg-*) only need to look like root. Run the command as fake
 # root, like `ARCH_ROOT=1 lotfix-run`: start faked (fakeroot over TCP, state kept in /var/lib/fakeroot.state) and
 # add libfakeroot to the preloads, between android-compat and fakechroot.

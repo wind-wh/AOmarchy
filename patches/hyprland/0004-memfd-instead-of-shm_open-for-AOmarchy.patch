@@ -6,10 +6,10 @@ index be4f033..662fe75 100644
      return {{}, ""};
  }
  
-+// Andromarchy (Android, no proot): there is no /dev/shm, and glibc's shm_open() opens it internally (no fakechroot
++// AOmarchy (Android, no proot): there is no /dev/shm, and glibc's shm_open() opens it internally (no fakechroot
 +// rewrite), so keymaps and other shared files fail. Use an anonymous memfd instead.
 +static bool useMemfd() {
-+    static const bool memfd = getenv("ANDROMARCHY");
++    static const bool memfd = getenv("AOMARCHY");
 +    return memfd;
 +}
 +

@@ -62,8 +62,8 @@ chmod 600 /root/keys/*
 
 ## Notes and limits
 
-- **Native code is built too.** `apk/build.gradle` compiles the NDK executables (`libandromarchy.so`,
-  `liblotfixrun.so`, `libtermuxva.so`) and CMake builds `libandromarchy_consumer.so`; the first build downloads nothing
+- **Native code is built too.** `apk/build.gradle` compiles the NDK executables (`libaomarchy.so`,
+  `liblotfixrun.so`, `libtermuxva.so`) and CMake builds `libaomarchy_consumer.so`; the first build downloads nothing
   extra (NDK is local) and later builds only relink changed sources.
 - **Signing differs from CI only in timestamps** — same key, same code, so the APK is interchangeable for testing but
   its SHA-256 differs from the release asset.

@@ -21,13 +21,13 @@ pacman -S --noconfirm --needed \
 rm -rf "$OMARCHY_PATH"
 cp -a "$SRC" "$OMARCHY_PATH"
 # Our changes to Omarchy's own files, also re-applied after every omarchy-update (post-update hook).
-install -Dm 755 "$(dirname "$0")/../native/omarchy-dns-android.sh" /usr/local/share/andromarchy/omarchy-dns
+install -Dm 755 "$(dirname "$0")/../native/omarchy-dns-android.sh" /usr/local/share/aomarchy/omarchy-dns
 install -m 755 "$(dirname "$0")/omarchy-android-patches.sh" /usr/local/bin/omarchy-android-patches
 omarchy-android-patches
 mkdir -p ~/.config/omarchy/hooks/post-update.d
-printf '#!/bin/bash\n# Andromarchy: re-apply our changes to Omarchy after its update\nomarchy-android-patches\n' \
-  > ~/.config/omarchy/hooks/post-update.d/andromarchy
-chmod +x ~/.config/omarchy/hooks/post-update.d/andromarchy
+printf '#!/bin/bash\n# AOmarchy: re-apply our changes to Omarchy after its update\nomarchy-android-patches\n' \
+  > ~/.config/omarchy/hooks/post-update.d/aomarchy
+chmod +x ~/.config/omarchy/hooks/post-update.d/aomarchy
 
 # No journald on Android: omarchy-launch-shell runs the shell through systemd-cat.
 cat > /usr/local/bin/systemd-cat <<'EOF'
@@ -98,13 +98,13 @@ grep -q 'systemctl --user init' ~/.config/hypr/autostart.lua ||
 # Hyprland decodes binds with the main layout, where wtype's first keycode is Escape (Super+W opened the system
 # menu). Resolve binds with the sending keyboard's own keymap.
 grep -q 'resolve_binds_by_sym' ~/.config/hypr/input.lua ||
-  printf '\n-- Android/Andromarchy: binds from virtual keyboards (on-screen keyboard) use their own keymap\nhl.config({ input = { resolve_binds_by_sym = true } })\n' >> ~/.config/hypr/input.lua
+  printf '\n-- Android/AOmarchy: binds from virtual keyboards (on-screen keyboard) use their own keymap\nhl.config({ input = { resolve_binds_by_sym = true } })\n' >> ~/.config/hypr/input.lua
 # Hyprland is started by the app (SessionService), not start-hyprland: no "launched without start-hyprland" nag.
 grep -q 'disable_watchdog_warning' ~/.config/hypr/input.lua ||
-  printf '\n-- Android/Andromarchy: started by the app (SessionService), not start-hyprland\nhl.config({ misc = { disable_watchdog_warning = true } })\n' >> ~/.config/hypr/input.lua
+  printf '\n-- Android/AOmarchy: started by the app (SessionService), not start-hyprland\nhl.config({ misc = { disable_watchdog_warning = true } })\n' >> ~/.config/hypr/input.lua
 
 # On-screen keyboard: Squeekboard (Phosh's, Arch package). It shows by itself when a text field gets focus
-# (input-method-v2); the bar icon (plugin andromarchy.squeekboard) toggles it. PC-style AZERTY layout with
+# (input-method-v2); the bar icon (plugin aomarchy.squeekboard) toggles it. PC-style AZERTY layout with
 # Ctrl/Super/Alt/AltGr/arrows (terminals too), a globe key for the layout list, Omarchy theme colours.
 SQ="$(dirname "$0")/squeekboard"
 pacman -S --noconfirm --needed squeekboard
@@ -117,40 +117,40 @@ for l in fr us ara; do
   done
 done
 for f in number/us pin/us; do install -Dm644 "$SQ"/us_wide.yaml $K/${f}_wide.yaml; install -Dm644 "$SQ"/us.yaml $K/$f.yaml; done
-mkdir -p ~/.config/omarchy/plugins/andromarchy.squeekboard ~/.config/omarchy/hooks/theme-set.d
-cp "$SQ"/plugin/* ~/.config/omarchy/plugins/andromarchy.squeekboard/
+mkdir -p ~/.config/omarchy/plugins/aomarchy.squeekboard ~/.config/omarchy/hooks/theme-set.d
+cp "$SQ"/plugin/* ~/.config/omarchy/plugins/aomarchy.squeekboard/
 printf '#!/bin/bash\n# Squeekboard follows the Omarchy theme\nsqueekboard-theme\n' > ~/.config/omarchy/hooks/theme-set.d/squeekboard
 chmod +x ~/.config/omarchy/hooks/theme-set.d/squeekboard
 install -m755 "$SQ"/squeekboard-session /usr/local/bin/
 # Globe key: XF86Keyboard -> next language (Squeekboard's own menu is a popover that gets no touch)
 grep -q 'squeekboard-next-layout' ~/.config/hypr/bindings.lua ||
   printf '
--- Android/Andromarchy: Squeekboard globe key -> next keyboard language
+-- Android/AOmarchy: Squeekboard globe key -> next keyboard language
 o.bind("XF86Keyboard", "Next on-screen keyboard language", hl.dsp.exec_cmd("squeekboard-next-layout"))
 ' >> ~/.config/hypr/bindings.lua
 grep -q 'squeekboard-session' ~/.config/hypr/autostart.lua ||
-  printf '\n-- Android/Andromarchy: Squeekboard (shows by itself in text fields; bar icon toggles it)\no.exec_on_start("squeekboard-session")\n' >> ~/.config/hypr/autostart.lua
+  printf '\n-- Android/AOmarchy: Squeekboard (shows by itself in text fields; bar icon toggles it)\no.exec_on_start("squeekboard-session")\n' >> ~/.config/hypr/autostart.lua
 # Touchscreen gestures (hyprgrass, built by build-inside.sh): 3 fingers. HyperOS's own 3-finger gestures must be off
 # (docs/user-guide.md).
 install -Dm644 "$(dirname "$0")/touch.lua" ~/.config/hypr/touch.lua
 # Window rules for the Android screen (modal dialogs kept below Omarchy's bar).
-install -Dm644 "$(dirname "$0")/andromarchy.lua" ~/.config/hypr/andromarchy.lua
-grep -q 'require("hypr.andromarchy")' ~/.config/hypr/hyprland.lua ||
-  echo 'require("hypr.andromarchy")' >> ~/.config/hypr/hyprland.lua
+install -Dm644 "$(dirname "$0")/aomarchy.lua" ~/.config/hypr/aomarchy.lua
+grep -q 'require("hypr.aomarchy")' ~/.config/hypr/hyprland.lua ||
+  echo 'require("hypr.aomarchy")' >> ~/.config/hypr/hyprland.lua
 grep -q 'require("hypr.touch")' ~/.config/hypr/hyprland.lua ||
   sed -i 's/^require("hypr.autostart")$/require("hypr.autostart")\nrequire("hypr.touch")/' ~/.config/hypr/hyprland.lua
 grep -q 'libhyprgrass' ~/.config/hypr/autostart.lua ||
-  printf '\n-- Android/Andromarchy: touchscreen gestures\no.exec_on_start("hyprctl plugin load /usr/lib/hyprland-plugins/libhyprgrass.so && hyprctl reload")\n' >> ~/.config/hypr/autostart.lua
-# Shared clipboard with Android (native/android-clipboard.sh, our aquamarine bridges the Andromarchy socket).
+  printf '\n-- Android/AOmarchy: touchscreen gestures\no.exec_on_start("hyprctl plugin load /usr/lib/hyprland-plugins/libhyprgrass.so && hyprctl reload")\n' >> ~/.config/hypr/autostart.lua
+# Shared clipboard with Android (native/android-clipboard.sh, our aquamarine bridges the AOmarchy socket).
 grep -q 'android-clipboard' ~/.config/hypr/autostart.lua ||
   printf '
--- Android/Andromarchy: shared clipboard with Android
+-- Android/AOmarchy: shared clipboard with Android
 o.exec_on_start("android-clipboard")
 ' >> ~/.config/hypr/autostart.lua
 # Omarchy's first-run steps that need the session (dark GTK theme, primary paste, welcome notification), once.
 grep -q 'first-session.sh' ~/.config/hypr/autostart.lua ||
-  printf '\n-- Android/Andromarchy: first session (once)\no.exec_on_start("/opt/lotfix/first-session.sh")\n' >> ~/.config/hypr/autostart.lua
-"$OMARCHY_PATH"/bin/omarchy-plugin-enable andromarchy.squeekboard || echo "on-screen keyboard: enable it with 'omarchy plugin enable andromarchy.squeekboard'"
+  printf '\n-- Android/AOmarchy: first session (once)\no.exec_on_start("/opt/lotfix/first-session.sh")\n' >> ~/.config/hypr/autostart.lua
+"$OMARCHY_PATH"/bin/omarchy-plugin-enable aomarchy.squeekboard || echo "on-screen keyboard: enable it with 'omarchy plugin enable aomarchy.squeekboard'"
 
 # kitty: spawn bash directly. Its default (kitten run-shell + shell integration) works only partly without proot.
 grep -q '^shell /usr/bin/bash' ~/.config/kitty/kitty.conf 2>/dev/null ||

@@ -1,5 +1,5 @@
 #!/bin/bash
-# omarchy-dns for Android/Andromarchy (replaces Omarchy's, which drives NetworkManager + systemd-resolved): DNS for
+# omarchy-dns for Android/AOmarchy (replaces Omarchy's, which drives NetworkManager + systemd-resolved): DNS for
 # every Linux program is the rootfs's /etc/resolv.conf (android-compat points glibc's resolver at it), so the provider
 # is written there directly. DHCP = the DNS servers of Android's current network ($XDG_RUNTIME_DIR/dns, from the app;
 # android-nm keeps them current when the network changes).
@@ -11,13 +11,13 @@ write() { # <tag> <servers...>
   local tag=$1 tmp
   shift
   tmp=$(mktemp /etc/.resolv.XXXXXX)
-  { echo "# andromarchy-dns: $tag"; printf 'nameserver %s\n' "$@"; } > "$tmp"
+  { echo "# aomarchy-dns: $tag"; printf 'nameserver %s\n' "$@"; } > "$tmp"
   chmod 644 "$tmp" && mv -f "$tmp" "$R"
 }
 
 case ${1:-} in
   "")
-    tag=$(sed -n 's/^# andromarchy-dns: //p' "$R" 2>/dev/null)
+    tag=$(sed -n 's/^# aomarchy-dns: //p' "$R" 2>/dev/null)
     if [ -n "$tag" ]; then echo "$tag"
     elif [ "$(awk '/^nameserver/ {print $2; exit}' "$R" 2>/dev/null)" = 1.1.1.1 ]; then echo Cloudflare
     elif [ "$(awk '/^nameserver/ {print $2; exit}' "$R" 2>/dev/null)" = 8.8.8.8 ]; then echo Google

@@ -1,5 +1,5 @@
 #!/bin/sh
-# /usr/local/bin/systemctl for Android/Andromarchy: power verbs go to the app (there is no machine to reboot:
+# /usr/local/bin/systemctl for Android/AOmarchy: power verbs go to the app (there is no machine to reboot:
 # reboot = a fresh session, poweroff = close the app, suspend = to the background); the rest is the
 # docker-systemctl-replacement in /usr/local/libexec (services, user units, Restart=...).
 for a in "$@"; do

@@ -1920,7 +1920,7 @@ class SettingsPage extends Page {
     /** KB_LAYOUTS from the rootfs's setup.conf: the layout the install chose. */
     private String installedLayout() {
         try {
-            File f = new File(SessionService.rootfs(shell), "root/.config/andromarchy/setup.conf");
+            File f = new File(SessionService.rootfs(shell), "root/.config/aomarchy/setup.conf");
             if (!f.isFile())
                 return "";
             for (String line : java.nio.file.Files.readAllLines(f.toPath())) {

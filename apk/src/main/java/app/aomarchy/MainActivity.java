@@ -55,7 +55,7 @@ import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends Activity
         implements SurfaceHolder.Callback, SystemIME.Host {
-    private static final String TAG = "Andromarchy";
+    private static final String TAG = "AOmarchy";
 
     /** The {@code ui_lang} this instance was built with: resources are wrapped in attachBaseContext, so a change needs a recreate. */
     private String mLanguage;
@@ -64,7 +64,7 @@ public class MainActivity extends Activity
     private boolean surfaceReady = false;
     // System-clipboard bridge; also the target for the native clipboard callbacks.
     private Clipboard clipboard;
-    private static final String PREFS_NAME = "andromarchy_settings";
+    private static final String PREFS_NAME = "aomarchy_settings";
     private int customScreenWidth = 0;
     private int customScreenHeight = 0;
     private int viewWidth = 0;
@@ -89,7 +89,7 @@ public class MainActivity extends Activity
     // the AAudio playback stream while this window is in the foreground.
     private AudioManager mAudioManager;
     private AudioFocusRequest mAudioFocusRequest;
-    private static final String DEFAULT_SOCKET_PATH = "/data/data/app.aomarchy/files/run/andromarchy/display_daemon.sock";
+    private static final String DEFAULT_SOCKET_PATH = "/data/data/app.aomarchy/files/run/aomarchy/display_daemon.sock";
     private static final String KEY_ACCESSIBILITY_ENABLED = "accessibility_key_intercept";
     private static final String KEY_EXTRA_KEYS_ENABLED = "extra_keys_bar";
     private static final String KEY_AUTO_SHOW_EXTRA_KEYS = "auto_show_extra_keys";
@@ -203,7 +203,7 @@ public class MainActivity extends Activity
     static {
         // Loads the single shared .so backing MainActivity, Native and
         // CameraServices; the last two only declare their natives.
-        System.loadLibrary("andromarchy_consumer");
+        System.loadLibrary("aomarchy_consumer");
     }
     // Forwards the current display refresh rate to the daemon so KWin can repace
     // its RenderLoop. Re-fires on every onDisplayChanged (e.g. 60/90/120 switch).
@@ -249,7 +249,7 @@ public class MainActivity extends Activity
             sock = DEFAULT_SOCKET_PATH;
         boolean useRoot = prefs.getBoolean(KEY_USE_ROOT, false);
         String helperPath = getApplicationInfo().nativeLibraryDir + "/libfdhelper.so";
-        String bridgePath = getCacheDir().getAbsolutePath() + "/andromarchy_fdbridge.sock";
+        String bridgePath = getCacheDir().getAbsolutePath() + "/aomarchy_fdbridge.sock";
         Native.nativeSetCompatibleMode(BuildConfig.COMPATIBLE);
         Native.nativeConfigure(sock.trim(), useRoot, helperPath, bridgePath);
         if (BuildConfig.COMPATIBLE)
@@ -356,7 +356,7 @@ public class MainActivity extends Activity
         Prefs.init(this); // settings defaults + move from the former file name
         mLanguage = T.savedLang(this); // what attachBaseContext wrapped the resources with
 
-        // Andromarchy: this app is also the Linux side. Start the session (daemon, audio, Hyprland) if the Arch
+        // AOmarchy: this app is also the Linux side. Start the session (daemon, audio, Hyprland) if the Arch
         // rootfs is installed; this activity then connects to the daemon like the Termux version did.
         if (!SessionService.rootfsReady(this)) { // no system: hand the user back to the console, whose 系统 page installs it
             redirected = true;
@@ -506,7 +506,7 @@ public class MainActivity extends Activity
         reloadPointerCapturePreferences();
     }
 
-    private static final String NOTIFICATION_CHANNEL = "andromarchy_channel";
+    private static final String NOTIFICATION_CHANNEL = "aomarchy_channel";
     private static final int NOTIFICATION_ID = 1;
 
     private void showSettingsNotification() {
@@ -1026,7 +1026,7 @@ public class MainActivity extends Activity
      * onRequestPermissionsResult finishes the init.
      */
     private void applyCameraState() {
-        // Andromarchy: always on (no settings switch); a camera only opens while a Linux app streams from it.
+        // AOmarchy: always on (no settings switch); a camera only opens while a Linux app streams from it.
         requestDevicePermissions(); // location may be missing even when camera and mic were granted earlier
         if (cameraInited)
             return;
@@ -1077,7 +1077,7 @@ public class MainActivity extends Activity
     }
 
     private void applyMicState() {
-        // Andromarchy: always on (no settings switch).
+        // AOmarchy: always on (no settings switch).
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
                 == PackageManager.PERMISSION_GRANTED) {
             Native.nativeSetMicEnabled(true);

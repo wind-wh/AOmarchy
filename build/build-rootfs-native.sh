@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# Builds the Andromarchy rootfs ON THE TABLET, natively (aarch64): no PC, no qemu, no chroot, no proot. Our own
+# Builds the AOmarchy rootfs ON THE TABLET, natively (aarch64): no PC, no qemu, no chroot, no proot. Our own
 # runtime (lotfix-run: fakechroot + fake root + android-compat) runs everything, in two rootfs:
 #   - the installed one (the app's files/rootfs): downloads, Hyprland build, unpacking, packing;
 #   - the new one (being built): build-inside.sh, started directly with lotfix-run (an Android program: it cannot

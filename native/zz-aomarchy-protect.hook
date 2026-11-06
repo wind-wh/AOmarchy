@@ -1,0 +1,13 @@
+# /etc/pacman.d/hooks/zz-aomarchy-protect.hook: after every transaction (last, "zz"), put back AOmarchy's
+# own builds if a package replaced them, and check that their libraries are still there.
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+Description = Keeping AOmarchy's own builds in place...
+When = PostTransaction
+Exec = /usr/local/bin/aomarchy-protect check

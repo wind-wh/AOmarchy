@@ -27,18 +27,18 @@ import java.util.Map;
 import app.aomarchy.i18n.T;
 
 /**
- * Andromarchy session: keeps the Linux side alive in a foreground service (HyperOS kills background apps).
+ * AOmarchy session: keeps the Linux side alive in a foreground service (HyperOS kills background apps).
  *
- * Starts, once per process: the Andromarchy display daemon, the PipeWire audio stack and Hyprland, the last two inside
+ * Starts, once per process: the AOmarchy display daemon, the PipeWire audio stack and Hyprland, the last two inside
  * the Arch rootfs through lotfix-run (the native launcher: patched glibc loader + fakechroot, no proot).
  * Layout, all under getFilesDir() (short: Unix socket paths are limited to 108 bytes):
  *   rootfs/            the Arch Linux ARM system
  *   run/               XDG_RUNTIME_DIR (Wayland, PipeWire, Hyprland sockets), excluded from fakechroot
- *   run/andromarchy/        the display daemon's socket
+ *   run/aomarchy/        the display daemon's socket
  *   run/*.log          output of each process
  */
 public class SessionService extends Service {
-    private static final String TAG = "Andromarchy";
+    private static final String TAG = "AOmarchy";
     private static final String CHANNEL = "session";
     private static final int NOTIFICATION_ID = 1;
 
@@ -59,7 +59,7 @@ public class SessionService extends Service {
     }
 
     public static File daemonSocket(Context ctx) {
-        return new File(runDir(ctx), "andromarchy/display_daemon.sock");
+        return new File(runDir(ctx), "aomarchy/display_daemon.sock");
     }
 
     /** True once the Arch rootfs (built by build/build-rootfs.sh) is in place. */
@@ -93,7 +93,7 @@ public class SessionService extends Service {
     };
 
     private static final String CJK_DIR = "usr/share/fonts/noto-cjk";
-    private static final String CJK_CONF = "etc/fonts/conf.d/99-andromarchy-cjk.conf";
+    private static final String CJK_CONF = "etc/fonts/conf.d/99-aomarchy-cjk.conf";
 
     /**
      * Puts the CJK font Android ships into the rootfs, so Chinese (and Japanese/Korean) text is drawn. fontconfig
@@ -156,7 +156,7 @@ public class SessionService extends Service {
     private static final String CJK_CONF_TEXT = "<?xml version=\"1.0\"?>\n"
             + "<!DOCTYPE fontconfig SYSTEM \"urn:fontconfig:fonts.dtd\">\n"
             + "<fontconfig>\n"
-            + "  <!-- Andromarchy: the Arch rootfs ships no CJK font; SessionService copies the one Android provides\n"
+            + "  <!-- AOmarchy: the Arch rootfs ships no CJK font; SessionService copies the one Android provides\n"
             + "       into /usr/share/fonts/noto-cjk. Generic families asked for Chinese get it. -->\n"
             + "  <match target=\"pattern\">\n"
             + "    <test name=\"lang\" compare=\"contains\"><string>zh</string></test>\n"
@@ -206,7 +206,7 @@ public class SessionService extends Service {
 
     /** Runs the wrapped command instead of asking logind for an inhibitor (see installSystemdInhibitShim). */
     private static final String SYSTEMD_INHIBIT_SHIM = "#!/bin/sh\n"
-            + "# Andromarchy: there is no logind, so there is nothing to ask for an inhibitor. Omarchy's shutdown is\n"
+            + "# AOmarchy: there is no logind, so there is nothing to ask for an inhibitor. Omarchy's shutdown is\n"
             + "# wrapped in systemd-inhibit, and the real binary failing stopped it before systemctl ran. Run it instead.\n"
             + "if [ \"$1\" = \"--list\" ] || [ \"$1\" = \"--list-details\" ]; then\n"
             + "  echo \"No inhibitors.\"\n"
@@ -232,7 +232,7 @@ public class SessionService extends Service {
         startForeground(NOTIFICATION_ID, buildNotification(this));
 
         PowerManager pm = getSystemService(PowerManager.class);
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "andromarchy:session");
+        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "aomarchy:session");
         wakeLock.acquire();
 
         // Battery for the session's UPower stand-in (android-upower): apps cannot read /sys/class/power_supply.
@@ -319,7 +319,7 @@ public class SessionService extends Service {
         }
 
         // 1. Display daemon: relays buffers and input between this app's display and Hyprland.
-        spawn("andromarchy", List.of(libDir + "/libandromarchy.so", sock.getPath()), null);
+        spawn("aomarchy", List.of(libDir + "/libaomarchy.so", sock.getPath()), null);
 
         // 2. Session D-Bus (systemd provides it on a normal Linux login). Browsers, file dialogs, portals and tray
         //    apps need it; archEnv() gives every program its address.
@@ -354,7 +354,7 @@ public class SessionService extends Service {
         spawn("termux-va", List.of(libDir + "/libtermuxva.so", "--sock", new File(run, "termux-va.sock").getPath()),
                 null);
 
-        // 3. Sound: Hyprland's Andromarchy backend creates PipeWire nodes, so the stack must exist (it reconnects anyway).
+        // 3. Sound: Hyprland's AOmarchy backend creates PipeWire nodes, so the stack must exist (it reconnects anyway).
         //    wireplumber and pipewire-pulse give up when PipeWire is not up yet (a cold first start): they wait for its
         //    socket.
         spawn("pipewire", List.of(launcher, "-c", "exec pipewire"), archEnv(this, run, sock));
@@ -388,21 +388,21 @@ public class SessionService extends Service {
         env.put("XDG_RUNTIME_DIR", run.getPath());
         env.put("TZ", java.util.TimeZone.getDefault().getID()); // glibc only knows /etc/localtime otherwise: UTC
         env.put("LANG", androidLocale(app)); // Android's language (first-boot.sh compiles its locale)
-        env.put("ANDROMARCHY_UID", String.valueOf(android.os.Process.myUid()));
-        env.put("ANDROMARCHY_GID", String.valueOf(android.os.Process.myUid()));
-        env.put("ANDROMARCHY_SOCKET", sock.getPath());
+        env.put("AOMARCHY_UID", String.valueOf(android.os.Process.myUid()));
+        env.put("AOMARCHY_GID", String.valueOf(android.os.Process.myUid()));
+        env.put("AOMARCHY_SOCKET", sock.getPath());
         // The display's physical size (landscape, mm) for the compositor's output: clients size themselves from it
         android.util.DisplayMetrics dm = new android.util.DisplayMetrics();
         ((android.view.WindowManager) app.getSystemService(WINDOW_SERVICE)).getDefaultDisplay().getRealMetrics(dm);
         int wmm = Math.round(Math.max(dm.widthPixels / dm.xdpi, dm.heightPixels / dm.ydpi) * 25.4f);
         int hmm = Math.round(Math.min(dm.widthPixels / dm.xdpi, dm.heightPixels / dm.ydpi) * 25.4f);
-        env.put("ANDROMARCHY_PHYSICAL_MM", wmm + "x" + hmm);
+        env.put("AOMARCHY_PHYSICAL_MM", wmm + "x" + hmm);
         // Flatpak apps' launchers (exported .desktop files, icons): a normal login gets these from
         // /etc/profile.d/flatpak.sh or systemd's environment generator; this session starts from the app.
         env.put("XDG_DATA_DIRS", "/root/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share"
                 + ":/usr/local/share:/usr/share");
-        env.put("ANDROMARCHY_VENDOR", android.os.Build.MANUFACTURER); // the machine's identity (DMI) for Linux tools
-        env.put("ANDROMARCHY_MODEL", android.os.Build.MODEL);
+        env.put("AOMARCHY_VENDOR", android.os.Build.MANUFACTURER); // the machine's identity (DMI) for Linux tools
+        env.put("AOMARCHY_MODEL", android.os.Build.MODEL);
         env.put("DBUS_SESSION_BUS_ADDRESS", "unix:path=" + new File(run, "bus").getPath());
         env.put("DBUS_SYSTEM_BUS_ADDRESS", "unix:path=" + new File(run, "system_bus").getPath());
         // Hardware video: VA-API through Mesa's termuxva bridge to the termux-va daemon (MediaCodec), when the
@@ -431,7 +431,7 @@ public class SessionService extends Service {
         String kb = sp.getString("kb_layouts", "").trim();
         try {
             if (!kb.isEmpty()) {
-                File conf = new File(rootfs, "root/.config/andromarchy/setup.conf");
+                File conf = new File(rootfs, "root/.config/aomarchy/setup.conf");
                 conf.getParentFile().mkdirs();
                 writeText(conf, "KB_LAYOUTS=" + kb + " FULL_NAME=" + shellQuote(name) + " EMAIL=" + shellQuote(email) + "\n");
                 File input = new File(rootfs, "root/.config/hypr/input.lua");
@@ -439,7 +439,7 @@ public class SessionService extends Service {
                 StringBuilder kept = new StringBuilder();
                 boolean skipping = false;
                 for (String line : text.split("\n", -1)) {
-                    if (line.startsWith("-- Android/Andromarchy: keyboard layouts")
+                    if (line.startsWith("-- Android/AOmarchy: keyboard layouts")
                             || line.startsWith("-- Android/AOmarchy: keyboard layouts")) {
                         skipping = true;
                         continue;

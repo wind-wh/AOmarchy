@@ -1,7 +1,7 @@
 From: Lotfix
-Subject: [PATCH] output: reload after Andromarchy output resizes (tablet rotation)
+Subject: [PATCH] output: reload after AOmarchy output resizes (tablet rotation)
 
-Andromarchy resizes its output when the Android device rotates (Hyprland treats it
+AOmarchy resizes its output when the Android device rotates (Hyprland treats it
 as user-created and applies the new size). Layer surfaces keep the old size
 until a reload: do one right after, as "hyprctl reload" would.
 ---
@@ -22,10 +22,10 @@ index e69d8dd..c3f4ac0 100644
  
          applyMonitorRule(std::move(rule));
 +
-+        // Andromarchy: Android resized the output (tablet rotation). The new size alone leaves layer surfaces (Omarchy's bar,
++        // AOmarchy: Android resized the output (tablet rotation). The new size alone leaves layer surfaces (Omarchy's bar,
 +        // wallpaper, menus) at the old one; a reload right after, like "hyprctl reload", re-applies the configured rule
 +        // and the shell rebuilds its per-screen surfaces.
-+        if (getenv("ANDROMARCHY"))
++        if (getenv("AOMARCHY"))
 +            g_pEventLoopManager->doLater([] { Config::mgr()->reload(); });
      });
  

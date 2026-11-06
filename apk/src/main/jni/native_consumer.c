@@ -23,7 +23,7 @@
 #include "protocol.h"
 #include "socket_utils.h"
 
-#define TAG "Andromarchy"
+#define TAG "AOmarchy"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 
@@ -82,7 +82,7 @@ static struct consumer_state g_state = {
 /* Connection config, set from Java via nativeConfigure() and read on each
  * (re)connect in do_connect(). Guarded by cfg_lock. */
 static pthread_mutex_t cfg_lock = PTHREAD_MUTEX_INITIALIZER;
-static char cfg_socket_path[256] = "/data/data/app.aomarchy/files/run/andromarchy/display_daemon.sock";
+static char cfg_socket_path[256] = "/data/data/app.aomarchy/files/run/aomarchy/display_daemon.sock";
 static bool cfg_use_root = false;
 static bool cfg_use_compatible_bridge = false;
 static int cfg_compatible_fd = -1;

@@ -12,7 +12,7 @@
  }
  
  
-+// Andromarchy: standard keys get their real evdev code (KEY_SPACE...), not the next free one. Chromium and
++// AOmarchy: standard keys get their real evdev code (KEY_SPACE...), not the next free one. Chromium and
 +// Electron read the physical code: wtype's space arrived as code 1 = Escape (the address bar cancelled).
 +static unsigned int natural_code(xkb_keysym_t s)
 +{

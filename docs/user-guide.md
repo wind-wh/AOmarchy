@@ -178,7 +178,7 @@ runs inside the installed system, so the files, packages and settings are exactl
 Open a terminal and run:
 
 ```sh
-andromarchy-selftest
+aomarchy-selftest
 ```
 
 It checks the GPU, sound, cameras, keyboard, clipboard, system services and app store, and prints one line per

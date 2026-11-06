@@ -93,7 +93,7 @@ android {
 // 16 KB-aligned segments for Android 15+ devices with 16 KB pages.
 def jniOut = file("src/main/jniLibs/arm64-v8a")
 def executables = [
-    "libandromarchy.so"   : ["native/andromarchy/andromarchy.c", "native/andromarchy/common/socket_utils.c"],
+    "libaomarchy.so"   : ["native/aomarchy/aomarchy.c", "native/aomarchy/common/socket_utils.c"],
     "liblotfixrun.so": ["../native/launcher/lotfix-run.c"],
     // termux-va (lfdevs, GPL-3.0): MediaCodec hardware video for the VA-API of Mesa's termuxva bridge
     "libtermuxva.so" : ["../third_party/termux-va/daemon/termux-va.c", "-std=c11",

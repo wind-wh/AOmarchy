@@ -1,0 +1,12 @@
+# /etc/pacman.d/hooks/00-aomarchy-keep-llvm.hook: before llvm-libs changes, keep the LLVM our Mesa is built
+# against (native/aomarchy-keep-llvm.sh); aomarchy-protect links it back after the transaction.
+[Trigger]
+Operation = Upgrade
+Operation = Remove
+Type = Package
+Target = llvm-libs
+
+[Action]
+Description = Keeping the LLVM our Mesa needs...
+When = PreTransaction
+Exec = /usr/local/bin/aomarchy-keep-llvm

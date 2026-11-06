@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-# /usr/local/bin/andromarchy-protect: keeps Andromarchy's own builds in place across pacman transactions.
+# /usr/local/bin/aomarchy-protect: keeps AOmarchy's own builds in place across pacman transactions.
 #
-# Our Mesa (KGSL), Hyprland and aquamarine (Andromarchy backend) replace files that belong to Arch packages, and our Mesa
+# Our Mesa (KGSL), Hyprland and aquamarine (AOmarchy backend) replace files that belong to Arch packages, and our Mesa
 # is built against the repo's LLVM, which a partial update may move ahead of it. An update, an app install pulling a dependency, or a full
 # -Syu could overwrite or remove them: the session would not start (black screen).
 #
@@ -83,7 +83,7 @@ def save(quiet=False):
     with open(MANIFEST, "w") as f:
         f.writelines(lines)
     if not quiet:
-        print(f"andromarchy-protect: {len(lines)} files recorded")
+        print(f"aomarchy-protect: {len(lines)} files recorded")
 
 
 def restore(path, want):
@@ -105,7 +105,7 @@ def needed(path):
 
 
 def keep_llvm():
-    """After an llvm-libs upgrade: the LLVM our Mesa needs, kept by andromarchy-keep-llvm before it, linked back."""
+    """After an llvm-libs upgrade: the LLVM our Mesa needs, kept by aomarchy-keep-llvm before it, linked back."""
     marker = "/opt/lotfix/lib/.restore"
     if not os.path.exists(marker):
         return
@@ -113,8 +113,8 @@ def keep_llvm():
     copy = "/opt/lotfix/lib/" + os.path.basename(src)
     if src and not os.path.lexists(src) and os.path.exists(copy):
         os.symlink(os.path.relpath(copy, os.path.dirname(src)), src)
-        print(f"andromarchy-protect: {os.path.basename(src)} kept for our Mesa (rebuild it against the new LLVM)")
-        subprocess.run(["notify-send", "Andromarchy: LLVM was upgraded",
+        print(f"aomarchy-protect: {os.path.basename(src)} kept for our Mesa (rebuild it against the new LLVM)")
+        subprocess.run(["notify-send", "AOmarchy: LLVM was upgraded",
                         f"Mesa keeps using {os.path.basename(src)}; rebuild it against the new LLVM when convenient."],
                        stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
     os.unlink(marker)
@@ -136,13 +136,13 @@ def check():
                 if not any(os.path.exists(os.path.join(d, lib)) for d in LIBDIRS):
                     problems.append(f"{p} needs {lib}, which is missing")
     if restored:
-        print("andromarchy-protect: restored Andromarchy's own version of:")
+        print("aomarchy-protect: restored AOmarchy's own version of:")
         for p in restored:
             print("   ", p)
     if problems:
         msg = "\n".join(problems)
-        print("andromarchy-protect: WARNING, the desktop may not start after this transaction:\n" + msg)
-        subprocess.run(["notify-send", "-u", "critical", "Andromarchy: a system update broke a dependency", msg],
+        print("aomarchy-protect: WARNING, the desktop may not start after this transaction:\n" + msg)
+        subprocess.run(["notify-send", "-u", "critical", "AOmarchy: a system update broke a dependency", msg],
                        stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
     return 0  # never fail the transaction: pacman has already changed the system
 
@@ -154,4 +154,4 @@ if __name__ == "__main__":
     elif cmd == "check":
         sys.exit(check())
     else:
-        sys.exit("usage: andromarchy-protect save|check")
+        sys.exit("usage: aomarchy-protect save|check")

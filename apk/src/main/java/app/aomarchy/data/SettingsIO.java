@@ -35,7 +35,7 @@ import app.aomarchy.i18n.T;
  */
 public final class SettingsIO {
     /** Must match {@code app.aomarchy.Prefs.NAME}. */
-    private static final String PREFS = "andromarchy_settings";
+    private static final String PREFS = "aomarchy_settings";
     private static final String APP = "AOmarchy";
     private static final String TAG = "SettingsIO";
     /** Guard against importing a huge file by accident: a settings document is a few KB. */

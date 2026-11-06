@@ -17,7 +17,7 @@ index cc263b4..3e7949a 100644
  endif()
  
 -file(GLOB_RECURSE SRCFILES CONFIGURE_DEPENDS "src/*.cpp" "include/*.hpp")
-+file(GLOB_RECURSE SRCFILES CONFIGURE_DEPENDS "src/*.cpp" "src/backend/andromarchy/*.c" "include/*.hpp")
++file(GLOB_RECURSE SRCFILES CONFIGURE_DEPENDS "src/*.cpp" "src/backend/aomarchy/*.c" "include/*.hpp")
  file(GLOB_RECURSE PUBLIC_HEADERS CONFIGURE_DEPENDS "include/*.hpp")
  
  add_library(aquamarine SHARED ${SRCFILES})
@@ -29,21 +29,21 @@ index 2dc1ee5..955df28 100644
      enum eAllocatorType {
          AQ_ALLOCATOR_TYPE_GBM = 0,
          AQ_ALLOCATOR_TYPE_DRM_DUMB,
-+        AQ_ALLOCATOR_TYPE_ANDROMARCHY,
++        AQ_ALLOCATOR_TYPE_AOMARCHY,
      };
  
      class IAllocator {
-diff --git a/include/aquamarine/backend/Andromarchy.hpp b/include/aquamarine/backend/Andromarchy.hpp
+diff --git a/include/aquamarine/backend/AOmarchy.hpp b/include/aquamarine/backend/AOmarchy.hpp
 new file mode 100644
 index 0000000..19b7b13
 --- /dev/null
-+++ b/include/aquamarine/backend/Andromarchy.hpp
++++ b/include/aquamarine/backend/AOmarchy.hpp
 @@ -0,0 +1,153 @@
 +#pragma once
 +
 +#include <chrono>
 +
-+// Andromarchy backend: renders into dmabufs owned by the Android "Andromarchy" display app.
++// AOmarchy backend: renders into dmabufs owned by the Android "AOmarchy" display app.
 +// The app allocates the buffers and picks which one we draw into next (get_selected_idx);
 +// we import them, render, hand back a fence and trigger_refresh. No DRM device exists.
 +
@@ -59,12 +59,12 @@ index 0000000..19b7b13
 +struct InputEvent;
 +
 +namespace Aquamarine {
-+    class CAndromarchyBackend;
++    class CAOmarchyBackend;
 +
-+    class CAndromarchyBuffer : public IBuffer {
++    class CAOmarchyBuffer : public IBuffer {
 +      public:
-+        CAndromarchyBuffer(int index, const SDMABUFAttrs& attrs);
-+        virtual ~CAndromarchyBuffer();
++        CAOmarchyBuffer(int index, const SDMABUFAttrs& attrs);
++        virtual ~CAOmarchyBuffer();
 +        virtual eBufferCapability caps();
 +        virtual eBufferType       type();
 +        virtual void              update(const Hyprutils::Math::CRegion& damage);
@@ -72,16 +72,16 @@ index 0000000..19b7b13
 +        virtual bool              good();
 +        virtual SDMABUFAttrs      dmabuf();
 +
-+        const int                 index; // slot in the Andromarchy buffer set
++        const int                 index; // slot in the AOmarchy buffer set
 +
 +      private:
 +        SDMABUFAttrs attrs;
 +    };
 +
-+    // Hands out the Andromarchy buffer set, one slot per acquire(); never allocates.
-+    class CAndromarchyAllocator : public IAllocator {
++    // Hands out the AOmarchy buffer set, one slot per acquire(); never allocates.
++    class CAOmarchyAllocator : public IAllocator {
 +      public:
-+        CAndromarchyAllocator(Hyprutils::Memory::CWeakPointer<CAndromarchyBackend> backend_);
++        CAOmarchyAllocator(Hyprutils::Memory::CWeakPointer<CAOmarchyBackend> backend_);
 +        virtual Hyprutils::Memory::CSharedPointer<IBuffer>  acquire(const SAllocatorBufferParams& params, Hyprutils::Memory::CSharedPointer<CSwapchain> swapchain);
 +        virtual Hyprutils::Memory::CSharedPointer<CBackend> getBackend();
 +        virtual int                                         drmFD();
@@ -90,28 +90,28 @@ index 0000000..19b7b13
 +        size_t                                              nextSlot = 0; // reset by the backend when the buffer set is replaced
 +
 +      private:
-+        Hyprutils::Memory::CWeakPointer<CAndromarchyBackend> backend;
++        Hyprutils::Memory::CWeakPointer<CAOmarchyBackend> backend;
 +    };
 +
 +    // Android forwards evdev keycodes, BTN_* buttons and touch in buffer pixels.
-+    class CAndromarchyKeyboard : public IKeyboard {
++    class CAOmarchyKeyboard : public IKeyboard {
 +      public:
 +        virtual const std::string& getName();
 +    };
 +
-+    class CAndromarchyPointer : public IPointer {
++    class CAOmarchyPointer : public IPointer {
 +      public:
 +        virtual const std::string& getName();
 +    };
 +
-+    class CAndromarchyTouch : public ITouch {
++    class CAOmarchyTouch : public ITouch {
 +      public:
 +        virtual const std::string& getName();
 +    };
 +
-+    class CAndromarchyOutput : public IOutput {
++    class CAOmarchyOutput : public IOutput {
 +      public:
-+        virtual ~CAndromarchyOutput();
++        virtual ~CAOmarchyOutput();
 +        virtual bool                                                      commit();
 +        virtual bool                                                      test();
 +        virtual Hyprutils::Memory::CSharedPointer<IBackendImplementation> getBackend();
@@ -120,25 +120,25 @@ index 0000000..19b7b13
 +        virtual bool                                                      pendingPageFlip();
 +        virtual bool                                                      pendingIdleFrame();
 +
-+        Hyprutils::Memory::CWeakPointer<CAndromarchyOutput>                    self;
++        Hyprutils::Memory::CWeakPointer<CAOmarchyOutput>                    self;
 +
 +      private:
-+        CAndromarchyOutput(const std::string& name_, Hyprutils::Memory::CWeakPointer<CAndromarchyBackend> backend_);
++        CAOmarchyOutput(const std::string& name_, Hyprutils::Memory::CWeakPointer<CAOmarchyBackend> backend_);
 +        void                                                     onConsumerReady();
 +
-+        Hyprutils::Memory::CWeakPointer<CAndromarchyBackend>          backend;
++        Hyprutils::Memory::CWeakPointer<CAOmarchyBackend>          backend;
 +        Hyprutils::Memory::CSharedPointer<std::function<void()>> framecb;
 +        bool                                                     frameScheduled = false;
 +        bool                                                     consumerReady  = true; // false between trigger_refresh and buffer-ready
 +        bool                                                     refreshPending = false; // committed while the consumer was busy
 +        std::chrono::steady_clock::time_point                    lastRefresh;            // last frame handed to the consumer
 +
-+        friend class CAndromarchyBackend;
++        friend class CAOmarchyBackend;
 +    };
 +
-+    class CAndromarchyBackend : public IBackendImplementation {
++    class CAOmarchyBackend : public IBackendImplementation {
 +      public:
-+        virtual ~CAndromarchyBackend();
++        virtual ~CAOmarchyBackend();
 +        virtual eBackendType                                               type();
 +        virtual bool                                                       start();
 +        virtual std::vector<Hyprutils::Memory::CSharedPointer<SPollFD>>    pollFDs();
@@ -159,10 +159,10 @@ index 0000000..19b7b13
 +        int                                                                selectedIndex() const; // slot the Android side wants drawn next
 +        Hyprutils::Memory::CSharedPointer<IBuffer>                         bufferAt(int index);
 +
-+        Hyprutils::Memory::CWeakPointer<CAndromarchyBackend>                    self;
++        Hyprutils::Memory::CWeakPointer<CAOmarchyBackend>                    self;
 +
 +      private:
-+        CAndromarchyBackend(Hyprutils::Memory::CSharedPointer<CBackend> backend_);
++        CAOmarchyBackend(Hyprutils::Memory::CSharedPointer<CBackend> backend_);
 +        void                                                    onBufferReady();
 +        bool                                                    importBuffers();
 +        void                                                    armReconnect(int ms);
@@ -179,17 +179,17 @@ index 0000000..19b7b13
 +        Hyprutils::OS::CFileDescriptor                          reconnectTimer;
 +        SSwapchainOptions                                       lastSwapchainOptions; // to rebuild the swapchain after a reconnect
 +        std::vector<Hyprutils::Memory::CSharedPointer<IBuffer>> buffers;
-+        Hyprutils::Memory::CSharedPointer<CAndromarchyAllocator>     allocator;
-+        Hyprutils::Memory::CSharedPointer<CAndromarchyOutput>        output;
++        Hyprutils::Memory::CSharedPointer<CAOmarchyAllocator>     allocator;
++        Hyprutils::Memory::CSharedPointer<CAOmarchyOutput>        output;
 +        Hyprutils::Math::Vector2D                               size;
-+        Hyprutils::Memory::CSharedPointer<CAndromarchyKeyboard>      keyboard;
-+        Hyprutils::Memory::CSharedPointer<CAndromarchyPointer>       pointer;
-+        Hyprutils::Memory::CSharedPointer<CAndromarchyTouch>         touch;
++        Hyprutils::Memory::CSharedPointer<CAOmarchyKeyboard>      keyboard;
++        Hyprutils::Memory::CSharedPointer<CAOmarchyPointer>       pointer;
++        Hyprutils::Memory::CSharedPointer<CAOmarchyTouch>         touch;
 +        int                                                     refreshmHz = 60000;
 +
 +        friend class CBackend;
-+        friend class CAndromarchyOutput;
-+        friend class CAndromarchyAllocator;
++        friend class CAOmarchyOutput;
++        friend class CAOmarchyAllocator;
 +    };
 +};
 diff --git a/include/aquamarine/backend/Backend.hpp b/include/aquamarine/backend/Backend.hpp
@@ -200,7 +200,7 @@ index bd55c7c..0ab3e94 100644
          AQ_BACKEND_DRM,
          AQ_BACKEND_HEADLESS,
          AQ_BACKEND_NULL,
-+        AQ_BACKEND_ANDROMARCHY, // Android, via the Andromarchy display app
++        AQ_BACKEND_AOMARCHY, // Android, via the AOmarchy display app
      };
  
      enum eBackendGPUDriver : uint32_t {
@@ -212,7 +212,7 @@ index edc4aff..7d9a985 100644
  #include <algorithm>
  #include <aquamarine/allocator/Swapchain.hpp>
  #include <aquamarine/backend/Backend.hpp>
-+#include <aquamarine/backend/Andromarchy.hpp>
++#include <aquamarine/backend/AOmarchy.hpp>
  #include "FormatUtils.hpp"
  
  using namespace Aquamarine;
@@ -226,8 +226,8 @@ index edc4aff..7d9a985 100644
          return false;
  
 +    SSwapchainOptions options_ = options_in;
-+    if (auto impl = backendImpl.lock(); impl && impl->type() == AQ_BACKEND_ANDROMARCHY && options_.length > 0)
-+        options_.length = ((CAndromarchyBackend*)impl.get())->bufferCount();
++    if (auto impl = backendImpl.lock(); impl && impl->type() == AQ_BACKEND_AOMARCHY && options_.length > 0)
++        options_.length = ((CAOmarchyBackend*)impl.get())->bufferCount();
 +
      if (options_.size == Vector2D{} || options_.length == 0) {
          // clear the swapchain
@@ -236,9 +236,9 @@ index edc4aff..7d9a985 100644
      if (!allocator || options.length <= 0)
          return nullptr;
  
-+    // Andromarchy: the Android consumer decides which buffer is free; render into that one, never round-robin.
-+    if (auto impl = backendImpl.lock(); impl && impl->type() == AQ_BACKEND_ANDROMARCHY) {
-+        lastAcquired = ((CAndromarchyBackend*)impl.get())->selectedIndex() % buffers.size();
++    // AOmarchy: the Android consumer decides which buffer is free; render into that one, never round-robin.
++    if (auto impl = backendImpl.lock(); impl && impl->type() == AQ_BACKEND_AOMARCHY) {
++        lastAcquired = ((CAOmarchyBackend*)impl.get())->selectedIndex() % buffers.size();
 +        if (age)
 +            *age = 0; // slot order is the consumer's choice: buffer age is unknown, ask for a full repaint
 +        return buffers.at(lastAcquired);
@@ -247,13 +247,13 @@ index edc4aff..7d9a985 100644
      lastAcquired = (lastAcquired + 1) % options.length;
  
      if (age)
-diff --git a/src/backend/Andromarchy.cpp b/src/backend/Andromarchy.cpp
+diff --git a/src/backend/AOmarchy.cpp b/src/backend/AOmarchy.cpp
 new file mode 100644
 index 0000000..d742070
 --- /dev/null
-+++ b/src/backend/Andromarchy.cpp
++++ b/src/backend/AOmarchy.cpp
 @@ -0,0 +1,643 @@
-+#include <aquamarine/backend/Andromarchy.hpp>
++#include <aquamarine/backend/AOmarchy.hpp>
 +#include <cstdio>
 +#include <cstdlib>
 +#include <chrono>
@@ -267,9 +267,9 @@ index 0000000..d742070
 +#include "Shared.hpp"
 +
 +extern "C" {
-+#include "andromarchy/display_producer.h"
-+#include "andromarchy/andromarchy_audio.h"
-+#include "andromarchy/andromarchy_camera.h"
++#include "aomarchy/display_producer.h"
++#include "aomarchy/aomarchy_audio.h"
++#include "aomarchy/aomarchy_camera.h"
 +}
 +
 +using namespace Aquamarine;
@@ -277,8 +277,8 @@ index 0000000..d742070
 +using namespace Hyprutils::Math;
 +#define SP CSharedPointer
 +
-+// Andromarchy wire format -> DRM fourcc. Mirrors protocol_format_to_drm() in the KWin/Weston backends.
-+static uint32_t andromarchyFormatToDRM(uint32_t fmt) {
++// AOmarchy wire format -> DRM fourcc. Mirrors protocol_format_to_drm() in the KWin/Weston backends.
++static uint32_t aomarchyFormatToDRM(uint32_t fmt) {
 +    return fmt == 1 ? DRM_FORMAT_ABGR8888 : DRM_FORMAT_XRGB8888;
 +}
 +
@@ -288,62 +288,62 @@ index 0000000..d742070
 +
 +// ---- input devices ----
 +
-+const std::string& Aquamarine::CAndromarchyKeyboard::getName() {
-+    static const std::string name = "andromarchy-keyboard";
++const std::string& Aquamarine::CAOmarchyKeyboard::getName() {
++    static const std::string name = "aomarchy-keyboard";
 +    return name;
 +}
 +
-+const std::string& Aquamarine::CAndromarchyPointer::getName() {
-+    static const std::string name = "andromarchy-pointer";
++const std::string& Aquamarine::CAOmarchyPointer::getName() {
++    static const std::string name = "aomarchy-pointer";
 +    return name;
 +}
 +
-+const std::string& Aquamarine::CAndromarchyTouch::getName() {
-+    static const std::string name = "andromarchy-touch";
++const std::string& Aquamarine::CAOmarchyTouch::getName() {
++    static const std::string name = "aomarchy-touch";
 +    return name;
 +}
 +
 +// ---- buffer ----
 +
-+Aquamarine::CAndromarchyBuffer::CAndromarchyBuffer(int index_, const SDMABUFAttrs& attrs_) : index(index_), attrs(attrs_) {
++Aquamarine::CAOmarchyBuffer::CAOmarchyBuffer(int index_, const SDMABUFAttrs& attrs_) : index(index_), attrs(attrs_) {
 +    size = attrs.size;
 +}
 +
-+Aquamarine::CAndromarchyBuffer::~CAndromarchyBuffer() {
++Aquamarine::CAOmarchyBuffer::~CAOmarchyBuffer() {
 +    events.destroy.emit(); // the fd belongs to the display producer, never close it here
 +}
 +
-+eBufferCapability Aquamarine::CAndromarchyBuffer::caps() {
++eBufferCapability Aquamarine::CAOmarchyBuffer::caps() {
 +    return BUFFER_CAPABILITY_NONE;
 +}
 +
-+eBufferType Aquamarine::CAndromarchyBuffer::type() {
++eBufferType Aquamarine::CAOmarchyBuffer::type() {
 +    return BUFFER_TYPE_DMABUF;
 +}
 +
-+void Aquamarine::CAndromarchyBuffer::update(const CRegion& damage) {
++void Aquamarine::CAOmarchyBuffer::update(const CRegion& damage) {
 +    ;
 +}
 +
-+bool Aquamarine::CAndromarchyBuffer::isSynchronous() {
++bool Aquamarine::CAOmarchyBuffer::isSynchronous() {
 +    return false;
 +}
 +
-+bool Aquamarine::CAndromarchyBuffer::good() {
++bool Aquamarine::CAOmarchyBuffer::good() {
 +    return attrs.success;
 +}
 +
-+SDMABUFAttrs Aquamarine::CAndromarchyBuffer::dmabuf() {
++SDMABUFAttrs Aquamarine::CAOmarchyBuffer::dmabuf() {
 +    return attrs;
 +}
 +
 +// ---- allocator ----
 +
-+Aquamarine::CAndromarchyAllocator::CAndromarchyAllocator(CWeakPointer<CAndromarchyBackend> backend_) : backend(backend_) {
++Aquamarine::CAOmarchyAllocator::CAOmarchyAllocator(CWeakPointer<CAOmarchyBackend> backend_) : backend(backend_) {
 +    ;
 +}
 +
-+SP<IBuffer> Aquamarine::CAndromarchyAllocator::acquire(const SAllocatorBufferParams& params, SP<CSwapchain> swapchain) {
++SP<IBuffer> Aquamarine::CAOmarchyAllocator::acquire(const SAllocatorBufferParams& params, SP<CSwapchain> swapchain) {
 +    if (!backend || backend->buffers.empty())
 +        return nullptr;
 +
@@ -351,45 +351,45 @@ index 0000000..d742070
 +    auto buf = backend->buffers.at(nextSlot % backend->buffers.size());
 +    nextSlot++;
 +    if (params.size != buf->size)
-+        backend->backend->log(AQ_LOG_WARNING, std::format("andromarchy: swapchain wants {}, buffers are {}", params.size, buf->size));
++        backend->backend->log(AQ_LOG_WARNING, std::format("aomarchy: swapchain wants {}, buffers are {}", params.size, buf->size));
 +    return buf;
 +}
 +
-+SP<CBackend> Aquamarine::CAndromarchyAllocator::getBackend() {
++SP<CBackend> Aquamarine::CAOmarchyAllocator::getBackend() {
 +    return backend ? backend->backend.lock() : nullptr;
 +}
 +
-+int Aquamarine::CAndromarchyAllocator::drmFD() {
++int Aquamarine::CAOmarchyAllocator::drmFD() {
 +    return -1;
 +}
 +
-+eAllocatorType Aquamarine::CAndromarchyAllocator::type() {
-+    return AQ_ALLOCATOR_TYPE_ANDROMARCHY;
++eAllocatorType Aquamarine::CAOmarchyAllocator::type() {
++    return AQ_ALLOCATOR_TYPE_AOMARCHY;
 +}
 +
 +// ---- output ----
 +
-+Aquamarine::CAndromarchyOutput::CAndromarchyOutput(const std::string& name_, CWeakPointer<CAndromarchyBackend> backend_) : backend(backend_) {
++Aquamarine::CAOmarchyOutput::CAOmarchyOutput(const std::string& name_, CWeakPointer<CAOmarchyBackend> backend_) : backend(backend_) {
 +    name        = name_;
-+    description = "Andromarchy Android display";
-+    make        = "andromarchy";
-+    model       = "andromarchy";
++    description = "AOmarchy Android display";
++    make        = "aomarchy";
++    model       = "aomarchy";
 +}
 +
-+Aquamarine::CAndromarchyOutput::~CAndromarchyOutput() {
++Aquamarine::CAOmarchyOutput::~CAOmarchyOutput() {
 +    events.destroy.emit();
 +}
 +
-+bool Aquamarine::CAndromarchyOutput::commit() {
++bool Aquamarine::CAOmarchyOutput::commit() {
 +    const auto  snapshot = state->snapshot();
 +    const auto& STATE    = snapshot.state();
 +
 +    events.commit.emit();
 +
 +    if ((STATE.committed & COutputState::AQ_OUTPUT_STATE_BUFFER) && STATE.buffer) {
-+        auto* buf = dynamic_cast<CAndromarchyBuffer*>(STATE.buffer.get());
++        auto* buf = dynamic_cast<CAOmarchyBuffer*>(STATE.buffer.get());
 +        if (!buf) {
-+            backend->backend->log(AQ_LOG_ERROR, "andromarchy: committed buffer is not an Andromarchy buffer");
++            backend->backend->log(AQ_LOG_ERROR, "aomarchy: committed buffer is not an AOmarchy buffer");
 +            return false;
 +        }
 +
@@ -413,29 +413,29 @@ index 0000000..d742070
 +    return true;
 +}
 +
-+bool Aquamarine::CAndromarchyOutput::test() {
++bool Aquamarine::CAOmarchyOutput::test() {
 +    return true;
 +}
 +
-+SP<IBackendImplementation> Aquamarine::CAndromarchyOutput::getBackend() {
++SP<IBackendImplementation> Aquamarine::CAOmarchyOutput::getBackend() {
 +    return backend.lock();
 +}
 +
-+std::vector<SDRMFormat> Aquamarine::CAndromarchyOutput::getRenderFormats() {
++std::vector<SDRMFormat> Aquamarine::CAOmarchyOutput::getRenderFormats() {
 +    return backend->getRenderFormats();
 +}
 +
-+bool Aquamarine::CAndromarchyOutput::pendingPageFlip() {
++bool Aquamarine::CAOmarchyOutput::pendingPageFlip() {
 +    return !consumerReady;
 +}
 +
-+bool Aquamarine::CAndromarchyOutput::pendingIdleFrame() {
++bool Aquamarine::CAOmarchyOutput::pendingIdleFrame() {
 +    return frameScheduled;
 +}
 +
-+void Aquamarine::CAndromarchyOutput::scheduleFrame(const scheduleFrameReason reason) {
-+    if (getenv("ANDROMARCHY_INPUT_DEBUG"))
-+        backend->backend->log(AQ_LOG_DEBUG, std::format("andromarchy: scheduleFrame reason {} ready {} scheduled {}", (uint32_t)reason, consumerReady, frameScheduled));
++void Aquamarine::CAOmarchyOutput::scheduleFrame(const scheduleFrameReason reason) {
++    if (getenv("AOMARCHY_INPUT_DEBUG"))
++        backend->backend->log(AQ_LOG_DEBUG, std::format("aomarchy: scheduleFrame reason {} ready {} scheduled {}", (uint32_t)reason, consumerReady, frameScheduled));
 +    needsFrame = true;
 +
 +    if (!framecb) {
@@ -455,7 +455,7 @@ index 0000000..d742070
 +    backend->backend->addIdleEvent(framecb);
 +}
 +
-+void Aquamarine::CAndromarchyOutput::onConsumerReady() {
++void Aquamarine::CAOmarchyOutput::onConsumerReady() {
 +    if (refreshPending) {
 +        // a frame was committed while the consumer was busy: hand it over now, stay "not ready"
 +        refreshPending = false;
@@ -472,33 +472,33 @@ index 0000000..d742070
 +
 +// ---- backend ----
 +
-+Aquamarine::CAndromarchyBackend::CAndromarchyBackend(SP<CBackend> backend_) : backend(backend_) {
-+    if (const char* sock = getenv("ANDROMARCHY_SOCKET"))
++Aquamarine::CAOmarchyBackend::CAOmarchyBackend(SP<CBackend> backend_) : backend(backend_) {
++    if (const char* sock = getenv("AOMARCHY_SOCKET"))
 +        socketPath = sock;
-+    unsetenv("ANDROMARCHY_SOCKET"); // see CBackend::create(): children must not become producers
++    unsetenv("AOMARCHY_SOCKET"); // see CBackend::create(): children must not become producers
 +}
 +
-+Aquamarine::CAndromarchyBackend::~CAndromarchyBackend() {
-+    andromarchy_audio_stop();
-+    andromarchy_camera_stop();
++Aquamarine::CAOmarchyBackend::~CAOmarchyBackend() {
++    aomarchy_audio_stop();
++    aomarchy_camera_stop();
 +    buffers.clear();
 +    if (display)
 +        disconnect(display);
 +}
 +
-+eBackendType Aquamarine::CAndromarchyBackend::type() {
-+    return AQ_BACKEND_ANDROMARCHY;
++eBackendType Aquamarine::CAOmarchyBackend::type() {
++    return AQ_BACKEND_AOMARCHY;
 +}
 +
-+bool Aquamarine::CAndromarchyBackend::start() {
++bool Aquamarine::CAOmarchyBackend::start() {
 +    if (socketPath.empty()) {
-+        backend->log(AQ_LOG_ERROR, "andromarchy: ANDROMARCHY_SOCKET is not set");
++        backend->log(AQ_LOG_ERROR, "aomarchy: AOMARCHY_SOCKET is not set");
 +        return false;
 +    }
 +    const char* sock = socketPath.c_str();
 +
 +    if (connect_to_deamon(&display, sock) < 0) {
-+        backend->log(AQ_LOG_ERROR, std::format("andromarchy: cannot connect to the display daemon at {}", sock));
++        backend->log(AQ_LOG_ERROR, std::format("aomarchy: cannot connect to the display daemon at {}", sock));
 +        display = nullptr;
 +        return false;
 +    }
@@ -509,13 +509,13 @@ index 0000000..d742070
 +        refreshmHz = refresh;
 +
 +    reconnectTimer = Hyprutils::OS::CFileDescriptor{timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC)};
-+    set_fallback_callback(display, &CAndromarchyBackend::onFallback, this);
++    set_fallback_callback(display, &CAOmarchyBackend::onFallback, this);
 +
 +    // ponytail: the first connection blocks startup until the Android app is in front (30 s): we need the buffer size for the output mode.
 +    int tries = 0;
 +    while (try_exit_fallback(display) != 0) {
 +        if (++tries > 300) {
-+            backend->log(AQ_LOG_ERROR, "andromarchy: the Andromarchy app never connected; open it and retry");
++            backend->log(AQ_LOG_ERROR, "aomarchy: the AOmarchy app never connected; open it and retry");
 +            return false;
 +        }
 +        usleep(100000);
@@ -524,21 +524,21 @@ index 0000000..d742070
 +    if (!importBuffers())
 +        return false;
 +
-+    allocator = makeShared<CAndromarchyAllocator>(self);
++    allocator = makeShared<CAOmarchyAllocator>(self);
 +    // Sound: a PipeWire sink whose output goes to the Android speaker, and a source fed by its microphone.
 +    // The streams live for the whole session; only the socket is swapped on (re)connect.
-+    if (andromarchy_audio_start() < 0)
-+        backend->log(AQ_LOG_WARNING, "andromarchy: PipeWire audio unavailable (is pipewire running?)");
-+    andromarchy_audio_set_fd(get_audio_fd(display));
++    if (aomarchy_audio_start() < 0)
++        backend->log(AQ_LOG_WARNING, "aomarchy: PipeWire audio unavailable (is pipewire running?)");
++    aomarchy_audio_set_fd(get_audio_fd(display));
 +    // Cameras: ask for the service; its fds arrive as an INPUT_TYPE_RESOURCE event (when enabled in the app's settings).
 +    push_resources_request(display, SERVICE_TYPE_CAMERA, nullptr);
 +    armReconnect(500); // doubles as the heartbeat tick while connected
-+    backend->log(AQ_LOG_DEBUG, std::format("andromarchy: connected, {} buffers of {}, {} mHz", buffers.size(), size, refreshmHz));
++    backend->log(AQ_LOG_DEBUG, std::format("aomarchy: connected, {} buffers of {}, {} mHz", buffers.size(), size, refreshmHz));
 +    return true;
 +}
 +
 +// (Re)builds `buffers` from the consumer's current dmabuf set. The fds stay owned by the transport.
-+bool Aquamarine::CAndromarchyBackend::importBuffers() {
++bool Aquamarine::CAOmarchyBackend::importBuffers() {
 +    buffers.clear();
 +
 +    const int count = get_buf_count(display);
@@ -546,7 +546,7 @@ index 0000000..d742070
 +        buf_info  info;
 +        const int fd = get_dmabuf_fd_at(display, i);
 +        if (fd < 0 || get_dmabuf_info_at(display, i, &info) < 0) {
-+            backend->log(AQ_LOG_ERROR, std::format("andromarchy: no info for buffer {}", i));
++            backend->log(AQ_LOG_ERROR, std::format("aomarchy: no info for buffer {}", i));
 +            buffers.clear();
 +            return false;
 +        }
@@ -554,17 +554,17 @@ index 0000000..d742070
 +        SDMABUFAttrs attrs;
 +        attrs.success    = true;
 +        attrs.size       = {(double)info.width, (double)info.height};
-+        attrs.format     = andromarchyFormatToDRM(info.format);
++        attrs.format     = aomarchyFormatToDRM(info.format);
 +        attrs.modifier   = info.modifier;
 +        attrs.planes     = 1;
 +        attrs.offsets[0] = info.offset;
 +        attrs.strides[0] = info.stride;
 +        attrs.fds[0]     = fd;
-+        buffers.emplace_back(SP<IBuffer>(new CAndromarchyBuffer(i, attrs)));
++        buffers.emplace_back(SP<IBuffer>(new CAOmarchyBuffer(i, attrs)));
 +    }
 +
 +    if (buffers.empty()) {
-+        backend->log(AQ_LOG_ERROR, "andromarchy: the consumer gave us no buffers");
++        backend->log(AQ_LOG_ERROR, "aomarchy: the consumer gave us no buffers");
 +        return false;
 +    }
 +
@@ -572,7 +572,7 @@ index 0000000..d742070
 +    return true;
 +}
 +
-+std::vector<SP<SPollFD>> Aquamarine::CAndromarchyBackend::pollFDs() {
++std::vector<SP<SPollFD>> Aquamarine::CAOmarchyBackend::pollFDs() {
 +    if (!display)
 +        return {};
 +    // The reconnect timer is always polled; the transport fds only exist while a consumer is connected.
@@ -585,7 +585,7 @@ index 0000000..d742070
 +}
 +
 +
-+void Aquamarine::CAndromarchyBackend::onInputReadable() {
++void Aquamarine::CAOmarchyBackend::onInputReadable() {
 +    InputEvent ev;
 +    while (!is_fallback(display) && poll_input_event(display, &ev, 0) > 0)
 +        processInput(ev);
@@ -620,7 +620,7 @@ index 0000000..d742070
 +    return false;
 +}
 +
-+void Aquamarine::CAndromarchyBackend::typeText(const char* text, uint32_t len, uint32_t t) {
++void Aquamarine::CAOmarchyBackend::typeText(const char* text, uint32_t len, uint32_t t) {
 +    constexpr uint32_t KEY_LEFTSHIFT = 42;
 +    for (uint32_t i = 0; i < len; i++) {
 +        uint32_t code  = 0;
@@ -636,10 +636,10 @@ index 0000000..d742070
 +    }
 +}
 +
-+void Aquamarine::CAndromarchyBackend::processInput(const InputEvent& ev) {
++void Aquamarine::CAOmarchyBackend::processInput(const InputEvent& ev) {
 +    const uint32_t t = nowMs();
-+    if (getenv("ANDROMARCHY_INPUT_DEBUG"))
-+        fprintf(stderr, "andromarchy: input type %u a=%d b=%d\n", ev.type, ev.key.action, ev.key.keycode);
++    if (getenv("AOMARCHY_INPUT_DEBUG"))
++        fprintf(stderr, "aomarchy: input type %u a=%d b=%d\n", ev.type, ev.key.action, ev.key.keycode);
 +    // positions arrive in buffer pixels; aquamarine wants them normalized to the output
 +    auto norm = [this](float x, float y) { return Vector2D{x / size.x, y / size.y}; };
 +
@@ -707,7 +707,7 @@ index 0000000..d742070
 +            const int n = ev.resource.fdnum < 16 ? (int)ev.resource.fdnum : 16;
 +            if (n > 0 && poll_input_event_extend_fds(display, fds, n, &got, 5000) == 1) {
 +                if (ev.resource.type == SERVICE_TYPE_CAMERA)
-+                    andromarchy_camera_set_fds(fds, got);
++                    aomarchy_camera_set_fds(fds, got);
 +                else
 +                    for (int i = 0; i < got; ++i)
 +                        close(fds[i]);
@@ -718,14 +718,14 @@ index 0000000..d742070
 +    }
 +}
 +
-+void Aquamarine::CAndromarchyBackend::onFallback(void* data) {
++void Aquamarine::CAOmarchyBackend::onFallback(void* data) {
 +    // Called by the transport when the Android side goes away (app closed / backgrounded).
 +    // Its fds are already closed: drop them from the event loop (deferred, we may be inside their handler) and start retrying.
-+    auto* self = (CAndromarchyBackend*)data;
-+    andromarchy_audio_set_fd(-1); // before the transport closes the borrowed fd; the streams keep running (silence)
-+    andromarchy_camera_stop();    // nodes come back with the service fds on reconnect
-+    self->backend->log(AQ_LOG_DEBUG, "andromarchy: consumer lost, waiting for it to come back");
-+    fprintf(stderr, "andromarchy: consumer lost\n");
++    auto* self = (CAOmarchyBackend*)data;
++    aomarchy_audio_set_fd(-1); // before the transport closes the borrowed fd; the streams keep running (silence)
++    aomarchy_camera_stop();    // nodes come back with the service fds on reconnect
++    self->backend->log(AQ_LOG_DEBUG, "aomarchy: consumer lost, waiting for it to come back");
++    fprintf(stderr, "aomarchy: consumer lost\n");
 +    if (self->output && self->output->swapchain && self->output->swapchain->currentOptions().length > 0)
 +        self->lastSwapchainOptions = self->output->swapchain->currentOptions();
 +    // Stop rendering: the dmabufs are gone. Dropping the swapchain releases the compositor's imports of them.
@@ -739,12 +739,12 @@ index 0000000..d742070
 +    self->backend->addIdleEvent(makeShared<std::function<void()>>([self]() { self->backend->events.pollFDsChanged.emit(); }));
 +}
 +
-+void Aquamarine::CAndromarchyBackend::armReconnect(int ms) {
++void Aquamarine::CAOmarchyBackend::armReconnect(int ms) {
 +    itimerspec ts = {.it_value = {.tv_sec = ms / 1000, .tv_nsec = (ms % 1000) * 1000000L}};
 +    timerfd_settime(reconnectTimer.get(), 0, &ts, nullptr);
 +}
 +
-+void Aquamarine::CAndromarchyBackend::onReconnectTimer() {
++void Aquamarine::CAOmarchyBackend::onReconnectTimer() {
 +    uint64_t expirations;
 +    read(reconnectTimer.get(), &expirations, sizeof(expirations));
 +
@@ -763,7 +763,7 @@ index 0000000..d742070
 +    if (try_exit_fallback(display) != 0) {
 +        static int attempts = 0;
 +        if (++attempts % 10 == 1)
-+            fprintf(stderr, "andromarchy: reconnect attempt %d failed\n", attempts);
++            fprintf(stderr, "aomarchy: reconnect attempt %d failed\n", attempts);
 +        armReconnect(300);
 +        return;
 +    }
@@ -777,16 +777,16 @@ index 0000000..d742070
 +    // The Android side sizes its buffers to the screen orientation it had when it (re)connected:
 +    // after a rotation the output mode follows, and the compositor reconfigures (events.state, like the Wayland backend).
 +    if (output && size != oldSize) {
-+        fprintf(stderr, "andromarchy: screen is now %.0fx%.0f\n", size.x, size.y);
++        fprintf(stderr, "aomarchy: screen is now %.0fx%.0f\n", size.x, size.y);
 +        output->modes.clear();
 +        output->modes.emplace_back(SP<SOutputMode>(new SOutputMode(size, (unsigned int)refreshmHz, true)));
 +        output->events.state.emit(IOutput::SStateEvent{.size = size});
 +    }
 +
-+    andromarchy_audio_set_fd(get_audio_fd(display));
++    aomarchy_audio_set_fd(get_audio_fd(display));
 +    push_resources_request(display, SERVICE_TYPE_CAMERA, nullptr);
-+    backend->log(AQ_LOG_DEBUG, std::format("andromarchy: consumer back, {} buffers of {}", buffers.size(), size));
-+    fprintf(stderr, "andromarchy: consumer back, %zu buffers of %.0fx%.0f\n", buffers.size(), size.x, size.y);
++    backend->log(AQ_LOG_DEBUG, std::format("aomarchy: consumer back, {} buffers of {}", buffers.size(), size));
++    fprintf(stderr, "aomarchy: consumer back, %zu buffers of %.0fx%.0f\n", buffers.size(), size.x, size.y);
 +
 +    // New dmabufs: rebuild the swapchain from them (it was cleared when the consumer went away).
 +    if (output && output->swapchain) {
@@ -807,41 +807,41 @@ index 0000000..d742070
 +    backend->events.pollFDsChanged.emit();
 +}
 +
-+void Aquamarine::CAndromarchyBackend::onBufferReady() {
-+    if (getenv("ANDROMARCHY_INPUT_DEBUG"))
-+        backend->log(AQ_LOG_DEBUG, "andromarchy: buffer ready");
++void Aquamarine::CAOmarchyBackend::onBufferReady() {
++    if (getenv("AOMARCHY_INPUT_DEBUG"))
++        backend->log(AQ_LOG_DEBUG, "aomarchy: buffer ready");
 +    eventfd_t val;
 +    eventfd_read(get_buffer_ready_fd(display), &val);
 +    if (output)
 +        output->onConsumerReady();
 +}
 +
-+int Aquamarine::CAndromarchyBackend::drmFD() {
++int Aquamarine::CAOmarchyBackend::drmFD() {
 +    return -1;
 +}
 +
-+int Aquamarine::CAndromarchyBackend::drmRenderNodeFD() {
++int Aquamarine::CAOmarchyBackend::drmRenderNodeFD() {
 +    return -1;
 +}
 +
-+bool Aquamarine::CAndromarchyBackend::dispatchEvents() {
++bool Aquamarine::CAOmarchyBackend::dispatchEvents() {
 +    return true;
 +}
 +
-+uint32_t Aquamarine::CAndromarchyBackend::capabilities() {
++uint32_t Aquamarine::CAOmarchyBackend::capabilities() {
 +    return 0;
 +}
 +
-+bool Aquamarine::CAndromarchyBackend::setCursor(SP<IBuffer> buffer, const Vector2D& hotspot) {
++bool Aquamarine::CAOmarchyBackend::setCursor(SP<IBuffer> buffer, const Vector2D& hotspot) {
 +    return false;
 +}
 +
-+void Aquamarine::CAndromarchyBackend::onReady() {
++void Aquamarine::CAOmarchyBackend::onReady() {
 +    createOutput();
 +
-+    keyboard = makeShared<CAndromarchyKeyboard>();
-+    pointer  = makeShared<CAndromarchyPointer>();
-+    touch    = makeShared<CAndromarchyTouch>();
++    keyboard = makeShared<CAOmarchyKeyboard>();
++    pointer  = makeShared<CAOmarchyPointer>();
++    touch    = makeShared<CAOmarchyTouch>();
 +    // Announced from the idle loop: the compositor's input manager does not exist yet while start() runs.
 +    backend->addIdleEvent(makeShared<std::function<void()>>([this]() {
 +        backend->events.newKeyboard.emit(SP<IKeyboard>(keyboard));
@@ -850,22 +850,22 @@ index 0000000..d742070
 +    }));
 +}
 +
-+std::vector<SDRMFormat> Aquamarine::CAndromarchyBackend::getRenderFormats() {
++std::vector<SDRMFormat> Aquamarine::CAOmarchyBackend::getRenderFormats() {
 +    if (buffers.empty())
 +        return {};
 +    const auto attrs = buffers.at(0)->dmabuf();
 +    return {SDRMFormat{.drmFormat = attrs.format, .modifiers = {attrs.modifier}}};
 +}
 +
-+std::vector<SDRMFormat> Aquamarine::CAndromarchyBackend::getCursorFormats() {
++std::vector<SDRMFormat> Aquamarine::CAOmarchyBackend::getCursorFormats() {
 +    return {};
 +}
 +
-+bool Aquamarine::CAndromarchyBackend::createOutput(const std::string& name) {
++bool Aquamarine::CAOmarchyBackend::createOutput(const std::string& name) {
 +    if (output)
 +        return false; // one Android screen
 +
-+    output = SP<CAndromarchyOutput>(new CAndromarchyOutput(name.empty() ? "ANDROMARCHY-1" : name, self));
++    output = SP<CAOmarchyOutput>(new CAOmarchyOutput(name.empty() ? "AOMARCHY-1" : name, self));
 +    output->self = output;
 +    output->modes.emplace_back(SP<SOutputMode>(new SOutputMode(size, (unsigned int)refreshmHz, true)));
 +    output->swapchain = CSwapchain::create(allocator, self.lock());
@@ -873,27 +873,27 @@ index 0000000..d742070
 +    return true;
 +}
 +
-+SP<IAllocator> Aquamarine::CAndromarchyBackend::preferredAllocator() {
++SP<IAllocator> Aquamarine::CAOmarchyBackend::preferredAllocator() {
 +    return allocator;
 +}
 +
-+std::vector<SP<IAllocator>> Aquamarine::CAndromarchyBackend::getAllocators() {
++std::vector<SP<IAllocator>> Aquamarine::CAOmarchyBackend::getAllocators() {
 +    return {allocator};
 +}
 +
-+CWeakPointer<IBackendImplementation> Aquamarine::CAndromarchyBackend::getPrimary() {
++CWeakPointer<IBackendImplementation> Aquamarine::CAOmarchyBackend::getPrimary() {
 +    return {};
 +}
 +
-+int Aquamarine::CAndromarchyBackend::bufferCount() const {
++int Aquamarine::CAOmarchyBackend::bufferCount() const {
 +    return (int)buffers.size();
 +}
 +
-+int Aquamarine::CAndromarchyBackend::selectedIndex() const {
++int Aquamarine::CAOmarchyBackend::selectedIndex() const {
 +    return display ? get_selected_idx(display) : 0;
 +}
 +
-+SP<IBuffer> Aquamarine::CAndromarchyBackend::bufferAt(int index) {
++SP<IBuffer> Aquamarine::CAOmarchyBackend::bufferAt(int index) {
 +    return buffers.at(index % buffers.size());
 +}
 diff --git a/src/backend/Backend.cpp b/src/backend/Backend.cpp
@@ -904,7 +904,7 @@ index dbd7147..62b7373 100644
  #include <aquamarine/backend/Backend.hpp>
  #include <aquamarine/backend/Wayland.hpp>
  #include <aquamarine/backend/Headless.hpp>
-+#include <aquamarine/backend/Andromarchy.hpp>
++#include <aquamarine/backend/AOmarchy.hpp>
  #include <aquamarine/backend/DRM.hpp>
  #include <aquamarine/backend/Null.hpp>
  #include <aquamarine/allocator/GBM.hpp>
@@ -912,7 +912,7 @@ index dbd7147..62b7373 100644
          case AQ_BACKEND_DRM: return "drm";
          case AQ_BACKEND_HEADLESS: return "headless";
          case AQ_BACKEND_WAYLAND: return "wayland";
-+        case AQ_BACKEND_ANDROMARCHY: return "andromarchy";
++        case AQ_BACKEND_AOMARCHY: return "aomarchy";
          default: break;
      }
      return "invalid";
@@ -920,12 +920,12 @@ index dbd7147..62b7373 100644
  
      backend->log(AQ_LOG_DEBUG, "Creating an Aquamarine backend!");
  
-+    // Android: there is no DRM or parent compositor, the Andromarchy display app is the only output.
-+    // ANDROMARCHY_SOCKET is consumed (unset) by the first process that claims the display, so clients the compositor
-+    // spawns (e.g. hyprtoolkit apps, which also use aquamarine) inherit ANDROMARCHY but never steal the daemon.
-+    if (getenv("ANDROMARCHY") && getenv("ANDROMARCHY_SOCKET")) {
-+        backend->log(AQ_LOG_DEBUG, "ANDROMARCHY is set, using only the andromarchy backend");
-+        auto ref = SP<CAndromarchyBackend>(new CAndromarchyBackend(backend));
++    // Android: there is no DRM or parent compositor, the AOmarchy display app is the only output.
++    // AOMARCHY_SOCKET is consumed (unset) by the first process that claims the display, so clients the compositor
++    // spawns (e.g. hyprtoolkit apps, which also use aquamarine) inherit AOMARCHY but never steal the daemon.
++    if (getenv("AOMARCHY") && getenv("AOMARCHY_SOCKET")) {
++        backend->log(AQ_LOG_DEBUG, "AOMARCHY is set, using only the aomarchy backend");
++        auto ref = SP<CAOmarchyBackend>(new CAOmarchyBackend(backend));
 +        backend->implementations.emplace_back(ref);
 +        ref->self = ref;
 +        backend->idle.fd = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC);
@@ -940,21 +940,21 @@ index dbd7147..62b7373 100644
      }
  
 +    for (auto const& b : implementations) {
-+        if (!primaryAllocator && b->type() == AQ_BACKEND_ANDROMARCHY)
++        if (!primaryAllocator && b->type() == AQ_BACKEND_AOMARCHY)
 +            primaryAllocator = b->preferredAllocator();
 +    }
 +
      if (!primaryAllocator && (implementations.empty() || implementations.at(0)->type() != AQ_BACKEND_NULL)) {
          log(AQ_LOG_CRITICAL, "Cannot open backend: no allocator available");
          return false;
-diff --git a/src/backend/andromarchy/andromarchy_audio.c b/src/backend/andromarchy/andromarchy_audio.c
+diff --git a/src/backend/aomarchy/aomarchy_audio.c b/src/backend/aomarchy/aomarchy_audio.c
 new file mode 100644
 index 0000000..67f3251
 --- /dev/null
-+++ b/src/backend/andromarchy/andromarchy_audio.c
++++ b/src/backend/aomarchy/aomarchy_audio.c
 @@ -0,0 +1,541 @@
 +#define _GNU_SOURCE
-+#include "andromarchy_audio.h"
++#include "aomarchy_audio.h"
 +#include "protocol.h"
 +
 +#include <errno.h>
@@ -984,7 +984,7 @@ index 0000000..67f3251
 +/* Retry cadence after the PipeWire connection is lost (sound service restart, etc). */
 +#define RECONNECT_SECS    1
 +
-+struct andromarchy_audio {
++struct aomarchy_audio {
 +    struct pw_thread_loop *loop;
 +    struct pw_context     *context;
 +    struct pw_core        *core;
@@ -1016,7 +1016,7 @@ index 0000000..67f3251
 +    uint8_t                rx[MAX_DGRAM];
 +};
 +
-+static struct andromarchy_audio *g_audio = NULL;
++static struct aomarchy_audio *g_audio = NULL;
 +
 +static int connect_stream(struct pw_stream *stream, enum spa_direction direction,
 +                          uint32_t rate, uint32_t channels, uint32_t quantum);
@@ -1026,12 +1026,12 @@ index 0000000..67f3251
 +
 +/* ---- mic ring buffer (single-threaded: loop thread only) ---- */
 +
-+static void ring_reset(struct andromarchy_audio *a)
++static void ring_reset(struct aomarchy_audio *a)
 +{
 +    a->ring_head = a->ring_tail = a->ring_fill = 0;
 +}
 +
-+static void ring_write(struct andromarchy_audio *a, const uint8_t *p, size_t n)
++static void ring_write(struct aomarchy_audio *a, const uint8_t *p, size_t n)
 +{
 +    if (n > a->ring_size) {           /* keep only the newest ring_size bytes */
 +        p += n - a->ring_size;
@@ -1051,7 +1051,7 @@ index 0000000..67f3251
 +    a->ring_fill += n;
 +}
 +
-+static size_t ring_read(struct andromarchy_audio *a, uint8_t *p, size_t n)
++static size_t ring_read(struct aomarchy_audio *a, uint8_t *p, size_t n)
 +{
 +    size_t got = n < a->ring_fill ? n : a->ring_fill;
 +    size_t first = a->ring_size - a->ring_tail;
@@ -1070,7 +1070,7 @@ index 0000000..67f3251
 + * the consumer plays it. Dropped (still drained) while detached. */
 +static void on_capture_process(void *data)
 +{
-+    struct andromarchy_audio *a = data;
++    struct aomarchy_audio *a = data;
 +    struct pw_buffer *b = pw_stream_dequeue_buffer(a->capture);
 +    if (!b)
 +        return;
@@ -1094,7 +1094,7 @@ index 0000000..67f3251
 + * when the ring underruns or while detached, so the source never glitches/vanishes. */
 +static void on_source_process(void *data)
 +{
-+    struct andromarchy_audio *a = data;
++    struct aomarchy_audio *a = data;
 +    struct pw_buffer *b = pw_stream_dequeue_buffer(a->source);
 +    if (!b)
 +        return;
@@ -1137,14 +1137,14 @@ index 0000000..67f3251
 + * unset field as a change and re-plug on every announcement. (One bug was a CAPTURE
 + * announce with channels==0 defaulting to 2, never matching the mono source.)
 + *
-+ * Every change is applied IN PLACE -- the node object (andromarchy-speaker / andromarchy-mic) is
++ * Every change is applied IN PLACE -- the node object (aomarchy-speaker / aomarchy-mic) is
 + * never destroyed, so WirePlumber/plasma-pa keep their default reference and never log
-+ * "No object for name andromarchy-speaker". A rate/channels change renegotiates the port
++ * "No object for name aomarchy-speaker". A rate/channels change renegotiates the port
 + * format via pw_stream_update_params(); a quantum-only change (AAudio's framesPerBurst
 + * legitimately varies between opens) just updates node.latency. Neither disconnects.
 + *
 + * Runs on the loop thread, so the pw_stream calls are safe. */
-+static void apply_format(struct andromarchy_audio *a, const struct audio_format *f)
++static void apply_format(struct aomarchy_audio *a, const struct audio_format *f)
 +{
 +    const bool playback = (f->role == AUDIO_ROLE_PLAYBACK);
 +    const uint32_t rate = f->rate ? f->rate : DEFAULT_RATE;
@@ -1186,7 +1186,7 @@ index 0000000..67f3251
 +/* Mic PCM / format announcements arriving from the consumer. Runs on the loop thread. */
 +static void on_audio_readable(void *data, int fd, uint32_t mask)
 +{
-+    struct andromarchy_audio *a = data;
++    struct aomarchy_audio *a = data;
 +    if (mask & (SPA_IO_ERR | SPA_IO_HUP))
 +        return;
 +    if (!(mask & SPA_IO_IN))
@@ -1219,7 +1219,7 @@ index 0000000..67f3251
 +
 +/* ---- PipeWire connection lifecycle (build / teardown / auto-reconnect) ---- */
 +
-+static void arm_reconnect(struct andromarchy_audio *a)
++static void arm_reconnect(struct aomarchy_audio *a)
 +{
 +    struct timespec val = { .tv_sec = RECONNECT_SECS, .tv_nsec = 0 };
 +    pw_loop_update_timer(pw_thread_loop_get_loop(a->loop), a->reconnect_timer,
@@ -1232,7 +1232,7 @@ index 0000000..67f3251
 + * keeps working and resumes the moment PipeWire is back. */
 +static void on_core_error(void *data, uint32_t id, int seq, int res, const char *message)
 +{
-+    struct andromarchy_audio *a = data;
++    struct aomarchy_audio *a = data;
 +    (void)seq;
 +    (void)message;
 +    if (id == PW_ID_CORE && res == -EPIPE) {
@@ -1297,7 +1297,7 @@ index 0000000..67f3251
 +
 +/* Tear down the core proxy and both streams, leaving the loop, context, timer, mic
 + * ring and audio-socket io source intact. Idempotent. */
-+static void teardown_pw(struct andromarchy_audio *a)
++static void teardown_pw(struct aomarchy_audio *a)
 +{
 +    if (a->capture) {
 +        spa_hook_remove(&a->capture_listener);
@@ -1317,7 +1317,7 @@ index 0000000..67f3251
 +}
 +
 +/* (Re)connect the core and (re)create both streams. Returns 0 on success. */
-+static int build_pw(struct andromarchy_audio *a)
++static int build_pw(struct aomarchy_audio *a)
 +{
 +    a->core = pw_context_connect(a->context, NULL, 0);
 +    if (!a->core)
@@ -1328,12 +1328,12 @@ index 0000000..67f3251
 +     * the auto-null "Dummy Output": apps play into this Audio/Sink, WirePlumber makes
 +     * it the default (high priority beats auto_null), and on_capture_process receives
 +     * the mixed PCM directly -- no monitor capture, nothing bound to the dummy. */
-+    a->capture = pw_stream_new(a->core, "andromarchy-speaker",
++    a->capture = pw_stream_new(a->core, "aomarchy-speaker",
 +        pw_properties_new(
 +            PW_KEY_MEDIA_TYPE, "Audio",
 +            PW_KEY_MEDIA_CLASS, "Audio/Sink",
-+            PW_KEY_NODE_NAME, "andromarchy-speaker",
-+            PW_KEY_NODE_DESCRIPTION, "Andromarchy remote speaker",
++            PW_KEY_NODE_NAME, "aomarchy-speaker",
++            PW_KEY_NODE_DESCRIPTION, "AOmarchy remote speaker",
 +            PW_KEY_PRIORITY_SESSION, "1010",   /* outrank the auto-null dummy sink */
 +            PW_KEY_PRIORITY_DRIVER, "1010",
 +            NULL));
@@ -1342,12 +1342,12 @@ index 0000000..67f3251
 +    pw_stream_add_listener(a->capture, &a->capture_listener, &capture_events, a);
 +
 +    /* Expose the Android mic to Linux apps as a recordable source. */
-+    a->source = pw_stream_new(a->core, "andromarchy-mic",
++    a->source = pw_stream_new(a->core, "aomarchy-mic",
 +        pw_properties_new(
 +            PW_KEY_MEDIA_TYPE, "Audio",
 +            PW_KEY_MEDIA_CLASS, "Audio/Source",
-+            PW_KEY_NODE_NAME, "andromarchy-mic",
-+            PW_KEY_NODE_DESCRIPTION, "Andromarchy remote microphone",
++            PW_KEY_NODE_NAME, "aomarchy-mic",
++            PW_KEY_NODE_DESCRIPTION, "AOmarchy remote microphone",
 +            PW_KEY_PRIORITY_SESSION, "1010",   /* outrank the auto-null dummy source */
 +            PW_KEY_PRIORITY_DRIVER, "1010",
 +            NULL));
@@ -1367,7 +1367,7 @@ index 0000000..67f3251
 +
 +static void on_reconnect_timer(void *data, uint64_t expirations)
 +{
-+    struct andromarchy_audio *a = data;
++    struct aomarchy_audio *a = data;
 +    (void)expirations;
 +    if (a->pw_connected)
 +        return;
@@ -1383,9 +1383,9 @@ index 0000000..67f3251
 +
 +/* ---- public API ---- */
 +
-+void andromarchy_audio_set_fd(int audio_fd)
++void aomarchy_audio_set_fd(int audio_fd)
 +{
-+    struct andromarchy_audio *a = g_audio;
++    struct aomarchy_audio *a = g_audio;
 +    if (!a)
 +        return;
 +
@@ -1410,14 +1410,14 @@ index 0000000..67f3251
 +    pw_thread_loop_unlock(a->loop);
 +}
 +
-+int andromarchy_audio_start(void)
++int aomarchy_audio_start(void)
 +{
 +    if (g_audio)
 +        return 0;
 +
 +    pw_init(NULL, NULL);
 +
-+    struct andromarchy_audio *a = calloc(1, sizeof(*a));
++    struct aomarchy_audio *a = calloc(1, sizeof(*a));
 +    if (!a)
 +        return -1;
 +    a->audio_fd = -1;
@@ -1430,7 +1430,7 @@ index 0000000..67f3251
 +    if (!a->ring)
 +        goto fail;
 +
-+    a->loop = pw_thread_loop_new("andromarchy-audio", NULL);
++    a->loop = pw_thread_loop_new("aomarchy-audio", NULL);
 +    if (!a->loop)
 +        goto fail;
 +
@@ -1472,9 +1472,9 @@ index 0000000..67f3251
 +    return -1;
 +}
 +
-+void andromarchy_audio_stop(void)
++void aomarchy_audio_stop(void)
 +{
-+    struct andromarchy_audio *a = g_audio;
++    struct aomarchy_audio *a = g_audio;
 +    if (!a)
 +        return;
 +    g_audio = NULL;
@@ -1494,14 +1494,14 @@ index 0000000..67f3251
 +    free(a);
 +    pw_deinit();
 +}
-diff --git a/src/backend/andromarchy/andromarchy_audio.h b/src/backend/andromarchy/andromarchy_audio.h
+diff --git a/src/backend/aomarchy/aomarchy_audio.h b/src/backend/aomarchy/aomarchy_audio.h
 new file mode 100644
 index 0000000..5acf1f1
 --- /dev/null
-+++ b/src/backend/andromarchy/andromarchy_audio.h
++++ b/src/backend/aomarchy/aomarchy_audio.h
 @@ -0,0 +1,41 @@
-+#ifndef ANDROMARCHY_AUDIO_H
-+#define ANDROMARCHY_AUDIO_H
++#ifndef AOMARCHY_AUDIO_H
++#define AOMARCHY_AUDIO_H
 +
 +/*
 + * Producer-side audio engine.
@@ -1517,7 +1517,7 @@ index 0000000..5acf1f1
 + * The streams are NEVER torn down on consumer disconnect: while detached the capture
 + * stream simply drops its PCM and the source feeds silence, so PipeWire (and every
 + * recording app) never sees the device disappear. Only the socket fd is hot-swapped:
-+ * andromarchy_audio_set_fd(fd) on (re)connect, andromarchy_audio_set_fd(-1) on fallback. The fd
++ * aomarchy_audio_set_fd(fd) on (re)connect, aomarchy_audio_set_fd(-1) on fallback. The fd
 + * is borrowed -- the engine never closes it (display_producer owns its lifetime).
 + */
 +
@@ -1527,28 +1527,28 @@ index 0000000..5acf1f1
 +
 +/* Create the thread-loop and both streams. Returns 0 on success, -1 on failure.
 + * Idempotent: a second call while already started is a no-op returning 0. */
-+int  andromarchy_audio_start(void);
++int  aomarchy_audio_start(void);
 +
 +/* Stop and destroy the engine. Safe to call when not started. */
-+void andromarchy_audio_stop(void);
++void aomarchy_audio_stop(void);
 +
 +/* Point the engine at the current audio socket, or -1 to detach (drop/silence).
 + * Re-pointing resets the mic buffer and re-announces the playback format. */
-+void andromarchy_audio_set_fd(int audio_fd);
++void aomarchy_audio_set_fd(int audio_fd);
 +
 +#ifdef __cplusplus
 +}
 +#endif
 +
 +#endif
-diff --git a/src/backend/andromarchy/andromarchy_camera.c b/src/backend/andromarchy/andromarchy_camera.c
+diff --git a/src/backend/aomarchy/aomarchy_camera.c b/src/backend/aomarchy/aomarchy_camera.c
 new file mode 100644
 index 0000000..6801e55
 --- /dev/null
-+++ b/src/backend/andromarchy/andromarchy_camera.c
++++ b/src/backend/aomarchy/aomarchy_camera.c
 @@ -0,0 +1,338 @@
 +#define _GNU_SOURCE
-+#include "andromarchy_camera.h"
++#include "aomarchy_camera.h"
 +
 +#include <errno.h>
 +#include <poll.h>
@@ -1598,7 +1598,7 @@ index 0000000..6801e55
 +#define FPS    30
 +
 +struct cam {
-+    struct andromarchy_camera *owner;
++    struct aomarchy_camera *owner;
 +    int                   id, stream_fd;
 +    uint32_t              w, h;
 +    uint8_t              *shm;
@@ -1609,7 +1609,7 @@ index 0000000..6801e55
 +    bool                  recording;
 +};
 +
-+struct andromarchy_camera {
++struct aomarchy_camera {
 +    struct pw_thread_loop *loop;
 +    struct pw_context     *context;
 +    struct pw_core        *core;
@@ -1618,7 +1618,7 @@ index 0000000..6801e55
 +    struct cam             cams[MAX_CAMERAS];
 +};
 +
-+static struct andromarchy_camera *g_cam = NULL;
++static struct aomarchy_camera *g_cam = NULL;
 +
 +static int read_full(int fd, void *buf, size_t n, int timeout_ms)
 +{
@@ -1635,7 +1635,7 @@ index 0000000..6801e55
 +    return 0;
 +}
 +
-+static void ctrl_send(struct andromarchy_camera *c, uint8_t type, const uint8_t *payload, uint16_t len)
++static void ctrl_send(struct aomarchy_camera *c, uint8_t type, const uint8_t *payload, uint16_t len)
 +{
 +    uint8_t                msg[sizeof(struct camera_ctrl_msg) + 8];
 +    struct camera_ctrl_msg h = {type, 0, len};
@@ -1643,7 +1643,7 @@ index 0000000..6801e55
 +    if (len)
 +        memcpy(msg + sizeof h, payload, len);
 +    if (send(c->ctrl_fd, msg, sizeof h + len, MSG_NOSIGNAL) < 0)
-+        fprintf(stderr, "andromarchy-camera: ctrl send failed: %s\n", strerror(errno));
++        fprintf(stderr, "aomarchy-camera: ctrl send failed: %s\n", strerror(errno));
 +}
 +
 +static void set_recording(struct cam *k, bool on)
@@ -1659,7 +1659,7 @@ index 0000000..6801e55
 +        ctrl_send(k->owner, CAMERA_CTRL_START_RECORD, p, 5);
 +    } else
 +        ctrl_send(k->owner, CAMERA_CTRL_STOP_RECORD, p, 1);
-+    fprintf(stderr, "andromarchy-camera: camera %d %s (%ux%u)\n", k->id, on ? "on" : "off", k->w, k->h);
++    fprintf(stderr, "aomarchy-camera: camera %d %s (%ux%u)\n", k->id, on ? "on" : "off", k->w, k->h);
 +}
 +
 +static void stream_send(int fd, uint8_t type, uint8_t slot)
@@ -1786,9 +1786,9 @@ index 0000000..6801e55
 +                           on_stream_io, k);
 +}
 +
-+void andromarchy_camera_stop(void)
++void aomarchy_camera_stop(void)
 +{
-+    struct andromarchy_camera *c = g_cam;
++    struct aomarchy_camera *c = g_cam;
 +    if (!c)
 +        return;
 +    if (!c->loop) {
@@ -1821,15 +1821,15 @@ index 0000000..6801e55
 +    g_cam = NULL;
 +}
 +
-+void andromarchy_camera_set_fds(const int *fds, int n)
++void aomarchy_camera_set_fds(const int *fds, int n)
 +{
-+    andromarchy_camera_stop();
++    aomarchy_camera_stop();
 +    if (n < 2) {
 +        for (int i = 0; i < n; i++)
 +            close(fds[i]);
 +        return;
 +    }
-+    struct andromarchy_camera *c = calloc(1, sizeof *c);
++    struct aomarchy_camera *c = calloc(1, sizeof *c);
 +    if (!c)
 +        return;
 +    c->ctrl_fd = fds[0];
@@ -1843,7 +1843,7 @@ index 0000000..6801e55
 +    uint8_t                info[1 + MAX_CAMERAS * 4] = {0};
 +    if (read_full(c->ctrl_fd, &h, sizeof h, 2000) < 0 || h.type != CAMERA_CTRL_INFO_REPLY || h.len < 1 ||
 +        h.len > sizeof info || read_full(c->ctrl_fd, info, h.len, 2000) < 0) {
-+        fprintf(stderr, "andromarchy-camera: no camera info from Android\n");
++        fprintf(stderr, "aomarchy-camera: no camera info from Android\n");
 +        for (int i = 0; i < c->n; i++)
 +            close(fds[i + 1]);
 +        close(c->ctrl_fd);
@@ -1854,7 +1854,7 @@ index 0000000..6801e55
 +        c->n = info[0];
 +
 +    pw_init(NULL, NULL);
-+    c->loop    = pw_thread_loop_new("andromarchy-camera", NULL);
++    c->loop    = pw_thread_loop_new("aomarchy-camera", NULL);
 +    c->context = c->loop ? pw_context_new(pw_thread_loop_get_loop(c->loop), NULL, 0) : NULL;
 +    c->core    = c->context ? pw_context_connect(c->context, NULL, 0) : NULL;
 +    g_cam      = c;
@@ -1870,29 +1870,29 @@ index 0000000..6801e55
 +        k->h         = mh && mh < WANT_H ? mh : WANT_H;
 +    }
 +    if (!c->core) {
-+        fprintf(stderr, "andromarchy-camera: no PipeWire\n");
-+        andromarchy_camera_stop();
++        fprintf(stderr, "aomarchy-camera: no PipeWire\n");
++        aomarchy_camera_stop();
 +        return;
 +    }
 +    for (int i = 0; i < c->n; i++)
 +        if (get_shm(&c->cams[i]) < 0)
-+            fprintf(stderr, "andromarchy-camera: camera %d: no shared memory\n", i);
++            fprintf(stderr, "aomarchy-camera: camera %d: no shared memory\n", i);
 +    pw_thread_loop_lock(c->loop);
 +    for (int i = 0; i < c->n; i++)
 +        if (c->cams[i].shm)
 +            cam_create_node(&c->cams[i]);
 +    pw_thread_loop_unlock(c->loop);
 +    pw_thread_loop_start(c->loop);
-+    fprintf(stderr, "andromarchy-camera: %d camera(s) as PipeWire Video/Source\n", c->n);
++    fprintf(stderr, "aomarchy-camera: %d camera(s) as PipeWire Video/Source\n", c->n);
 +}
-diff --git a/src/backend/andromarchy/andromarchy_camera.h b/src/backend/andromarchy/andromarchy_camera.h
+diff --git a/src/backend/aomarchy/aomarchy_camera.h b/src/backend/aomarchy/aomarchy_camera.h
 new file mode 100644
 index 0000000..3d5f4c0
 --- /dev/null
-+++ b/src/backend/andromarchy/andromarchy_camera.h
++++ b/src/backend/aomarchy/aomarchy_camera.h
 @@ -0,0 +1,29 @@
-+#ifndef ANDROMARCHY_CAMERA_H
-+#define ANDROMARCHY_CAMERA_H
++#ifndef AOMARCHY_CAMERA_H
++#define AOMARCHY_CAMERA_H
 +
 +/*
 + * Producer-side camera: the Android device's cameras as PipeWire Video/Source nodes
@@ -1910,21 +1910,21 @@ index 0000000..3d5f4c0
 +
 +/* Take ownership of the service fds (fds[0] = ctrl, then one per camera) and (re)create
 + * the nodes. Replaces any previous set. */
-+void andromarchy_camera_set_fds(const int *fds, int n);
++void aomarchy_camera_set_fds(const int *fds, int n);
 +
 +/* Drop the fds and nodes (consumer gone). Safe to call when not started. */
-+void andromarchy_camera_stop(void);
++void aomarchy_camera_stop(void);
 +
 +#ifdef __cplusplus
 +}
 +#endif
 +
 +#endif
-diff --git a/src/backend/andromarchy/display_producer.c b/src/backend/andromarchy/display_producer.c
+diff --git a/src/backend/aomarchy/display_producer.c b/src/backend/aomarchy/display_producer.c
 new file mode 100644
 index 0000000..bf3846a
 --- /dev/null
-+++ b/src/backend/andromarchy/display_producer.c
++++ b/src/backend/aomarchy/display_producer.c
 @@ -0,0 +1,529 @@
 +#define _GNU_SOURCE
 +#include "display_producer.h"
@@ -2025,7 +2025,7 @@ index 0000000..bf3846a
 +    struct ctrl_msg resp;
 +    int n = recv_fds(ctx->ctrl_fd, &resp, sizeof(resp), fds, 5, &fd_count);
 +    if (n <= 0 || resp.type != CTRL_MSG_FDS_READY || fd_count < 5) {
-+        if (getenv("ANDROMARCHY_PROTO_DEBUG")) fprintf(stderr, "andromarchy-proto: pickup reply n=%d type=%u fds=%d\n", n, resp.type, fd_count);
++        if (getenv("AOMARCHY_PROTO_DEBUG")) fprintf(stderr, "aomarchy-proto: pickup reply n=%d type=%u fds=%d\n", n, resp.type, fd_count);
 +        for (int i = 0; i < fd_count; i++)
 +            close(fds[i]);
 +        return -1;
@@ -2382,7 +2382,7 @@ index 0000000..bf3846a
 +
 +    // Step 1: ask the daemon to hand over the consumer-side fds.
 +    if (pickup_fds(ctx) < 0) {
-+        if (getenv("ANDROMARCHY_PROTO_DEBUG")) fprintf(stderr, "andromarchy-proto: pickup_fds failed (errno %d)\n", errno);
++        if (getenv("AOMARCHY_PROTO_DEBUG")) fprintf(stderr, "aomarchy-proto: pickup_fds failed (errno %d)\n", errno);
 +        release_consumer_resources(ctx);
 +        return -1;
 +    }
@@ -2391,7 +2391,7 @@ index 0000000..bf3846a
 +    // fd handshake. Only leave fallback once both fds and dmabufs are in hand, so
 +    // the backend can import straight away.
 +    if (receive_dmabufs(ctx) < 0) {
-+        if (getenv("ANDROMARCHY_PROTO_DEBUG")) fprintf(stderr, "andromarchy-proto: receive_dmabufs failed (errno %d)\n", errno);
++        if (getenv("AOMARCHY_PROTO_DEBUG")) fprintf(stderr, "aomarchy-proto: receive_dmabufs failed (errno %d)\n", errno);
 +        release_consumer_resources(ctx);
 +        return -1;
 +    }
@@ -2407,7 +2407,7 @@ index 0000000..bf3846a
 +
 +/* Current local end of the audio socketpair, or -1 in fallback. The value changes
 + * across reconnects (each pickup installs a fresh socket), so the audio engine must
-+ * be re-pointed via andromarchy_audio_set_fd() rather than caching it. */
++ * be re-pointed via aomarchy_audio_set_fd() rather than caching it. */
 +int get_audio_fd(display_ctx *ctx)
 +{
 +    return ctx->fallback ? -1 : ctx->audio_fd;
@@ -2455,11 +2455,11 @@ index 0000000..bf3846a
 +    *info = ctx->dmabuf_infos[idx];
 +    return 0;
 +}
-diff --git a/src/backend/andromarchy/display_producer.h b/src/backend/andromarchy/display_producer.h
+diff --git a/src/backend/aomarchy/display_producer.h b/src/backend/aomarchy/display_producer.h
 new file mode 100644
 index 0000000..53a5cdd
 --- /dev/null
-+++ b/src/backend/andromarchy/display_producer.h
++++ b/src/backend/aomarchy/display_producer.h
 @@ -0,0 +1,92 @@
 +#ifndef DISPLAY_PRODUCER_H
 +#define DISPLAY_PRODUCER_H
@@ -2553,11 +2553,11 @@ index 0000000..53a5cdd
 +int  get_dmabuf_info_at(display_ctx *ctx, int idx, struct buf_info *info);
 +
 +#endif
-diff --git a/src/backend/andromarchy/protocol.h b/src/backend/andromarchy/protocol.h
+diff --git a/src/backend/aomarchy/protocol.h b/src/backend/aomarchy/protocol.h
 new file mode 100644
 index 0000000..c76b506
 --- /dev/null
-+++ b/src/backend/andromarchy/protocol.h
++++ b/src/backend/aomarchy/protocol.h
 @@ -0,0 +1,194 @@
 +#ifndef DISPLAY_PROTOCOL_H
 +#define DISPLAY_PROTOCOL_H
@@ -2753,11 +2753,11 @@ index 0000000..c76b506
 +
 +
 +#endif
-diff --git a/src/backend/andromarchy/socket_utils.c b/src/backend/andromarchy/socket_utils.c
+diff --git a/src/backend/aomarchy/socket_utils.c b/src/backend/aomarchy/socket_utils.c
 new file mode 100644
 index 0000000..1b4ef31
 --- /dev/null
-+++ b/src/backend/andromarchy/socket_utils.c
++++ b/src/backend/aomarchy/socket_utils.c
 @@ -0,0 +1,121 @@
 +#include "socket_utils.h"
 +
@@ -2880,11 +2880,11 @@ index 0000000..1b4ef31
 +    }
 +    return 0;
 +}
-diff --git a/src/backend/andromarchy/socket_utils.h b/src/backend/andromarchy/socket_utils.h
+diff --git a/src/backend/aomarchy/socket_utils.h b/src/backend/aomarchy/socket_utils.h
 new file mode 100644
 index 0000000..06ba8f4
 --- /dev/null
-+++ b/src/backend/andromarchy/socket_utils.h
++++ b/src/backend/aomarchy/socket_utils.h
 @@ -0,0 +1,18 @@
 +#ifndef DISPLAY_SOCKET_UTILS_H
 +#define DISPLAY_SOCKET_UTILS_H

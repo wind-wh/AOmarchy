@@ -76,7 +76,7 @@ static const char *default_socket_path(void)
     if (!tmpdir || tmpdir[0] == '\0')
         tmpdir = "/data/data/com.termux/files/usr/tmp";
 
-    if (snprintf(path, sizeof(path), "%s/andromarchy/display_daemon.sock", tmpdir) >=
+    if (snprintf(path, sizeof(path), "%s/aomarchy/display_daemon.sock", tmpdir) >=
         (int)sizeof(path)) {
         daemon_log("daemon: default socket path is too long\n");
         exit(1);
@@ -91,7 +91,7 @@ static const char *parse_socket_path(int argc, char **argv)
         return default_socket_path();
     if (strcmp(argv[1], "--socket") == 0) {
         if (argc < 3 || argv[2][0] == '\0') {
-            daemon_log("usage: andromarchy [--socket PATH] [PATH]\n");
+            daemon_log("usage: aomarchy [--socket PATH] [PATH]\n");
             exit(1);
         }
         return argv[2];

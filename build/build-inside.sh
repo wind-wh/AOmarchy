@@ -47,7 +47,7 @@ rm -rf /tmp/fr && mkdir -p /tmp/fr && tar -xzf $L/fakeroot.tar.gz -C /tmp/fr --s
 for p in $L/patches/fakeroot/*.patch; do patch -d /tmp/fr -p1 < "$p"; done
 (cd /tmp/fr && ./configure --prefix=/usr/local --with-ipc=tcp && make -j"$(nproc)" && make install)
 
-# aquamarine (Andromarchy backend) + Hyprland (our patches), compiled natively by build-hyprland.sh: over Arch's copies.
+# aquamarine (AOmarchy backend) + Hyprland (our patches), compiled natively by build-hyprland.sh: over Arch's copies.
 tar -xf $L/lotfix-hyprland-aarch64.tar.zst -C /
 # Only now: ignored earlier, pacman could not resolve them as hyprland dependencies.
 grep -q '^IgnorePkg.*hyprland' $C || sed -i "/^IgnorePkg/ s/$/ aquamarine hyprland/" $C
@@ -92,7 +92,7 @@ install -Dm 644 $L/native/lotfix-abs-needed.hook /usr/share/libalpm/hooks/zz-lot
 # fakechroot: Arch's package rebuilt with our patch (a dirfd's directory without fchdir: threads resolved paths against
 # each other's, Flatpak runtime installs failed). Arch's recipe and patches (patches/fakechroot/arch, from Arch's
 # packaging repo, 2.20.1-5); git apply (patch -i stopped after the first file here). Only the library replaced (a
-# rename: this build runs on it); andromarchy-protect keeps it across updates.
+# rename: this build runs on it); aomarchy-protect keeps it across updates.
 rm -rf /tmp/fc && mkdir -p /tmp/fc && curl -fsSL https://github.com/dex4er/fakechroot/archive/2.20.1.tar.gz | tar -xz -C /tmp/fc
 (cd /tmp/fc/fakechroot-2.20.1 && for p in $L/patches/fakechroot/arch/{statx,fakechroot-2,fakechroot-3,fakechroot-4,fakechroot-5}.patch $L/patches/fakechroot/*.patch; do git apply "$p"; done &&
   autoreconf -fi && ./configure --prefix=/usr --sbindir=/usr/bin --libdir=/usr/lib/libfakeroot --sysconfdir=/etc && make -j"$(nproc)" &&
@@ -138,12 +138,12 @@ install -m 755 $L/native/android-nm.py /usr/local/bin/android-nm
 # The other services a desktop expects on D-Bus (tools/dbus-probe.sh): system and session stand-ins.
 install -m 755 $L/native/bwrap-shim.sh -D /usr/local/libexec/bwrap-legacy
 install -m 755 $L/native/bwrap-flatpak.py /usr/local/bin/bwrap  # Flatpak apps (trees + runtime glibc); others: legacy
-install -Dm 755 $L/native/flatpak-spawn.sh /usr/local/libexec/andromarchy-flatpak/flatpak-spawn # nested sandboxes, run directly
+install -Dm 755 $L/native/flatpak-spawn.sh /usr/local/libexec/aomarchy-flatpak/flatpak-spawn # nested sandboxes, run directly
 install -m 755 $L/native/flatpak-fix-links.py /opt/lotfix/flatpak-fix-links.py
 # Flatpak runs bwrap from /usr/bin with an empty environment (no PATH): the stand-in there too, kept on updates.
 ln -sf /usr/local/bin/bwrap /usr/bin/bwrap
 grep -q "^NoExtract.*usr/bin/bwrap" /etc/pacman.conf ||
-  sed -i '/^\[options\]/a # Andromarchy: bubblewrap cannot run on Android (no user namespaces); /usr/bin/bwrap is our stand-in\nNoExtract = usr/bin/bwrap' /etc/pacman.conf
+  sed -i '/^\[options\]/a # AOmarchy: bubblewrap cannot run on Android (no user namespaces); /usr/bin/bwrap is our stand-in\nNoExtract = usr/bin/bwrap' /etc/pacman.conf
 install -m 755 $L/native/android-system-services.py /usr/local/bin/android-system-services
 install -m 755 $L/native/android-session-services.py /usr/local/bin/android-session-services
 # Linux -> Android requests (Wi-Fi panel, launching Android apps): the app watches run/android-request.
@@ -202,16 +202,16 @@ rm -rf /tmp/xwayland
 pacman -Rns --noconfirm clang llvm libclc spirv-llvm-translator cbindgen 2>/dev/null || true
 rm -rf /root/.cargo /tmp/mesa-install.stamp
 
-# Protection of our own builds across pacman transactions (native/andromarchy-protect.py): a record of every
+# Protection of our own builds across pacman transactions (native/aomarchy-protect.py): a record of every
 # protected file; the hook puts them back after any install/upgrade/removal.
-install -m 755 $L/native/andromarchy-protect.py /usr/local/bin/andromarchy-protect
+install -m 755 $L/native/aomarchy-protect.py /usr/local/bin/aomarchy-protect
 install -m 755 $L/native/android-clipboard.sh /usr/local/bin/android-clipboard
-install -m 755 $L/native/andromarchy-selftest.sh /usr/local/bin/andromarchy-selftest
-install -Dm 644 $L/native/zz-andromarchy-protect.hook /etc/pacman.d/hooks/zz-andromarchy-protect.hook
-install -Dm 644 $L/native/00-andromarchy-protect-save.hook /etc/pacman.d/hooks/00-andromarchy-protect-save.hook
-install -m 755 $L/native/andromarchy-keep-llvm.sh /usr/local/bin/andromarchy-keep-llvm
-install -Dm 644 $L/native/00-andromarchy-keep-llvm.hook /etc/pacman.d/hooks/00-andromarchy-keep-llvm.hook
-andromarchy-protect save
+install -m 755 $L/native/aomarchy-selftest.sh /usr/local/bin/aomarchy-selftest
+install -Dm 644 $L/native/zz-aomarchy-protect.hook /etc/pacman.d/hooks/zz-aomarchy-protect.hook
+install -Dm 644 $L/native/00-aomarchy-protect-save.hook /etc/pacman.d/hooks/00-aomarchy-protect-save.hook
+install -m 755 $L/native/aomarchy-keep-llvm.sh /usr/local/bin/aomarchy-keep-llvm
+install -Dm 644 $L/native/00-aomarchy-keep-llvm.hook /etc/pacman.d/hooks/00-aomarchy-keep-llvm.hook
+aomarchy-protect save
 
 rm -rf /tmp/mesa /tmp/fr /tmp/omarchy
 echo "lotfix rootfs built"

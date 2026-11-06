@@ -28,11 +28,11 @@ NOT_HERE = "org.freedesktop.DBus.Error.NotSupported"
 
 
 def model():
-    return os.environ.get("ANDROMARCHY_MODEL", "Android device")
+    return os.environ.get("AOMARCHY_MODEL", "Android device")
 
 
 def vendor():
-    return os.environ.get("ANDROMARCHY_VENDOR", "Android")
+    return os.environ.get("AOMARCHY_VENDOR", "Android")
 
 
 def os_name():

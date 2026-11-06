@@ -69,7 +69,7 @@ public final class Wallpaper {
     private static final int GRADIENT_GLOW = 0x1F7C8CFF;
 
     /** Must match {@code app.aomarchy.Prefs.NAME}; that class is package-private, so the name is repeated here. */
-    private static final String PREFS = "andromarchy_settings";
+    private static final String PREFS = "aomarchy_settings";
     private static final String KEY_MODE = "console_bg_mode";
     private static final String KEY_URI = "console_bg_uri";
     /** User-tunable backdrop blur radius in dp (0 = sharp .. 24 = heavy frosting). */

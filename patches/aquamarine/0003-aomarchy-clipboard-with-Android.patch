@@ -1,7 +1,7 @@
-diff --git i/include/aquamarine/backend/Andromarchy.hpp w/include/aquamarine/backend/Andromarchy.hpp
+diff --git i/include/aquamarine/backend/AOmarchy.hpp w/include/aquamarine/backend/AOmarchy.hpp
 index 19b7b13..81b54ce 100644
---- i/include/aquamarine/backend/Andromarchy.hpp
-+++ w/include/aquamarine/backend/Andromarchy.hpp
+--- i/include/aquamarine/backend/AOmarchy.hpp
++++ w/include/aquamarine/backend/AOmarchy.hpp
 @@ -126,6 +126,7 @@ namespace Aquamarine {
          bool                                                    importBuffers();
          void                                                    armReconnect(int ms);
@@ -19,11 +19,11 @@ index 19b7b13..81b54ce 100644
 +        std::string                                             clipDir, lastClip;
          SSwapchainOptions                                       lastSwapchainOptions; // to rebuild the swapchain after a reconnect
          std::vector<Hyprutils::Memory::CSharedPointer<IBuffer>> buffers;
-         Hyprutils::Memory::CSharedPointer<CAndromarchyAllocator>     allocator;
-diff --git i/src/backend/Andromarchy.cpp w/src/backend/Andromarchy.cpp
+         Hyprutils::Memory::CSharedPointer<CAOmarchyAllocator>     allocator;
+diff --git i/src/backend/AOmarchy.cpp w/src/backend/AOmarchy.cpp
 index 30a6c97..7640a73 100644
---- i/src/backend/Andromarchy.cpp
-+++ w/src/backend/Andromarchy.cpp
+--- i/src/backend/AOmarchy.cpp
++++ w/src/backend/AOmarchy.cpp
 @@ -6,6 +6,9 @@
  #include <vector>
  #include <sys/eventfd.h>
@@ -34,7 +34,7 @@ index 30a6c97..7640a73 100644
  #include <sys/socket.h>
  #include <unistd.h>
  #include <drm_fourcc.h>
-@@ -261,6 +264,12 @@ bool Aquamarine::CAndromarchyBackend::start() {
+@@ -261,6 +264,12 @@ bool Aquamarine::CAOmarchyBackend::start() {
          refreshmHz = refresh;
  
      reconnectTimer = Hyprutils::OS::CFileDescriptor{timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC)};
@@ -44,10 +44,10 @@ index 30a6c97..7640a73 100644
 +        if (clipWatch.isValid())
 +            inotify_add_watch(clipWatch.get(), run, IN_MOVED_TO | IN_CLOSE_WRITE);
 +    }
-     set_fallback_callback(display, &CAndromarchyBackend::onFallback, this);
+     set_fallback_callback(display, &CAOmarchyBackend::onFallback, this);
  
      // ponytail: the first connection blocks startup until the Android app is in front (30 s): we need the buffer size for the output mode.
-@@ -329,6 +338,8 @@ std::vector<SP<SPollFD>> Aquamarine::CAndromarchyBackend::pollFDs() {
+@@ -329,6 +338,8 @@ std::vector<SP<SPollFD>> Aquamarine::CAOmarchyBackend::pollFDs() {
          return {};
      // The reconnect timer is always polled; the transport fds only exist while a consumer is connected.
      std::vector<SP<SPollFD>> fds = {makeShared<SPollFD>(reconnectTimer.get(), [this]() { onReconnectTimer(); })};
@@ -56,7 +56,7 @@ index 30a6c97..7640a73 100644
      if (!is_fallback(display) && !hideTransportFDs) {
          fds.emplace_back(makeShared<SPollFD>(get_buffer_ready_fd(display), [this]() { onBufferReady(); }));
          fds.emplace_back(makeShared<SPollFD>(get_data_fd(display), [this]() { onInputReadable(); }));
-@@ -443,13 +454,19 @@ void Aquamarine::CAndromarchyBackend::processInput(const InputEvent& ev) {
+@@ -443,13 +454,19 @@ void Aquamarine::CAOmarchyBackend::processInput(const InputEvent& ev) {
              break;
          case INPUT_TYPE_CLIPBOARD:
          case INPUT_TYPE_TEXT_INPUT: {
@@ -77,13 +77,13 @@ index 30a6c97..7640a73 100644
              }
              break;
          }
-@@ -648,3 +665,30 @@ int Aquamarine::CAndromarchyBackend::selectedIndex() const {
- SP<IBuffer> Aquamarine::CAndromarchyBackend::bufferAt(int index) {
+@@ -648,3 +665,30 @@ int Aquamarine::CAOmarchyBackend::selectedIndex() const {
+ SP<IBuffer> Aquamarine::CAOmarchyBackend::bufferAt(int index) {
      return buffers.at(index % buffers.size());
  }
 +
 +// The desktop copied (android-clipboard writes wl-paste's text to clipboard-to-android): set Android's clipboard.
-+void Aquamarine::CAndromarchyBackend::onClipboardFile() {
++void Aquamarine::CAOmarchyBackend::onClipboardFile() {
 +    alignas(inotify_event) char buf[4096];
 +    bool                        changed = false;
 +    ssize_t                     n;

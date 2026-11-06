@@ -16,14 +16,14 @@ import java.lang.reflect.Method;
 /**
  * Termux-side entry point for the APK without sharedUserId.
  *
- * The command installed by the Andromarchy Termux package starts this class with
+ * The command installed by the AOmarchy Termux package starts this class with
  * app_process. It connects to the daemon as the Termux UID and publishes a
  * Binder which lets the Android app duplicate that connected socket fd.
  */
 public final class CompatibleBridge {
     public static final String ACTION_START = "app.aomarchy.COMPATIBLE_BRIDGE_START";
 
-    private static final String TAG = "AndromarchyCompatibleBridge";
+    private static final String TAG = "AOmarchyCompatibleBridge";
     private static final String APPLICATION_ID = BuildConfig.APPLICATION_ID;
 
     private final Context context;

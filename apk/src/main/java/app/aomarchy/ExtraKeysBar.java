@@ -80,7 +80,7 @@ public class ExtraKeysBar extends GridLayout {
 
     // Settings storage for the user-customizable layout. Shared with
     // SettingsActivity / MainActivity (same SharedPreferences file).
-    private static final String PREFS_NAME = "andromarchy_settings";
+    private static final String PREFS_NAME = "aomarchy_settings";
     private static final String KEY_EXTRA_KEYS_LAYOUT = "extra_keys_layout";
 
     // JSON key/value names for the serialized layout (see DEFAULT_LAYOUT_JSON).

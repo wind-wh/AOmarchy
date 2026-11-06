@@ -1,5 +1,5 @@
 #!/bin/sh
-# /usr/local/bin/systemd-inhibit for Android/Andromarchy: there is no logind, so there is nothing to ask for
+# /usr/local/bin/systemd-inhibit for Android/AOmarchy: there is no logind, so there is nothing to ask for
 # an inhibitor. The real binary in /usr/bin talks to org.freedesktop.login1 over D-Bus and fails; Omarchy's
 # power menu wraps "shutdown" in `systemd-inhibit ... omarchy-system shutdown --inhibited`, so that failure
 # stopped the shutdown halfway and only produced the "shutdown failed" notification.

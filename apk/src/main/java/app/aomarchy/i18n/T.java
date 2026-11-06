@@ -53,7 +53,7 @@ import java.util.Map;
  */
 public final class T {
     /** Must match {@code app.aomarchy.Prefs.NAME}; the class there is package-private, so it is repeated here. */
-    private static final String PREFS = "andromarchy_settings";
+    private static final String PREFS = "aomarchy_settings";
     private static final String KEY_LANG = "ui_lang";
 
     public static final String LANG_AUTO = "auto";

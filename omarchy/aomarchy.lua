@@ -1,4 +1,4 @@
--- Andromarchy: Hyprland rules for the Android screen (installed by install-omarchy-android.sh).
+-- AOmarchy: Hyprland rules for the Android screen (installed by install-omarchy-android.sh).
 
 -- Omarchy centres its floating windows (portal file choosers...) before resizing them to 875x600: a dialog that
 -- opened taller than the screen ended up above it (y = -21), its title bar and buttons under the bar. Place them

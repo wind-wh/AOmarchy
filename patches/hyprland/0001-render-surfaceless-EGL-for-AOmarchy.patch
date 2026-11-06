@@ -7,8 +7,8 @@ index baee1ad..09c4317 100644
      attrs.push_back(EGL_NONE);
  
 -    m_eglDisplay = m_proc.eglGetPlatformDisplayEXT(gbm ? EGL_PLATFORM_GBM_KHR : EGL_PLATFORM_DEVICE_EXT, gbm ? m_gbmDevice : m_eglDevice, attrs.data());
-+    // Andromarchy (Android): no DRM device exists, the display daemon hands us KGSL dmabufs. Render surfaceless.
-+    if (getenv("ANDROMARCHY"))
++    // AOmarchy (Android): no DRM device exists, the display daemon hands us KGSL dmabufs. Render surfaceless.
++    if (getenv("AOMARCHY"))
 +        m_eglDisplay = m_proc.eglGetPlatformDisplayEXT(EGL_PLATFORM_SURFACELESS_MESA, EGL_DEFAULT_DISPLAY, attrs.data());
 +    else
 +        m_eglDisplay = m_proc.eglGetPlatformDisplayEXT(gbm ? EGL_PLATFORM_GBM_KHR : EGL_PLATFORM_DEVICE_EXT, gbm ? m_gbmDevice : m_eglDevice, attrs.data());
@@ -20,7 +20,7 @@ index baee1ad..09c4317 100644
      m_exts.EXT_image_dma_buf_import           = EGLEXTENSIONS.contains("EXT_image_dma_buf_import");
      m_exts.EXT_image_dma_buf_import_modifiers = EGLEXTENSIONS.contains("EXT_image_dma_buf_import_modifiers");
 +    // The KGSL Mesa imports dmabufs (EGL_LINUX_DMA_BUF_EXT) without advertising the extension.
-+    if (getenv("ANDROMARCHY"))
++    if (getenv("AOMARCHY"))
 +        m_exts.EXT_image_dma_buf_import = true;
      m_exts.KHR_context_flush_control          = EGLEXTENSIONS.contains("EGL_KHR_context_flush_control");
  
@@ -30,8 +30,8 @@ index baee1ad..09c4317 100644
  
      bool success = false;
 -    if (EGLEXTENSIONS.contains("EXT_platform_device") || !m_proc.eglQueryDevicesEXT || !m_proc.eglQueryDeviceStringEXT) {
-+    if (getenv("ANDROMARCHY")) {
-+        RASSERT(EGLEXTENSIONS.contains("EGL_MESA_platform_surfaceless"), "ANDROMARCHY set but EGL_MESA_platform_surfaceless is missing");
++    if (getenv("AOMARCHY")) {
++        RASSERT(EGLEXTENSIONS.contains("EGL_MESA_platform_surfaceless"), "AOMARCHY set but EGL_MESA_platform_surfaceless is missing");
 +        success = true;
 +        initEGL(false);
 +    } else if (EGLEXTENSIONS.contains("EXT_platform_device") || !m_proc.eglQueryDevicesEXT || !m_proc.eglQueryDeviceStringEXT) {

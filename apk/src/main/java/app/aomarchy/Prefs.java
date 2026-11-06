@@ -10,7 +10,7 @@ import java.util.Map;
  * activity and the accessibility service; idempotent.
  */
 final class Prefs {
-    static final String NAME = "andromarchy_settings";
+    static final String NAME = "aomarchy_settings";
     private static final String OLD_NAME = "anland_settings";
 
     /** Clipboard passthrough switch (Controls page). On by default: Android ↔ desktop sync happens automatically. */

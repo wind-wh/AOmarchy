@@ -1,5 +1,5 @@
 #!/bin/sh
-# flatpak-spawn inside Andromarchy's Flatpak sandboxes (first in their PATH, /run/host/andromarchy-bin): a nested
+# flatpak-spawn inside AOmarchy's Flatpak sandboxes (first in their PATH, /run/host/aomarchy-bin): a nested
 # sandbox (--sandbox) is asked of Flatpak's portal, which refuses here (it identifies apps by an isolated root that
 # Android cannot give them). glycin, GTK's image loader, uses it for every icon: GTK aborted on a missing icon and
 # took the app down (Zotero's file dialogs). Run the command directly in the same sandbox, like the host's bwrap

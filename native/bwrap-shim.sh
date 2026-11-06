@@ -1,5 +1,5 @@
 #!/bin/bash
-# /usr/local/bin/bwrap for Android/Andromarchy: bubblewrap needs user namespaces, which Android denies to apps.
+# /usr/local/bin/bwrap for Android/AOmarchy: bubblewrap needs user namespaces, which Android denies to apps.
 # GTK's image loaders (glycin) run every decoder through it: the loader died, GTK aborted on a missing icon (Brave's
 # "Save as" dialog). Run the command directly: bind mounts, tmpfs and namespaces are dropped (no isolation, the same
 # trade-off as the browsers' sandboxes); --setenv/--unsetenv/--clearenv/--chdir still apply.

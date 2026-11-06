@@ -6,9 +6,9 @@ index 897c98d..74b6add 100644
          int  rendererFD = g_pCompositor->m_drmRenderNode.fd >= 0 ? g_pCompositor->m_drmRenderNode.fd : g_pCompositor->m_drm.fd;
          auto dev        = devIDFromFD(rendererFD);
  
-+        // Andromarchy (Android): no DRM node exists, but the KGSL Mesa can still share dmabufs. Advertise the protocol
-+        // with device 0, like the KWin Andromarchy backend does, so GPU clients get a way to hand us their buffers.
-+        if (!dev.has_value() && getenv("ANDROMARCHY"))
++        // AOmarchy (Android): no DRM node exists, but the KGSL Mesa can still share dmabufs. Advertise the protocol
++        // with device 0, like the KWin AOmarchy backend does, so GPU clients get a way to hand us their buffers.
++        if (!dev.has_value() && getenv("AOMARCHY"))
 +            dev = dev_t{0};
 +
          if (!dev.has_value()) {
@@ -18,9 +18,9 @@ index 897c98d..74b6add 100644
  
          m_formatTable = makeUnique<CDMABUFFormatTable>(eglTranche, tches);
  
-+        // Andromarchy: device 0 is not a DRM node; keep the protocol, without the render-node checks
++        // AOmarchy: device 0 is not a DRM node; keep the protocol, without the render-node checks
 +        // (same as the "no render node" branch below).
-+        if (getenv("ANDROMARCHY"))
++        if (getenv("AOMARCHY"))
 +            return;
 +
          drmDevice* device = nullptr;

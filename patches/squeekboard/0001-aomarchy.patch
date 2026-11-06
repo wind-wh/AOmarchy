@@ -6,7 +6,7 @@ index cc5df3d..80bdb9b 100644
      )?;
      
      for (name, keycode) in pairs {
-+        // Andromarchy: an uppercase letter is the Shift level of its lowercase one, as on a hardware keyboard:
++        // AOmarchy: an uppercase letter is the Shift level of its lowercase one, as on a hardware keyboard:
 +        // the compositor matches shortcuts on the unshifted keysym (Super+Shift+F = Shift + f).
 +        let upper_letter = name.len() == 1 && name.chars().all(|c| c.is_ascii_uppercase());
 +        if upper_letter {
@@ -45,7 +45,7 @@ index 75a5c94..824e24d 100644
      use super::*;
  
 +    thread_local! {
-+        /// Andromarchy sticky modifiers: (locked ones, last modifier tap and its time in ms)
++        /// AOmarchy sticky modifiers: (locked ones, last modifier tap and its time in ms)
 +        static STICKY: std::cell::RefCell<(Vec<crate::action::Modifier>, Option<(crate::action::Modifier, u32)>)> =
 +            std::cell::RefCell::new((Vec::new(), None));
 +    }
@@ -57,7 +57,7 @@ index 75a5c94..824e24d 100644
          manager: Option<(&actors::popover::State, receiver::State)>,
          button_pos: &ButtonPosition,
      ) {
-+        // Andromarchy: sticky modifiers, like a hardware keyboard's chords (Omarchy's Super+Shift+F...): a tap on
++        // AOmarchy: sticky modifiers, like a hardware keyboard's chords (Omarchy's Super+Shift+F...): a tap on
 +        // Ctrl/Alt/Super holds it until the next key, a double tap locks it, a tap on a locked one releases it.
 +        let pressed = layout.shape.get_button(button_pos).map(|b| b.action.clone());
 +        let tapped_modifier = match &pressed {
@@ -100,7 +100,7 @@ index 75a5c94..824e24d 100644
          
          // Apply state changes
          layout.apply_view_transition(&action);
-+        // Andromarchy: the "upper" view (Shift, Caps) also holds the Shift modifier, so shortcuts like
++        // AOmarchy: the "upper" view (Shift, Caps) also holds the Shift modifier, so shortcuts like
 +        // Super+Shift+F or Ctrl+Shift+C reach the compositor and apps (letters are uppercase keysyms either way).
 +        let upper = layout.state.current_view == "upper";
 +        if upper != submission.is_modifier_active(crate::action::Modifier::Shift) {

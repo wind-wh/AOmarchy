@@ -1,0 +1,13 @@
+# /etc/pacman.d/hooks/00-aomarchy-protect-save.hook: before every transaction, record the current version of
+# AOmarchy's own builds (including ones rebuilt since), which zz-aomarchy-protect puts back afterwards.
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+Description = Recording AOmarchy's own builds...
+When = PreTransaction
+Exec = /usr/local/bin/aomarchy-protect save -q

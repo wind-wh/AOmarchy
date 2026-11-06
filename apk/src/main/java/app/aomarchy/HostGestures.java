@@ -25,7 +25,7 @@ final class HostGestures {
         try {
             Settings.Global.putInt(cr, "multi_finger_slide", 0);
         } catch (RuntimeException e) {
-            Log.w("Andromarchy", "HyperOS gesture settings (global): " + e);
+            Log.w("AOmarchy", "HyperOS gesture settings (global): " + e);
         }
     }
 }

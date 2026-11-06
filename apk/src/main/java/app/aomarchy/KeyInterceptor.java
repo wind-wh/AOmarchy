@@ -13,7 +13,7 @@ import android.view.accessibility.AccessibilityEvent;
 import java.util.LinkedHashSet;
 
 public class KeyInterceptor extends AccessibilityService {
-    private static final String PREFS_NAME = "andromarchy_settings";
+    private static final String PREFS_NAME = "aomarchy_settings";
     private static final String KEY_ACCESSIBILITY_ENABLED = "accessibility_key_intercept";
 
     LinkedHashSet<Integer> pressedKeys = new LinkedHashSet<>();

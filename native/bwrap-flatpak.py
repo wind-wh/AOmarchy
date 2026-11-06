@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# /usr/local/bin/bwrap for Android/Andromarchy. bubblewrap needs user/mount namespaces; Android's kernel has user
+# /usr/local/bin/bwrap for Android/AOmarchy. bubblewrap needs user/mount namespaces; Android's kernel has user
 # namespaces disabled (unshare(CLONE_NEWUSER): EINVAL), so no real bwrap can run.
 #  - Flatpak-style calls (a runtime bound at /usr or an app at /app): the container is built as a directory tree of
 #    relative symlinks (design of selkies-project/proot-bwrap's fakechroot mode, MPL-2.0) inside the rootfs, and the
@@ -319,7 +319,7 @@ def runtime_glibc(tree):
 
 
 HOST_GL = "/opt/lotfix/host-gl"
-SPAWN_DIR = "/usr/local/libexec/andromarchy-flatpak"  # flatpak-spawn for inside the sandboxes (native/flatpak-spawn.sh)
+SPAWN_DIR = "/usr/local/libexec/aomarchy-flatpak"  # flatpak-spawn for inside the sandboxes (native/flatpak-spawn.sh)
 
 
 GECKO_PREFS = ('user_pref("gfx.webrender.all", true);\n'
@@ -349,7 +349,7 @@ def host_gl():
     """Our Mesa (KGSL: the Adreno through the only GPU interface Android gives apps) for Flatpak apps, instead of
     their runtime's (Flathub's upstream Mesa: no GPU here, it fell back to llvmpipe on the CPU). A dir of links to our
     EGL/GBM/gallium/Vulkan libraries, put first on the app's library path, and a Vulkan ICD naming our driver by its
-    real path. ponytail: our Mesa is built against Arch's libraries; ANDROMARCHY_FLATPAK_GL=runtime falls back."""
+    real path. ponytail: our Mesa is built against Arch's libraries; AOMARCHY_FLATPAK_GL=runtime falls back."""
     if not os.path.exists(HOST_GL + "/freedreno_icd.json"):
         os.makedirs(HOST_GL, exist_ok=True)
         for n in os.listdir("/usr/lib"):
@@ -490,14 +490,14 @@ def main():
 
         # Our flatpak-spawn first in the app's PATH: nested sandboxes (glycin's image loaders) run directly.
         if os.path.isdir(SPAWN_DIR):
-            tree.bind(SPAWN_DIR, "/run/host/andromarchy-bin")
-            env["PATH"] = "/run/host/andromarchy-bin:" + env.get("PATH", "/app/bin:/usr/bin")
+            tree.bind(SPAWN_DIR, "/run/host/aomarchy-bin")
+            env["PATH"] = "/run/host/aomarchy-bin:" + env.get("PATH", "/app/bin:/usr/bin")
         glibc = runtime_glibc(tree)
         loader = real(glibc + "/ld-linux-aarch64.so.1")
         T = real(tree.path)
         libdirs = [p for p in (env.get("LD_LIBRARY_PATH", "").split(":") + ld_conf_dirs(tree)
                                + ["/usr/lib/aarch64-linux-gnu", "/usr/lib"]) if p.startswith("/")]
-        gl = os.environ.get("ANDROMARCHY_FLATPAK_GL", env.get("ANDROMARCHY_FLATPAK_GL", "host")) != "runtime"
+        gl = os.environ.get("AOMARCHY_FLATPAK_GL", env.get("AOMARCHY_FLATPAK_GL", "host")) != "runtime"
         first = [real(glibc)] + ([real(HOST_GL)] if gl else [])
         # last: our own /usr/lib, only for what our Mesa needs and the runtime lacks (its LLVM, ...)
         last = [ROOTFS + "/usr/lib"] if gl else []
@@ -521,9 +521,9 @@ def main():
                 pass
         compat = real("/opt/lotfix/android-compat.so")
         fc = real("/usr/lib/libfakeroot/fakechroot/libfakechroot.so")
-        for k in ("ANDROMARCHY", "ANDROMARCHY_NO_DRM_DEVICE", "TURNIP_KMD", "FD_FORCE_KGSL", "MESA_LOADER_DRIVER_OVERRIDE",
-                  "GALLIUM_DRIVER", "WAYLAND_DISPLAY", "DBUS_SESSION_BUS_ADDRESS", "ANDROMARCHY_VENDOR",
-                  "ANDROMARCHY_MODEL", "TZ"):
+        for k in ("AOMARCHY", "AOMARCHY_NO_DRM_DEVICE", "TURNIP_KMD", "FD_FORCE_KGSL", "MESA_LOADER_DRIVER_OVERRIDE",
+                  "GALLIUM_DRIVER", "WAYLAND_DISPLAY", "DBUS_SESSION_BUS_ADDRESS", "AOMARCHY_VENDOR",
+                  "AOMARCHY_MODEL", "TZ"):
             if k in os.environ and k not in env:
                 env[k] = os.environ[k]
         env.update({

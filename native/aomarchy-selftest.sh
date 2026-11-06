@@ -1,20 +1,20 @@
 #!/bin/bash
-# /usr/local/bin/andromarchy-selftest: regression test of a running Andromarchy session. Run it inside the session
+# /usr/local/bin/aomarchy-selftest: regression test of a running AOmarchy session. Run it inside the session
 # (terminal, or adb through inapp.sh) after any change or on a freshly installed image: one PASS/FAIL line per
 # check, a summary, exit code = number of failures. Opens no window and leaves the clipboard as it was.
-# Usage: andromarchy-selftest [-v]   (-v: show the output of failed checks)
+# Usage: aomarchy-selftest [-v]   (-v: show the output of failed checks)
 V=${1:-}
 # Same environment as the session's apps (bus addresses, DISPLAY, VA-API...), wherever this runs from (adb, ssh):
 # taken from the Omarchy shell, which Hyprland started.
 qs=$(pgrep -x quickshell | head -1)
 [ -n "$qs" ] && while IFS= read -r -d '' kv; do case $kv in
-  DBUS_*|DISPLAY=*|WAYLAND_DISPLAY=*|XDG_RUNTIME_DIR=*|LIBVA_*|TERMUX_VA_*|MESA_*|FD_*|TU_*|TURNIP_*|GALLIUM_*|ANDROMARCHY*|XWAYLAND_*|EGL_*) export "$kv";;
+  DBUS_*|DISPLAY=*|WAYLAND_DISPLAY=*|XDG_RUNTIME_DIR=*|LIBVA_*|TERMUX_VA_*|MESA_*|FD_*|TU_*|TURNIP_*|GALLIUM_*|AOMARCHY*|XWAYLAND_*|EGL_*) export "$kv";;
 esac; done < /proc/$qs/environ
 # Same environment as the session's apps (bus addresses, DISPLAY, VA-API...), wherever this runs from (adb, ssh):
 # taken from the Omarchy shell, which Hyprland started.
 qs=$(pgrep -x quickshell | head -1)
 [ -n "$qs" ] && while IFS= read -r -d '' kv; do case $kv in
-  DBUS_*|DISPLAY=*|WAYLAND_DISPLAY=*|XDG_RUNTIME_DIR=*|LIBVA_*|TERMUX_VA_*|MESA_*|FD_*|TU_*|TURNIP_*|GALLIUM_*|ANDROMARCHY*|XWAYLAND_*|EGL_*) export "$kv";;
+  DBUS_*|DISPLAY=*|WAYLAND_DISPLAY=*|XDG_RUNTIME_DIR=*|LIBVA_*|TERMUX_VA_*|MESA_*|FD_*|TU_*|TURNIP_*|GALLIUM_*|AOMARCHY*|XWAYLAND_*|EGL_*) export "$kv";;
 esac; done < /proc/$qs/environ
 pass=0; fail=0; failed=()
 t() { # t "name" command...: PASS if the command succeeds within 20 s
@@ -61,7 +61,7 @@ section "Clipboard with Android"
 t "bridge running"                  pgrep -f /usr/local/bin/android-clipboard
 clip_test() {
   local before; before=$(wl-paste --type text 2>/dev/null)
-  local mark="andromarchy-selftest-$$"
+  local mark="aomarchy-selftest-$$"
   printf '%s' "$mark" | wl-copy >/dev/null 2>&1
   sleep 1
   local ok=1
@@ -86,8 +86,8 @@ t "sudo (fake root)"                sudo true
 t "Go programs (gum)"               gum --version
 t "Bun programs (claude)"           sh -c 'command -v claude >/dev/null || exit 0; claude --version'
 t "fonts"                           sh -c '[ "$(fc-list | wc -l)" -gt 10 ]'
-t "protected builds intact"         sh -c 'out=$(andromarchy-protect check); [ -z "$out" ]'
-t "protection hook installed"       test -f /etc/pacman.d/hooks/zz-andromarchy-protect.hook
+t "protected builds intact"         sh -c 'out=$(aomarchy-protect check); [ -z "$out" ]'
+t "protection hook installed"       test -f /etc/pacman.d/hooks/zz-aomarchy-protect.hook
 
 section "Flatpak"
 t "flatpak works"                   flatpak --version

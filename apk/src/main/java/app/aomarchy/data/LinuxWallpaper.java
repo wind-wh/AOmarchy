@@ -63,7 +63,7 @@ import app.aomarchy.SessionService;
  */
 public final class LinuxWallpaper {
     /** Must match {@code app.aomarchy.Prefs.NAME}; that class is package-private, so the name is repeated here. */
-    private static final String PREFS = "andromarchy_settings";
+    private static final String PREFS = "aomarchy_settings";
     /** Absolute path of the last hit, tried first on the next console build. */
     private static final String KEY_PATH = "linux_wallpaper_path";
 

@@ -22,7 +22,7 @@
 
 #include "protocol.h"
 
-#define TAG "AndromarchyCam"
+#define TAG "AOmarchyCam"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 
@@ -780,7 +780,7 @@ static int create_camera_shm(int i)
     size_t slot_bytes = (w > 0 && h > 0) ? (size_t)w * h * 3 / 2 : CAM_FALLBACK_BYTES;
     g_camera.slot_bytes[i] = slot_bytes;
 
-    int fd = ASharedMemory_create("andromarchy-camera", CAMERA_SLOTS * slot_bytes);
+    int fd = ASharedMemory_create("aomarchy-camera", CAMERA_SLOTS * slot_bytes);
     if (fd < 0) {
         LOGE("init: ASharedMemory_create[%d] failed", i);
         return -1;

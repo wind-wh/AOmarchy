@@ -41,7 +41,7 @@ public final class Clipboard {
         ClipboardManager cm = context.getSystemService(ClipboardManager.class);
         if (cm != null) {
             mLastSentClip = text;  // 记录，clipListener 回环时会比对跳过
-            cm.setPrimaryClip(ClipData.newPlainText("andromarchy", text));
+            cm.setPrimaryClip(ClipData.newPlainText("aomarchy", text));
         }
     }
 

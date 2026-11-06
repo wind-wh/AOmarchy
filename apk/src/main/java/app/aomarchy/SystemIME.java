@@ -310,7 +310,7 @@ public final class SystemIME {
                 return super.sendKeyEvent(event);
             }
             // Soft keyboards send symbols as keys with meta state (':' = KEYCODE_SEMICOLON + Shift). The compositor
-            // only sees evdev key presses, so press the modifiers around the key (Andromarchy fix: ':' gave ';').
+            // only sees evdev key presses, so press the modifiers around the key (AOmarchy fix: ':' gave ';').
             final int[] mods = modifierKeys(event, evdev);
             if (event.getAction() == KeyEvent.ACTION_DOWN) {
                 for (int m : mods) Native.nativeSendKey(0, m);

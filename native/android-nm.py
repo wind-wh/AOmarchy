@@ -231,7 +231,7 @@ def follow_dhcp_dns():  # resolv.conf on "DHCP" (omarchy-dns) follows the DNS of
         with open(DNS_FILE) as f:
             dns = f.read()
         with open("/etc/resolv.conf") as f:
-            dhcp = "# andromarchy-dns: DHCP" in f.read()
+            dhcp = "# aomarchy-dns: DHCP" in f.read()
     except OSError:
         return
     if dns != dns_seen and dhcp:
