@@ -317,8 +317,8 @@ public final class T {
             "Tap 'A' in the desktop's top-left corner to return to the console; the session notification also has 'Controls' and 'Console'. First time: install the system on the System page, then fill in your identity and keyboard in Settings."},
 
         // ===== page 2: system ==============================================================
-        {"system.install_desc", "首次安装或重装 Linux 系统。安装包来自 GitHub Release 的在线下载，或设备上的 lotfix-rootfs.tar.gz。",
-            "First install or reinstall of the Linux system. The archive comes from a GitHub Release download, or from lotfix-rootfs.tar.gz on the device."},
+        {"system.install_desc", "首次安装或重装 Linux 系统。安装包来自 GitHub Release 的在线下载，或设备上的 ao-rootfs.tar.gz。",
+            "First install or reinstall of the Linux system. The archive comes from a GitHub Release download, or from ao-rootfs.tar.gz on the device."},
         {"system.selected", "已选择：%s", "Selected: %s"},
         {"system.selected_sized", "已选择：%s · %s", "Selected: %s · %s"},
         {"system.found_archive", "已发现设备上的归档：%s · %s", "Found an archive on the device: %s · %s"},
@@ -340,7 +340,7 @@ public final class T {
         {"source.online", "在线下载", "Online download"},
         {"source.online_sub", "GitHub Release · 约 1.9 GB", "GitHub Release · about 1.9 GB"},
         {"source.local", "本地归档", "Local archive"},
-        {"source.local_sub", "设备上的 lotfix-rootfs.tar.gz", "lotfix-rootfs.tar.gz on this device"},
+        {"source.local_sub", "设备上的 ao-rootfs.tar.gz", "ao-rootfs.tar.gz on this device"},
         {"backup.restore", "恢复到这个备份", "Restore this backup"},
         {"backup.export", "导出到…", "Export to…"},
         // installer progress/errors: data/Installer.java reports them through its Callback, the System page shows them.

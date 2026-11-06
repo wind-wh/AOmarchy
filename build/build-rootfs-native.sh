@@ -5,7 +5,7 @@
 #   - the new one (being built): build-inside.sh, started directly with lotfix-run (an Android program: it cannot
 #     be exec'd from inside a rootfs, hence this driver in Android's shell).
 # Run as the app:   run-as app.aomarchy sh build-rootfs-native.sh <repo dir in the app's files>
-# Output: files/build/out/lotfix-rootfs.tar.gz (+ .sha256), files/build/out/lotfix-hyprland-aarch64.tar.zst
+# Output: files/build/out/ao-rootfs.tar.gz (+ .sha256), files/build/out/lotfix-hyprland-aarch64.tar.zst
 set -eu
 APP=/data/data/app.aomarchy/files
 R=$APP/rootfs                       # the installed rootfs (host path)
@@ -67,6 +67,6 @@ inside_installed "set -euo pipefail
   rm -f $G/rootfs/etc/machine-id && touch $G/rootfs/etc/machine-id # first-boot.sh makes this device's
   # Files no one may read (dbus-daemon-launch-helper is 4110): tar runs as the app, their real owner. Readable.
   find $G/rootfs -xdev ! -perm -u+r \\( -type f -o -type d \\) -exec chmod u+r {} +
-  tar --numeric-owner --hard-dereference -C $G/rootfs -I 'gzip -6' -cf $G/out/lotfix-rootfs.tar.gz .
-  cd $G/out && sha256sum lotfix-rootfs.tar.gz | tee lotfix-rootfs.tar.gz.sha256"
+  tar --numeric-owner --hard-dereference -C $G/rootfs -I 'gzip -6' -cf $G/out/ao-rootfs.tar.gz .
+  cd $G/out && sha256sum ao-rootfs.tar.gz | tee ao-rootfs.tar.gz.sha256"
 echo "done: $B/out"

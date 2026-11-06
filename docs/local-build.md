@@ -74,3 +74,21 @@ chmod 600 /root/keys/*
   keep a JVM resident in WSL's 8 GB memory.
 - For a release the CI workflow is still the source of truth (`.github/workflows/release.yml`, tag `v*`); local builds
   are for iteration and device testing.
+
+## Publishing the rootfs archive
+
+`build/build-rootfs.sh` (PC/WSL) and `build/build-rootfs-native.sh` (on-tablet) both produce
+`ao-rootfs.tar.gz` plus its `.sha256`. The app downloads it from a **fixed, dedicated tag**:
+
+```
+https://github.com/wind-wh/AOmarchy/releases/download/rootfs/ao-rootfs.tar.gz
+```
+
+Publish by creating one `rootfs` tag / GitHub Release and attaching `ao-rootfs.tar.gz` (and its checksum) there.
+Do **not** commit the archive to git: a ~2 GB file exceeds GitHub's 100 MB per-file limit and would bloat every
+clone forever. Keeping it on a dedicated tag means ordinary `v*` APK releases never invalidate the URL — the
+`release.yml` workflow only uploads APKs, so `releases/latest/download/...` would 404 after the next app release.
+Replacing the rootfs later = overwrite the asset on that same `rootfs` release, no code change needed.
+
+For offline installs, copy the archive to the tablet under the exact name `ao-rootfs.tar.gz`
+(`Installer.LOCAL_NAME`); the old `lotfix-rootfs.tar.gz` name is no longer recognised.

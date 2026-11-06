@@ -53,7 +53,7 @@ are untested.
 1. Download `AOmarchy-release.apk` from the [latest release](../../releases/latest) and install it. Releases are built,
    signed and published by GitHub Actions (see [Building](#building)); each release also carries a `.sha256` file.
 2. Open it: the app starts on its **console**, not straight in the desktop. Follow the short intro, then install the
-   system from **系统 → 安装系统** — either the release download (about 1.9 GB), or a `lotfix-rootfs.tar.gz` you pick
+   system from **系统 → 安装系统** — either the release download (about 1.9 GB), or an `ao-rootfs.tar.gz` you pick
    on the device (**Local archive**).
 3. Press **进入桌面**. Omarchy's menu opens with **Super + Space**. Your name, email and keyboard layout now live in
    the settings (they are asked once, after the system is installed).

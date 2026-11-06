@@ -1129,7 +1129,7 @@ class SystemPage extends Page {
             // provider that only grants for this session
         }
         new Thread(() -> {
-            String name = "lotfix-rootfs.tar.gz";
+            String name = "ao-rootfs.tar.gz";
             long bytes = -1;
             try (android.database.Cursor c = shell.getContentResolver().query(picked,
                     new String[] {android.provider.OpenableColumns.DISPLAY_NAME,

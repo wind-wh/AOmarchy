@@ -15,8 +15,8 @@ machine: Linux programs run directly on the tablet, with its GPU, sound, cameras
 1. Install the AOmarchy APK and open it. You land on the **console**, not on the desktop:
    **概览 / Overview**, **系统 / System**, **应用 / Apps**, **控制 / Controls**, **设置 / Settings**.
 2. Install the Linux system from **系统 → 安装系统**: **Online download** (about 2 GB, over Wi-Fi) or **Local
-   archive**, a `lotfix-rootfs.tar.gz` you pick on the device. It unpacks the system; this takes a few minutes.
-   - To install without a network, copy `lotfix-rootfs.tar.gz` to the tablet first, then pick it with
+   archive**, an `ao-rootfs.tar.gz` you pick on the device. It unpacks the system; this takes a few minutes.
+   - To install without a network, copy `ao-rootfs.tar.gz` to the tablet first, then pick it with
      **Local archive**; the file stays where it is.
    - Installing again replaces the system. It asks first, and the old system is moved aside (not deleted) until the
      new one is in place.

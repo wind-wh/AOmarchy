@@ -37,14 +37,14 @@ public final class Installer {
     }
 
     public static final String ROOTFS_URL =
-            "https://github.com/lotfibennour/andromarchy/releases/latest/download/lotfix-rootfs.tar.gz";
+            "https://github.com/wind-wh/AOmarchy/releases/download/rootfs/ao-rootfs.tar.gz";
 
     /** Fresh install: the extracted tree plus room to work. */
     public static final long NEEDED_FRESH = 6L << 30;
     /** Reinstall: the new tree next to the old one, which is only deleted after the swap. */
     public static final long NEEDED_REPLACE = 11L << 30;
 
-    private static final String LOCAL_NAME = "lotfix-rootfs.tar.gz";
+    private static final String LOCAL_NAME = "ao-rootfs.tar.gz";
 
     private static volatile boolean running;
     private static volatile boolean cancelled;
