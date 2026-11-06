@@ -43,7 +43,7 @@ The rebuilt detail settings (2.2), and the same console in English:
 
 - Android 11 or later, with a **Qualcomm Adreno GPU** (Snapdragon).
 - About 15 GB of free space.
-- Wi-Fi for the first launch, which downloads the system (about 1.9 GB) — unless you install from a local archive.
+- Wi-Fi for the first launch, which downloads the system (about 1.9 GB) from either mirror — unless you install from a local archive.
 
 Developed and tested on a POCO Pad 2 Pro (Adreno 810, HyperOS / Android 16). Other Snapdragon tablets should work but
 are untested.
@@ -53,8 +53,9 @@ are untested.
 1. Download `AOmarchy-release.apk` from the [latest release](../../releases/latest) and install it. Releases are built,
    signed and published by GitHub Actions (see [Building](#building)); each release also carries a `.sha256` file.
 2. Open it: the app starts on its **console**, not straight in the desktop. Follow the short intro, then install the
-   system from **系统 → 安装系统** — either the release download (about 1.9 GB), or an `ao-rootfs.tar.gz` you pick
-   on the device (**Local archive**).
+   system from **系统 → 安装系统**. Pick one of three sources: **Tencent Cloud mirror** (fastest in mainland China),
+   **GitHub Release**, or **Local archive** (an `ao-rootfs.tar.gz` you pick on the device). The two online sources
+   each download about 1.9 GB and carry the same archive; the app does not switch mirrors automatically.
 3. Press **进入桌面**. Omarchy's menu opens with **Super + Space**. Your name, email and keyboard layout now live in
    the settings (they are asked once, after the system is installed).
    Or switch **设置 → 启动方式** to **终端** and the same button opens a terminal instead of the desktop: one shell,

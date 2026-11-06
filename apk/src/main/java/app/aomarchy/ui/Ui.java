@@ -94,6 +94,13 @@ public final class Ui {
         return new CardBackground(c, GLASS_STRONG, GLASS_LINE, 1f, radiusDp);
     }
 
+    /** The same glass with its full-perimeter prismatic edge lit up: use for the selected item in a set. */
+    public static CardBackground surfaceSelected(Context c, float radiusDp) {
+        CardBackground bg = new CardBackground(c, GLASS_STRONG, GLASS_LINE, 1f, radiusDp);
+        bg.setPrismGlow(true);
+        return bg;
+    }
+
     /** The console rail: the same glass as the cards, so the blurred backdrop and its light read through it too. */
     public static Drawable rail(Context c) {
         return new CardBackground(c, GLASS_STRONG, GLASS_LINE, 1.2f, 22);

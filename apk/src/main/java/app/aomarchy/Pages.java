@@ -513,6 +513,8 @@ class OverviewPage extends Page {
 /** 系统: the Linux system itself — install/reinstall from the release or a local archive, logs. */
 class SystemPage extends Page {
     private static final int PICK_ARCHIVE = 41;
+    /** Third source id: the online ids are Installer.SOURCE_TENCENT (0) / SOURCE_GITHUB (1). */
+    private static final int SRC_LOCAL = 2;
 
     private TextView stateValue;
     private TextView size;
@@ -520,7 +522,8 @@ class SystemPage extends Page {
     private boolean sizing;
     private TextView archiveInfo;
     private TextView progressText;
-    private TextView tileOnline;
+    private TextView tileTencent;
+    private TextView tileGithub;
     private TextView tileLocal;
     private app.aomarchy.ui.SpringBar progress;
     private LinearLayout progressBox;
@@ -536,7 +539,7 @@ class SystemPage extends Page {
     private android.net.Uri localUri;
     private String localName;
     private long localBytes = -1;
-    private boolean sourceLocal;
+    private int source = Installer.SOURCE_TENCENT;
     private boolean installing;
 
     SystemPage(ShellActivity shell) {
@@ -557,16 +560,23 @@ class SystemPage extends Page {
         install.addView(Ui.text(shell, T.t("system.install_desc"), 13, Ui.DIM, false));
         install.addView(Ui.gap(shell, 12));
 
-        tileOnline = sourceTile(T.t("source.online") + "\n" + T.t("source.online_sub"), false);
-        tileLocal = sourceTile(T.t("source.local") + "\n" + T.t("source.local_sub"), true);
+        tileTencent = sourceTile(T.t("source.tencent") + "\n" + T.t("source.tencent_sub"),
+                Installer.SOURCE_TENCENT);
+        tileGithub = sourceTile(T.t("source.github") + "\n" + T.t("source.github_sub"),
+                Installer.SOURCE_GITHUB);
+        tileLocal = sourceTile(T.t("source.local") + "\n" + T.t("source.local_sub"), SRC_LOCAL);
         LinearLayout srcRow = Ui.row(shell);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         lp.rightMargin = Ui.dp(shell, 10);
-        srcRow.addView(tileOnline, lp);
+        LinearLayout.LayoutParams lp2 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        lp2.rightMargin = Ui.dp(shell, 10);
+        srcRow.addView(tileTencent, lp);
+        srcRow.addView(tileGithub, lp2);
         srcRow.addView(tileLocal, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         install.addView(srcRow);
 
-        sourceLocal = Installer.staged(shell) != null;
+        // A staged archive still wins as the initial choice, so an offline install is one tap away.
+        source = Installer.staged(shell) != null ? SRC_LOCAL : Installer.SOURCE_TENCENT;
         archiveInfo = Ui.text(shell, "", 12, Ui.DIM, false);
         archiveInfo.setPadding(0, Ui.dp(shell, 10), 0, 0);
         install.addView(archiveInfo);
@@ -1023,17 +1033,17 @@ class SystemPage extends Page {
                 })
                 .show();
     }
-    /** One of the two install sources; {@code local} is the selection flag (never derived from the label text). */
-    private TextView sourceTile(String title, boolean local) {
+    /** One of the three install sources; {@code src} is the selection id (never derived from the label text). */
+    private TextView sourceTile(String title, int src) {
         TextView t = Ui.text(shell, title, 12, Ui.DIM, false);
         t.setPadding(Ui.dp(shell, 12), Ui.dp(shell, 10), Ui.dp(shell, 12), Ui.dp(shell, 10));
-        // Two-line tile: one TalkBack stop ("在线下载，从网络获取安装包"), and the selected state comes from setSelected.
+        // Two-line tile: one TalkBack stop, and the selected state comes from setSelected.
         t.setContentDescription(title.replace('\n', '，'));
         t.setMinimumHeight(Ui.dp(shell, 48));
         t.setOnClickListener(v -> {
             if (installing)
                 return;
-            sourceLocal = local;
+            source = src;
             paintSources();
         });
         return t;
@@ -1064,14 +1074,28 @@ class SystemPage extends Page {
         return Installer.humanSize(bytes);
     }
 
+    /**
+     * Three tiles in a row need more than a text-brightness difference to show which one is selected.
+     * The chosen tile lights up the same prismatic fringe that every glass surface already carries, around
+     * the entire outline; the others keep the quiet hairline.
+     */
+    private android.graphics.drawable.Drawable sourceBackground(boolean selected) {
+        return selected ? Ui.surfaceSelected(shell, 14) : Ui.surface(shell, 14);
+    }
+
     private void paintSources() {
-        boolean local = sourceLocal;
-        tileOnline.setBackground(Ui.surface(shell, 14));
-        tileOnline.setTextColor(local ? Ui.DIM : Ui.TEXT);
-        tileLocal.setBackground(Ui.surface(shell, 14));
+        boolean local = source == SRC_LOCAL;
+        boolean tencent = source == Installer.SOURCE_TENCENT;
+        boolean github = source == Installer.SOURCE_GITHUB;
+        tileTencent.setBackground(sourceBackground(tencent));
+        tileTencent.setTextColor(tencent ? Ui.TEXT : Ui.DIM);
+        tileGithub.setBackground(sourceBackground(github));
+        tileGithub.setTextColor(github ? Ui.TEXT : Ui.DIM);
+        tileLocal.setBackground(sourceBackground(local));
         tileLocal.setTextColor(local ? Ui.TEXT : Ui.DIM);
         // TalkBack: setSelected makes it announce which install source is the current one.
-        tileOnline.setSelected(!local);
+        tileTencent.setSelected(tencent);
+        tileGithub.setSelected(github);
         tileLocal.setSelected(local);
         File staged = Installer.staged(shell);
         boolean haveLocal = localUri != null || staged != null;
@@ -1086,7 +1110,7 @@ class SystemPage extends Page {
                 archiveInfo.setText(T.t("system.no_archive"));
             }
         } else {
-            archiveInfo.setText(T.t("system.online_note"));
+            archiveInfo.setText(T.t("system.online_source_note", Installer.sourceName(source)));
         }
         archiveInfo.setTextColor(haveLocal || !local ? Ui.DIM : Ui.WARN);
     }
@@ -1151,7 +1175,7 @@ class SystemPage extends Page {
                 localUri = picked;
                 localName = fileName;
                 localBytes = fileBytes;
-                sourceLocal = true;
+                source = SRC_LOCAL;
                 paintSources();
             });
         }).start();
@@ -1165,7 +1189,8 @@ class SystemPage extends Page {
         b.setTitle(replace ? T.t("dialog.reinstall_title") : T.t("dialog.install_title"));
         b.setMessage(replace
                 ? T.t("dialog.reinstall_message")
-                : (sourceLocal ? T.t("dialog.install_local_message") : T.t("dialog.install_online_message")));
+                : (source == SRC_LOCAL ? T.t("dialog.install_local_message")
+                        : T.t("dialog.install_online_source_message", Installer.sourceName(source))));
         b.setNegativeButton(T.t("btn.cancel"), null);
         b.setPositiveButton(replace ? T.t("btn.delete_reinstall") : T.t("btn.start"), (d, w) -> startInstall(replace));
         b.show();
@@ -1174,7 +1199,7 @@ class SystemPage extends Page {
     private void startInstall(boolean replace) {
         android.net.Uri uri = null;
         File staged = null;
-        if (sourceLocal) {
+        if (source == SRC_LOCAL) {
             if (localUri != null) {
                 uri = localUri;
             } else if ((staged = Installer.staged(shell)) != null) {
@@ -1194,7 +1219,7 @@ class SystemPage extends Page {
         progress.setProgress(0);
         progress.setRunning(true);
         progressText.setText(T.t("system.preparing"));
-        Installer.install(shell, uri, replace, new Installer.Callback() {
+        Installer.install(shell, uri, source, replace, new Installer.Callback() {
             @Override
             public void progress(int permille, String text) {
                 shell.runOnUiThread(() -> {

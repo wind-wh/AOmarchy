@@ -36,8 +36,28 @@ public final class Installer {
         void failed(String message);
     }
 
-    public static final String ROOTFS_URL =
-            "https://github.com/wind-wh/AOmarchy/releases/download/rootfs/ao-rootfs.tar.gz";
+    /**
+     * Online download sources. The Tencent Cloud mirror is the default (fast in mainland China); the GitHub
+     * Release copy on the dedicated {@code rootfs} tag stays as a second, independent source. The System page lets
+     * the user pick either one instead of silently falling back, because the two mirrors may carry different builds.
+     */
+    public static final int SOURCE_TENCENT = 0;
+    public static final int SOURCE_GITHUB = 1;
+
+    public static final String[] ROOTFS_URLS = {
+            "https://www.yhbd.top/downloads/ao-rootfs.tar.gz",
+            "https://github.com/wind-wh/AOmarchy/releases/download/rootfs/ao-rootfs.tar.gz"
+    };
+
+    /** Human-readable name of an online source, for progress text and the confirmation dialog. */
+    public static String sourceName(int source) {
+        return T.t(source == SOURCE_GITHUB ? "source.github" : "source.tencent");
+    }
+
+    /** Any unknown id (including the System page's local-archive id) resolves to the default mirror. */
+    public static String sourceUrl(int source) {
+        return ROOTFS_URLS[source == SOURCE_GITHUB ? SOURCE_GITHUB : SOURCE_TENCENT];
+    }
 
     /** Fresh install: the extracted tree plus room to work. */
     public static final long NEEDED_FRESH = 6L << 30;
@@ -82,10 +102,19 @@ public final class Installer {
     }
 
     /**
-     * Starts installing in the background. {@code local} null means the release download; {@code replace} deletes an
-     * installed system only after the new one has been validated and is about to be moved into place.
+     * Starts installing in the background. {@code local} null means an online download from the default mirror;
+     * {@code replace} deletes an installed system only after the new one has been validated and is about to be
+     * moved into place.
      */
     public static void install(Context ctx, Uri local, boolean replace, Callback cb) {
+        install(ctx, local, SOURCE_TENCENT, replace, cb);
+    }
+
+    /**
+     * Starts installing with an explicit download source. {@code source} is {@link #SOURCE_TENCENT} or
+     * {@link #SOURCE_GITHUB} and is ignored when {@code local} is non-null.
+     */
+    public static void install(Context ctx, Uri local, int source, boolean replace, Callback cb) {
         if (running)
             return;
         running = true;
@@ -93,7 +122,7 @@ public final class Installer {
         Context app = ctx.getApplicationContext();
         new Thread(() -> {
             try {
-                perform(app, local, replace, cb);
+                perform(app, local, source, replace, cb);
                 cb.done();
             } catch (Cancelled e) {
                 cb.failed(T.t("install.cancelled"));
@@ -112,7 +141,7 @@ public final class Installer {
         }
     }
 
-    private static void perform(Context ctx, Uri local, boolean replace, Callback cb) throws IOException {
+    private static void perform(Context ctx, Uri local, int source, boolean replace, Callback cb) throws IOException {
         File rootfs = SessionService.rootfs(ctx);
         File partial = new File(rootfs.getPath() + ".partial");
         File files = ctx.getFilesDir();
@@ -137,7 +166,7 @@ public final class Installer {
                 // content:// has no path: the progress then only counts up
             }
         } else {
-            HttpURLConnection c = (HttpURLConnection) new URL(ROOTFS_URL).openConnection();
+            HttpURLConnection c = (HttpURLConnection) new URL(sourceUrl(source)).openConnection();
             c.setInstanceFollowRedirects(true); // GitHub release assets redirect to their storage host
             c.setConnectTimeout(30000);
             c.setReadTimeout(60000);
@@ -150,7 +179,8 @@ public final class Installer {
 
         long[] read = {0};
         long[] shown = {0};
-        final String mode = local != null ? T.t("install.mode_local") : T.t("install.mode_download");
+        final String mode = local != null ? T.t("install.mode_local")
+                : T.t("install.mode_download_source", sourceName(source));
         final long totalSize = size;
         try (InputStream stream = raw) { // closed even when the gzip header turns out to be corrupt
             InputStream counting = new FilterInputStream(new BufferedInputStream(stream, 1 << 20)) {

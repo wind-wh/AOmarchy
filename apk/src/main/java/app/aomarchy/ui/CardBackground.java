@@ -27,7 +27,8 @@ import android.view.animation.OvershootInterpolator;
  *   5. finger glint and press squash;
  *   6. a 1dp inner rim, and the prismatic edge: a 1dp chromatic fringe running the ENTIRE outline as an angular
  *      (sweep) gradient — indigo, blue, teal, signal green and amber cycle around the whole perimeter, so every
- *      side carries prismatic dispersion, not just the corners.
+ *      side carries prismatic dispersion, not just the corners. {@link #setPrismGlow(boolean)} keeps that same
+ *      perimeter but blooms it into a bright multi-pass halo for a selected surface.
  *
  * Used for cards (24dp radius), the side rail (22dp) and every small pill/cell via {@link Ui#surface}.
  */
@@ -54,6 +55,20 @@ public final class CardBackground extends Drawable {
             0x70FFFFFF  // back to white
     };
     private static final float[] EDGE_STOPS = {0f, 0.16f, 0.33f, 0.50f, 0.66f, 0.83f, 1f};
+    /**
+     * The same dispersion cycle at full strength for a selected surface. The hue order is deliberately identical —
+     * the selected card is the same glass, just lit up — only the alpha of every stop is raised so the fringe can
+     * carry a halo. Kept separate so ordinary cards keep their quiet 1dp edge.
+     */
+    private static final int[] EDGE_COLORS_GLOW = {
+            0xF0FFFFFF, // white
+            0xD87C8CFF, // indigo
+            0xD040C0FF, // blue
+            0xD048D8C8, // teal
+            0xD09CD462, // signal green
+            0xD0FFC66B, // amber
+            0xF0FFFFFF  // back to white
+    };
 
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint sheen = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -70,6 +85,9 @@ public final class CardBackground extends Drawable {
     private final Path clip = new Path();
     private final RectF rect = new RectF();
     private final RectF rimRect = new RectF();
+    private final RectF haloRect = new RectF();
+    /** Selected state: the whole chromatic outline blooms instead of staying a quiet hairline. */
+    private boolean prismGlow;
     private final float radiusPx;
     private final float rimPx;
     private final int baseColor;
@@ -222,14 +240,36 @@ public final class CardBackground extends Drawable {
      * The prismatic edge: a 1dp chromatic fringe running the ENTIRE outline. An angular (sweep) gradient around the
      * panel centre cycles indigo → blue → teal → signal green → amber → white around the perimeter, so every side
      * carries prismatic dispersion — not just the corners. Drawn as the rounded-rect stroke, so it hugs the outline.
+     *
+     * <p>When {@link #setPrismGlow(boolean)} is on, the same full-perimeter dispersion is drawn three times —
+     * wide and faint, then medium, then a crisp bright fringe — so the whole outline reads as lit glass.
      */
     private void drawChromaticBorder(Canvas canvas, RectF r) {
         if (borderShader == null || !borderBounds.equals(r)) {
             borderBounds.set(r);
-            borderShader = new SweepGradient(r.centerX(), r.centerY(), EDGE_COLORS, EDGE_STOPS);
+            borderShader = new SweepGradient(r.centerX(), r.centerY(),
+                    prismGlow ? EDGE_COLORS_GLOW : EDGE_COLORS, EDGE_STOPS);
             border.setShader(borderShader);
         }
-        canvas.drawRoundRect(r, radiusPx, radiusPx, border);
+        if (!prismGlow) {
+            canvas.drawRoundRect(r, radiusPx, radiusPx, border);
+            return;
+        }
+        int savedAlpha = border.getAlpha();
+        float savedWidth = border.getStrokeWidth();
+        float[] widths = {strokeWidth * 5f, strokeWidth * 3f, strokeWidth * 1.8f};
+        int[] alphas = {46, 110, 255};
+        for (int i = 0; i < widths.length; i++) {
+            border.setStrokeWidth(widths[i]);
+            border.setAlpha(alphas[i]);
+            // Inset by half the extra width so the bloom stays inside the tile and never clips against its neighbours.
+            float extra = (widths[i] - strokeWidth) / 2f;
+            haloRect.set(r);
+            haloRect.inset(extra, extra);
+            canvas.drawRoundRect(haloRect, Math.max(0f, radiusPx - extra), Math.max(0f, radiusPx - extra), border);
+        }
+        border.setStrokeWidth(savedWidth);
+        border.setAlpha(savedAlpha);
     }
 
     /** Diagonal glass sheen: bright at the top-left corner, transparent by {@link #SHEEN_EXTENT} of the diagonal. */
@@ -265,6 +305,15 @@ public final class CardBackground extends Drawable {
     @Override
     public int getOpacity() {
         return android.graphics.PixelFormat.TRANSLUCENT;
+    }
+
+    /** Lights up the entire prismatic outline (used for the selected install source). Rebuilds the fringe shader. */
+    public void setPrismGlow(boolean on) {
+        if (prismGlow == on)
+            return;
+        prismGlow = on;
+        borderShader = null;
+        invalidateSelf();
     }
 
     public int baseColor() {

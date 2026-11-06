@@ -78,17 +78,42 @@ chmod 600 /root/keys/*
 ## Publishing the rootfs archive
 
 `build/build-rootfs.sh` (PC/WSL) and `build/build-rootfs-native.sh` (on-tablet) both produce
-`ao-rootfs.tar.gz` plus its `.sha256`. The app downloads it from a **fixed, dedicated tag**:
+`ao-rootfs.tar.gz` plus its `.sha256`. The app offers **two online sources** and the user picks one explicitly on
+系统 → 安装系统; there is no automatic fallback, so keep both mirrors carrying the same archive.
+
+| Source | URL | Where the file lives |
+| --- | --- | --- |
+| Tencent Cloud mirror (default) | `https://www.yhbd.top/downloads/ao-rootfs.tar.gz` | `C:\wwwroot\yhbd\public\downloads\` on SSH host `yhbd-server` |
+| GitHub Release | `https://github.com/wind-wh/AOmarchy/releases/download/rootfs/ao-rootfs.tar.gz` | asset on the fixed `rootfs` tag |
+
+Publishing to the Tencent Cloud mirror:
 
 ```
-https://github.com/wind-wh/AOmarchy/releases/download/rootfs/ao-rootfs.tar.gz
+scp ao-rootfs.tar.gz          yhbd-server:C:/wwwroot/yhbd/public/downloads/ao-rootfs.tar.gz
+scp ao-rootfs.tar.gz.sha256   yhbd-server:C:/wwwroot/yhbd/public/downloads/ao-rootfs.tar.gz.sha256
 ```
 
-Publish by creating one `rootfs` tag / GitHub Release and attaching `ao-rootfs.tar.gz` (and its checksum) there.
-Do **not** commit the archive to git: a ~2 GB file exceeds GitHub's 100 MB per-file limit and would bloat every
-clone forever. Keeping it on a dedicated tag means ordinary `v*` APK releases never invalidate the URL — the
-`release.yml` workflow only uploads APKs, so `releases/latest/download/...` would 404 after the next app release.
-Replacing the rootfs later = overwrite the asset on that same `rootfs` release, no code change needed.
+The host is a Windows Server 2022 (Tencent Cloud Lighthouse) running nginx as the `NGINX (yhbd.top)` service
+under `NT AUTHORITY\SYSTEM`. `C:\nginx\conf\nginx.conf` has exact-match locations for both paths that disable
+gzip, set the MIME type, send `Cache-Control: no-cache` and extend `send_timeout` to 300s for slow mobile
+downloads; nginx static files support Range requests already. An ordinary Administrator SSH session **cannot**
+reload it (`OpenEvent("Global\ngx_reload_...") Access is denied`). Back up the config, run
+`nginx.exe -t -c C:\nginx\conf\nginx.conf`, then reload through a one-shot SYSTEM task:
+
+```
+schtasks /create /tn aom-nginx-reload /tr "C:\nginx\nginx.exe -s reload -p C:\nginx" /sc once /st 00:00 /ru SYSTEM /f
+schtasks /run /tn aom-nginx-reload
+schtasks /delete /tn aom-nginx-reload /f
+```
+
+Publishing to GitHub: create one `rootfs` tag / GitHub Release and attach `ao-rootfs.tar.gz` (and its checksum)
+there. Do **not** commit the archive to git: a ~2 GB file exceeds GitHub's 100 MB per-file limit and would bloat
+every clone forever. Keeping it on a dedicated tag means ordinary `v*` APK releases never invalidate the URL —
+the `release.yml` workflow only uploads APKs, so `releases/latest/download/...` would 404 after the next app
+release. Replacing the rootfs later = overwrite the asset on that same `rootfs` release, no code change needed.
 
 For offline installs, copy the archive to the tablet under the exact name `ao-rootfs.tar.gz`
 (`Installer.LOCAL_NAME`); the old `lotfix-rootfs.tar.gz` name is no longer recognised.
+
+Until `ao-rootfs.tar.gz` is actually built and uploaded, both online URLs return 404 and offline install from a
+local archive is the only working path.
