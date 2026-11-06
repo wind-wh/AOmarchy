@@ -1364,24 +1364,20 @@ class AppsPage extends Page {
         head.addView(row);
         body.addView(head);
 
-        // Curated catalog: the install command is typed into the terminal, so nothing runs behind the user's back.
+        // One app = one small drawer in a grid. Tapping the whole drawer is the action (install / open);
+        // there is no menu-style row with separate label and action columns.
         LinearLayout catalog = Ui.card(shell, T.t("catalog.title"));
         catalog.addView(Ui.text(shell, T.t("catalog.desc"), 12, Ui.DIM, false));
-        catalog.addView(tableHead());
-        String catalogGroup = null;
-        for (app.aomarchy.data.AppCatalog.Entry entry : app.aomarchy.data.AppCatalog.all()) {
-            if (!entry.groupKey.equals(catalogGroup)) {
-                catalogGroup = entry.groupKey;
-                catalog.addView(tableGroup(T.t(entry.groupKey)));
-            }
-            catalog.addView(catalogRow(entry));
-        }
+        java.util.List<View> catalogCells = new java.util.ArrayList<>();
+        for (app.aomarchy.data.AppCatalog.Entry entry : app.aomarchy.data.AppCatalog.all())
+            catalogCells.add(catalogDrawer(entry));
+        catalog.addView(drawerGrid(catalogCells));
         body.addView(catalog);
 
         flatBox = Ui.card(shell, T.t("card.flatpak"));
         linuxBox = Ui.card(shell, T.t("card.omarchy_apps"));
         androidBox = Ui.card(shell, T.t("card.android_apps"));
-        // Tables need the full width for three aligned columns, so these modules are stacked, not paired.
+        // Every module is its own grid of drawers; each card keeps the full width for the columns to breathe.
         body.addView(flatBox);
         body.addView(linuxBox);
         body.addView(androidBox);
@@ -1417,154 +1413,181 @@ class AppsPage extends Page {
         }, "apps-list").start();
     }
 
-    /** Column weights shared by every table on this page: name / detail / action. */
-    private static final float[] TABLE_COL = {2.2f, 3f, 0.9f};
+    /** Several drawers per row, several rows per module: the grid is made of cells, not menu rows. */
+    private static final int DRAWER_COLS_LANDSCAPE = 5;
+    private static final int DRAWER_COLS_PORTRAIT = 3;
 
-    private void tableCell(LinearLayout row, View cell, int col) {
-        row.addView(cell, new LinearLayout.LayoutParams(
-                0, ViewGroup.LayoutParams.WRAP_CONTENT, TABLE_COL[col]));
+    private int drawerColumns() {
+        return shell.getResources().getConfiguration().orientation
+                == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                ? DRAWER_COLS_LANDSCAPE : DRAWER_COLS_PORTRAIT;
     }
 
-    private View hairline() {
-        View v = Ui.divider(shell);
+    /** Equal-width cells laid out row by row; a short final row is padded so its cells never stretch. */
+    private LinearLayout drawerGrid(java.util.List<View> cells) {
+        LinearLayout grid = Ui.column(shell);
+        LinearLayout.LayoutParams glp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        glp.topMargin = Ui.dp(shell, 6);
+        grid.setLayoutParams(glp);
+        int cols = drawerColumns();
+        int gap = Ui.dp(shell, 6);
+        LinearLayout row = null;
+        for (int i = 0; i < cells.size(); i++) {
+            if (i % cols == 0) {
+                row = Ui.row(shell);
+                row.setGravity(android.view.Gravity.TOP);
+                LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                rlp.bottomMargin = gap;
+                row.setLayoutParams(rlp);
+                grid.addView(row);
+            }
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            if (i % cols != cols - 1)
+                lp.rightMargin = gap;
+            row.addView(cells.get(i), lp);
+        }
+        if (row != null) {
+            int rest = cols - cells.size() % cols;
+            for (int k = 0; k < rest && rest < cols; k++)
+                row.addView(new View(shell), new LinearLayout.LayoutParams(0, 1, 1f));
+        }
+        return grid;
+    }
+
+    /** One small drawer: badge + name, one line of detail, and the action. The whole cell is the button. */
+    private LinearLayout drawer(View badge, String name, String detail, String action,
+                                View.OnClickListener onClick) {
+        LinearLayout cell = Ui.column(shell);
+        cell.setBackground(Ui.buttonSurface(shell, 0x3D1C2230, 12));
+        int pad = Ui.dp(shell, 9);
+        cell.setPadding(pad, pad, pad, pad);
+        cell.setMinimumHeight(Ui.dp(shell, 66));
+        cell.setClickable(true);
+        app.aomarchy.ui.Motion.pressable(cell);
+        cell.setOnClickListener(onClick);
+        cell.setContentDescription(name + "，" + action.replace("›", "").trim());
+
+        LinearLayout top = Ui.row(shell);
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(Ui.dp(shell, 26), Ui.dp(shell, 26));
+        blp.rightMargin = Ui.dp(shell, 7);
+        top.addView(badge, blp);
+        TextView label = Ui.text(shell, name, 13, Ui.TEXT, true);
+        label.setSingleLine(true);
+        label.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        top.addView(label, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        cell.addView(top);
+
+        // Detail and action share one line: no empty bottom half inside each drawer.
+        LinearLayout foot = Ui.row(shell);
+        LinearLayout.LayoutParams flp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        flp.topMargin = Ui.dp(shell, 6);
+        foot.setLayoutParams(flp);
+        TextView sub = Ui.text(shell, detail, 11, Ui.DIM, false);
+        sub.setSingleLine(true);
+        sub.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        sub.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        slp.rightMargin = Ui.dp(shell, 6); // long package names must not touch the action label
+        foot.addView(sub, slp);
+        // "打开 ›" is a menu affordance; inside a drawer the whole cell is the button, so drop the arrow.
+        String shortAction = action.replace("›", "").trim();
+        TextView act = Ui.text(shell, shortAction, 11, Ui.ACCENT, true);
+        act.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        foot.addView(act);
+        cell.addView(foot);
+        return cell;
+    }
+
+    /** Linux/catalogue entries have no icon asset, so a monogram keeps every drawer on the same visual grid. */
+    private TextView monogram(String name) {
+        String s = name.trim();
+        String ch = s.isEmpty() ? "?" : s.substring(0, 1).toUpperCase(java.util.Locale.ROOT);
+        TextView t = Ui.text(shell, ch, 12, Ui.TEXT, true);
+        t.setGravity(android.view.Gravity.CENTER);
+        android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
+        g.setColor(0x333D4660);
+        g.setCornerRadius(Ui.dp(shell, 8));
+        t.setBackground(g);
+        return t;
+    }
+
+    private android.widget.ImageView appIcon(android.graphics.drawable.Drawable icon) {
+        android.widget.ImageView v = new android.widget.ImageView(shell);
+        v.setImageDrawable(icon);
+        v.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
         decorative(v);
         return v;
-    }
-
-    /** The same column header for every app module, with a hairline underneath. */
-    private LinearLayout tableHead() {
-        LinearLayout box = Ui.column(shell);
-        box.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        LinearLayout h = Ui.row(shell);
-        h.setPadding(0, Ui.dp(shell, 2), 0, Ui.dp(shell, 5));
-        tableCell(h, Ui.text(shell, T.t("apps.col_app"), 11, Ui.DIM, true), 0);
-        tableCell(h, Ui.text(shell, T.t("apps.col_detail"), 11, Ui.DIM, true), 1);
-        TextView a = Ui.text(shell, T.t("apps.col_action"), 11, Ui.DIM, true);
-        a.setGravity(android.view.Gravity.END);
-        tableCell(h, a, 2);
-        box.addView(h);
-        box.addView(hairline());
-        return box;
-    }
-
-    /** A group caption inside the catalog table. */
-    private TextView tableGroup(String title) {
-        TextView t = Ui.text(shell, title, 11, Ui.DIM, true);
-        t.setPadding(0, Ui.dp(shell, 7), 0, Ui.dp(shell, 4));
-        return t;
-    }
-
-    private TextView cellText(String s, float size, int color) {
-        TextView t = Ui.text(shell, s, size, color, false);
-        t.setSingleLine(true);
-        t.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        return t;
-    }
-
-    private TextView actionText(String label, String description, View.OnClickListener onClick) {
-        TextView t = Ui.text(shell, label, 13, Ui.ACCENT, true);
-        t.setGravity(android.view.Gravity.END);
-        t.setPadding(Ui.dp(shell, 8), Ui.dp(shell, 8), 0, Ui.dp(shell, 8));
-        t.setMinimumHeight(Ui.dp(shell, 44));
-        t.setContentDescription(description);
-        t.setOnClickListener(onClick);
-        return t;
-    }
-
-    /** One data row: three aligned columns plus a hairline separator. */
-    private LinearLayout tableRowView(View name, View detail, View action) {
-        LinearLayout box = Ui.column(shell);
-        box.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        LinearLayout r = Ui.row(shell);
-        r.setPadding(0, Ui.dp(shell, 5), 0, Ui.dp(shell, 5));
-        r.setMinimumHeight(Ui.dp(shell, 44));
-        tableCell(r, name, 0);
-        tableCell(r, detail, 1);
-        tableCell(r, action, 2);
-        box.addView(r);
-        box.addView(hairline());
-        return box;
     }
 
     private void fillFlatpak(java.util.List<Apps.LinuxApp> apps) {
         flatBox.removeAllViews();
         flatBox.addView(Ui.text(shell, T.t("apps.flatpak_hint"), 12, Ui.DIM, false));
-        flatBox.addView(tableHead());
         if (apps.isEmpty()) {
             flatBox.addView(Ui.text(shell, T.t("apps.no_flatpak"), 13, Ui.FAINT, false));
             return;
         }
+        java.util.List<View> cells = new java.util.ArrayList<>();
         for (int i = 0; i < Math.min(apps.size(), 24); i++)
-            flatBox.addView(appRow(apps.get(i)));
+            cells.add(linuxDrawer(apps.get(i)));
+        flatBox.addView(drawerGrid(cells));
     }
 
     private void fillLinux(java.util.List<Apps.LinuxApp> apps) {
         linuxBox.removeAllViews();
         linuxBox.addView(Ui.text(shell, T.t("apps.linux_hint"), 12, Ui.DIM, false));
-        linuxBox.addView(tableHead());
-        for (int i = 0; i < Math.min(apps.size(), 24); i++)
-            linuxBox.addView(appRow(apps.get(i)));
-        if (apps.isEmpty())
+        if (apps.isEmpty()) {
             linuxBox.addView(Ui.text(shell, T.t("apps.no_linux"), 13, Ui.FAINT, false));
+            return;
+        }
+        java.util.List<View> cells = new java.util.ArrayList<>();
+        for (int i = 0; i < Math.min(apps.size(), 24); i++)
+            cells.add(linuxDrawer(apps.get(i)));
+        linuxBox.addView(drawerGrid(cells));
     }
 
-    private View catalogRow(app.aomarchy.data.AppCatalog.Entry entry) {
-        return tableRowView(
-                cellText(T.t(entry.labelKey), 14, Ui.TEXT),
-                cellText(T.t(entry.hintKey), 11, Ui.DIM),
-                actionText(T.t("catalog.install"),
-                        T.t("catalog.install") + " " + T.t(entry.labelKey),
-                        v -> shell.openTerminalWith(entry.command)));
+    private View catalogDrawer(app.aomarchy.data.AppCatalog.Entry entry) {
+        String name = T.t(entry.labelKey);
+        return drawer(monogram(name), name, T.t(entry.hintKey), T.t("catalog.install"),
+                v -> shell.openTerminalWith(entry.command));
     }
 
-    private View appRow(Apps.LinuxApp app) {
-        return tableRowView(
-                cellText(app.name, 14, Ui.TEXT),
-                cellText(app.id, 11, Ui.DIM),
-                actionText(T.t("btn.open"),
-                        app.name + "，" + T.t("btn.open").replace("›", "").trim(),
-                        v -> {
-                            if (!SessionService.rootfsReady(shell)) {
-                                toast(T.t("toast.system_missing"));
-                            } else if (!SessionService.started) {
-                                toast(T.t("toast.start_session_first"));
-                            } else {
-                                Apps.launchLinux(shell, app);
-                                toast(T.t("toast.opened_on_desktop", app.name));
-                            }
-                        }));
+    private View linuxDrawer(Apps.LinuxApp app) {
+        return drawer(monogram(app.name), app.name, app.id, T.t("btn.open"),
+                v -> {
+                    if (!SessionService.rootfsReady(shell)) {
+                        toast(T.t("toast.system_missing"));
+                    } else if (!SessionService.started) {
+                        toast(T.t("toast.start_session_first"));
+                    } else {
+                        Apps.launchLinux(shell, app);
+                        toast(T.t("toast.opened_on_desktop", app.name));
+                    }
+                });
     }
 
     private void fillAndroid(java.util.List<Apps.AndroidApp> apps) {
         androidBox.removeAllViews();
         androidBox.addView(Ui.text(shell, T.t("apps.android_hint"), 12, Ui.DIM, false));
-        androidBox.addView(tableHead());
         if (apps.isEmpty()) {
             androidBox.addView(Ui.text(shell, T.t("apps.no_android"), 13, Ui.FAINT, false));
             return;
         }
-        // Android apps used to be an icon grid; they now use the same three-column table as every other module.
+        java.util.List<View> cells = new java.util.ArrayList<>();
         for (int i = 0; i < Math.min(apps.size(), 32); i++)
-            androidBox.addView(androidTableRow(apps.get(i)));
+            cells.add(androidDrawer(apps.get(i)));
+        androidBox.addView(drawerGrid(cells));
     }
 
-    private View androidTableRow(Apps.AndroidApp app) {
-        LinearLayout nameCell = Ui.row(shell);
-        android.widget.ImageView icon = new android.widget.ImageView(shell);
-        icon.setImageDrawable(app.icon);
-        decorative(icon);
-        nameCell.addView(icon, new LinearLayout.LayoutParams(Ui.dp(shell, 22), Ui.dp(shell, 22)));
-        TextView label = cellText(app.label, 13, Ui.TEXT);
-        label.setPadding(Ui.dp(shell, 8), 0, 0, 0);
-        nameCell.addView(label, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        return tableRowView(nameCell,
-                cellText(app.packageName, 11, Ui.DIM),
-                actionText(T.t("btn.open"), app.label + "，" + T.t("btn.open"), v -> {
+    private View androidDrawer(Apps.AndroidApp app) {
+        return drawer(appIcon(app.icon), app.label, app.packageName, T.t("btn.open"),
+                v -> {
                     Apps.openFloating(shell, app.packageName);
                     toast(T.t("toast.floating_open", app.label));
-                }));
+                });
     }
 }
 /** 控制: the high-frequency switchboard — same view as the half-screen sheet over the desktop. */
