@@ -154,10 +154,15 @@ public final class Apps {
         Intent intent = ctx.getPackageManager().getLaunchIntentForPackage(pkg);
         if (intent == null)
             return;
-        intent.addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
         android.app.ActivityOptions options = floatingOptions(ctx);
         try {
-            ctx.startActivity(intent, options == null ? null : options.toBundle());
+            // Launch from the application context rather than the foreground Activity. MIUI inserts a
+            // "allow AOmarchy to open X?" confirmation into the caller's task and reuses the pending
+            // ActivityOptions there: doing it from an Activity shrinks AOmarchy into the floating
+            // window and leaves the target app fullscreen - exactly backwards. A non-Activity caller
+            // has no task of its own for that confirmation to inherit the bounds from.
+            ctx.getApplicationContext().startActivity(intent, options == null ? null : options.toBundle());
         } catch (RuntimeException e) {
             android.util.Log.w("Apps", "floating launch failed for " + pkg, e);
         }
