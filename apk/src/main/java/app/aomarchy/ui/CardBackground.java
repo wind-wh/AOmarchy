@@ -86,8 +86,8 @@ public final class CardBackground extends Drawable {
     private final RectF rect = new RectF();
     private final RectF rimRect = new RectF();
     private final RectF haloRect = new RectF();
-    /** Selected state: the whole chromatic outline blooms instead of staying a quiet hairline. */
-    private boolean prismGlow;
+    /** 0 = quiet hairline, 1 = full selected-state bloom. Buttons sit in between so selection still reads. */
+    private float prismGlow;
     private final float radiusPx;
     private final float rimPx;
     private final int baseColor;
@@ -248,17 +248,19 @@ public final class CardBackground extends Drawable {
         if (borderShader == null || !borderBounds.equals(r)) {
             borderBounds.set(r);
             borderShader = new SweepGradient(r.centerX(), r.centerY(),
-                    prismGlow ? EDGE_COLORS_GLOW : EDGE_COLORS, EDGE_STOPS);
+                    prismGlow > 0f ? EDGE_COLORS_GLOW : EDGE_COLORS, EDGE_STOPS);
             border.setShader(borderShader);
         }
-        if (!prismGlow) {
+        if (prismGlow <= 0f) {
             canvas.drawRoundRect(r, radiusPx, radiusPx, border);
             return;
         }
         int savedAlpha = border.getAlpha();
         float savedWidth = border.getStrokeWidth();
-        float[] widths = {strokeWidth * 5f, strokeWidth * 3f, strokeWidth * 1.8f};
-        int[] alphas = {46, 110, 255};
+        float s = prismGlow;
+        float[] widths = {strokeWidth * (2f + 3f * s), strokeWidth * (1.4f + 1.6f * s),
+                strokeWidth * (1f + 0.8f * s)};
+        int[] alphas = {(int) (18 + 28 * s), (int) (45 + 65 * s), (int) (130 + 125 * s)};
         for (int i = 0; i < widths.length; i++) {
             border.setStrokeWidth(widths[i]);
             border.setAlpha(alphas[i]);
@@ -307,13 +309,21 @@ public final class CardBackground extends Drawable {
         return android.graphics.PixelFormat.TRANSLUCENT;
     }
 
-    /** Lights up the entire prismatic outline (used for the selected install source). Rebuilds the fringe shader. */
-    public void setPrismGlow(boolean on) {
-        if (prismGlow == on)
+    /**
+     * Lights up the entire prismatic outline. {@code 1f} is the selected-state bloom, a lower value is the
+     * softer version used by console buttons, {@code 0f} restores the quiet hairline. Rebuilds the fringe shader.
+     */
+    public void setPrismGlow(float strength) {
+        float s = Math.max(0f, Math.min(1f, strength));
+        if (prismGlow == s)
             return;
-        prismGlow = on;
+        prismGlow = s;
         borderShader = null;
         invalidateSelf();
+    }
+
+    public void setPrismGlow(boolean on) {
+        setPrismGlow(on ? 1f : 0f);
     }
 
     public int baseColor() {

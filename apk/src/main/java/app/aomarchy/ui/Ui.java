@@ -97,7 +97,19 @@ public final class Ui {
     /** The same glass with its full-perimeter prismatic edge lit up: use for the selected item in a set. */
     public static CardBackground surfaceSelected(Context c, float radiusDp) {
         CardBackground bg = new CardBackground(c, GLASS_STRONG, GLASS_LINE, 1f, radiusDp);
-        bg.setPrismGlow(true);
+        bg.setPrismGlow(1f);
+        return bg;
+    }
+
+    /**
+     * Every console button carries the prismatic bloom, a notch below the selected-state intensity so a
+     * selected source tile still reads as the strongest element when it sits next to a button.
+     */
+    public static final float BUTTON_PRISM = 0.7f;
+
+    public static CardBackground buttonSurface(Context c, int baseColor, float radiusDp) {
+        CardBackground bg = new CardBackground(c, baseColor, GLASS_LINE, 1f, radiusDp);
+        bg.setPrismGlow(BUTTON_PRISM);
         return bg;
     }
 
@@ -172,7 +184,7 @@ public final class Ui {
     public static TextView button(Context c, String s, boolean primary, View.OnClickListener onClick) {
         TextView t = text(c, s, 14, primary ? 0xFF0A0C10 : TEXT, true);
         t.setGravity(Gravity.CENTER);
-        t.setBackground(rounded(c, primary ? ACCENT : 0x3D1C2230, primary ? 0 : GLASS_LINE, 14));
+        t.setBackground(buttonSurface(c, primary ? ACCENT : 0x3D1C2230, 14));
         Motion.pressable(t);
         int v = dp(c, 12), h = dp(c, 18);
         t.setPadding(h, v, h, v);

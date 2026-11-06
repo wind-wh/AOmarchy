@@ -253,7 +253,7 @@ public class ShellActivity extends Activity {
         rail.addView(new View(this), new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         FrameLayout power = new FrameLayout(this);
-        power.setBackground(Ui.surface(this, 14));
+        power.setBackground(Ui.buttonSurface(this, Ui.GLASS_STRONG, 14));
         power.setContentDescription(T.t("power.button"));
         power.setClickable(true);
         power.setFocusable(true);
@@ -298,6 +298,7 @@ public class ShellActivity extends Activity {
         // Startup mode lives in the global top bar: one tap switches desktop / terminal, wherever the user is.
         startupModeButton = Ui.text(this, "", 13, Ui.ACCENT, true);
         startupModeButton.setPadding(Ui.dp(this, 10), Ui.dp(this, 8), Ui.dp(this, 10), Ui.dp(this, 8));
+        startupModeButton.setBackground(Ui.buttonSurface(this, Ui.GLASS_STRONG, 14));
         startupModeButton.setMinimumHeight(Ui.dp(this, 48));
         startupModeButton.setOnClickListener(v -> pickStartupMode());
         top.addView(startupModeButton);
