@@ -6,3 +6,8 @@ apk/.gradle/
 apk/.cxx/
 apk/local.properties
 apk/src/main/jniLibs/
+
+# 设计过程产物：留在本地，不进仓库（截图若要入库请放进 docs/screenshots/）
+/.workbuddy/
+/2026-11-05-AOmarchy-*
+/shot_*.png

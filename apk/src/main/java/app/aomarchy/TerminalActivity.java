@@ -26,6 +26,8 @@ import app.aomarchy.ui.Ui;
  * terminal adds about 80 MB, and it starts in a couple of seconds instead of a dozen.
  */
 public class TerminalActivity extends Activity implements TerminalView.Listener {
+    /** True while this pty session is alive; SessionService.runningMode() uses it to tell terminal from desktop. */
+    static volatile boolean sRunning;
     static {
         System.loadLibrary("andromarchy_consumer"); // the pty natives live in the same .so as the display consumer
     }
@@ -48,6 +50,7 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        sRunning = true;
         Prefs.init(this);
         T.init(this); // the console's ui_lang choice applies to the terminal too
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -308,6 +311,7 @@ public class TerminalActivity extends Activity implements TerminalView.Listener 
 
     @Override
     protected void onDestroy() {
+        sRunning = false;
         if (terminal != null)
             terminal.stop();
         super.onDestroy();

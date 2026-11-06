@@ -51,6 +51,7 @@ public class ShellActivity extends Activity {
     private FrameLayout host;
     private FrameLayout shellRoot;
     private TextView status;
+    private TextView startupModeButton;
     private TextView installHint;
     private int current = -1;
     private View indicator;
@@ -294,6 +295,13 @@ public class ShellActivity extends Activity {
         top.addView(name);
         View spacer = new View(this);
         top.addView(spacer, new LinearLayout.LayoutParams(0, 1, 1f));
+        // Startup mode lives in the global top bar: one tap switches desktop / terminal, wherever the user is.
+        startupModeButton = Ui.text(this, "", 13, Ui.ACCENT, true);
+        startupModeButton.setPadding(Ui.dp(this, 10), Ui.dp(this, 8), Ui.dp(this, 10), Ui.dp(this, 8));
+        startupModeButton.setMinimumHeight(Ui.dp(this, 48));
+        startupModeButton.setOnClickListener(v -> pickStartupMode());
+        top.addView(startupModeButton);
+        top.addView(Ui.space(this, 12));
         status = Ui.chip(this, "○ " + T.t("status.not_installed"), Ui.DIM);
         top.addView(status);
         top.addView(Ui.space(this, 10));
@@ -322,6 +330,7 @@ public class ShellActivity extends Activity {
         app.aomarchy.ui.Wallpaper.behind(this, shellRoot);
         updateStatus();
         updateEntryLabel();
+        updateStartupModeLabel();
     }
 
     @Override
@@ -387,6 +396,10 @@ public class ShellActivity extends Activity {
                     .setDuration(280).setInterpolator(app.aomarchy.ui.Motion.SPRING).start();
         }
         moveIndicator(index);
+        // One primary action per screen: on Overview the hero owns the "enter desktop / terminal" CTA, so the
+        // top-bar duplicate hides there. Other pages keep it as a global shortcut back into the session.
+        if (entryButton != null)
+            entryButton.setVisibility(index == 0 ? View.GONE : View.VISIBLE);
         // Pages slide in from the side they come from (left when going back down the rail), fading as they arrive.
         View pageRoot = pages[index].root;
         float shift = Ui.dp(this, 22);
@@ -491,6 +504,81 @@ public class ShellActivity extends Activity {
         entryButton.setText(T.t(terminal ? "btn.enter_terminal" : "btn.enter_desktop"));
     }
 
+    /** The top bar shows the current startup mode; tapping it opens the picker the Settings page used to hold. */
+    void updateStartupModeLabel() {
+        if (startupModeButton == null)
+            return;
+        boolean terminal = "terminal".equals(getSharedPreferences(Prefs.NAME, MODE_PRIVATE)
+                .getString("session_mode", "desktop"));
+        String label = T.t(terminal ? "mode.terminal_short" : "mode.desktop");
+        startupModeButton.setText(label + " ▾");
+        startupModeButton.setContentDescription(T.t("label.startup_mode") + "，" + label);
+    }
+
+    private void pickStartupMode() {
+        String[] names = {T.t("mode.desktop_full"), T.t("mode.terminal")};
+        int checked = "terminal".equals(getSharedPreferences(Prefs.NAME, MODE_PRIVATE)
+                .getString("session_mode", "desktop")) ? 1 : 0;
+        new android.app.AlertDialog.Builder(this)
+                .setTitle(T.t("label.startup_mode"))
+                .setSingleChoiceItems(names, checked, (d, which) -> {
+                    d.dismiss();
+                    String next = which == 1 ? "terminal" : "desktop";
+                    String saved = getSharedPreferences(Prefs.NAME, MODE_PRIVATE)
+                            .getString("session_mode", "desktop");
+                    if (next.equals(saved))
+                        return;
+                    String running = SessionService.runningMode(this);
+                    String label = T.t(which == 1 ? "mode.terminal_short" : "mode.desktop");
+                    if ("none".equals(running) || "stopped".equals(running)) {
+                        // Nothing is live, so the new mode takes effect on the next launch without a restart.
+                        applyStartupMode(next);
+                        app.aomarchy.ui.Toasts.show(this, T.t("none".equals(running)
+                                ? "toast.mode_set_no_system" : "toast.mode_set_stopped", label));
+                        return;
+                    }
+                    // A live Linux session keeps its old mode until restarted: state it, then ask.
+                    String from = "terminal".equals(running)
+                            ? T.t("mode.terminal_short") : T.t("mode.desktop");
+                    new android.app.AlertDialog.Builder(this)
+                            .setTitle(T.t("dialog.mode_restart_title"))
+                            .setMessage(T.t("dialog.mode_restart_message", from, label))
+                            .setPositiveButton(T.t("btn.mode_restart_now"), (d2, w) -> {
+                                applyStartupMode(next);
+                                restartSessionForMode();
+                            })
+                            .setNegativeButton(T.t("btn.mode_next_launch"), (d2, w) -> {
+                                applyStartupMode(next);
+                                app.aomarchy.ui.Toasts.show(this,
+                                        T.t(which == 1 ? "toast.next_terminal_mode" : "toast.next_desktop_mode"));
+                            })
+                            .setNeutralButton(T.t("btn.cancel"), null)
+                            .show();
+                })
+                .setNegativeButton(T.t("btn.cancel"), null)
+                .show();
+    }
+
+    /** Save the choice and make every surface that shows the mode follow it. */
+    private void applyStartupMode(String mode) {
+        getSharedPreferences(Prefs.NAME, MODE_PRIVATE).edit().putString("session_mode", mode).apply();
+        SessionWidget.refresh(this); // the widget's state text follows the startup mode
+        updateStartupModeLabel();
+        updateEntryLabel();
+        if (current >= 0 && pages[current] != null)
+            pages[current].refresh();
+    }
+
+    /** End the live Linux session, then re-enter with the mode just saved (openDesktop reads that pref). */
+    private void restartSessionForMode() {
+        stopService(new Intent(this, SessionService.class));
+        app.aomarchy.ui.Toasts.show(this, T.t("power.toast_restarting"));
+        handler.postDelayed(() -> {
+            if (!isFinishing() && !isDestroyed())
+                openDesktop();
+        }, 700);
+    }
+
     /** Jump to a page by rail index (0 概览 … 4 设置). */
     void showTab(int index) {
         if (index >= 0 && index < TITLES.length)
@@ -507,12 +595,12 @@ public class ShellActivity extends Activity {
         String text = !ready ? "○ " + T.t("status.not_installed")
                 : running ? "● " + T.t("status.running") : "● " + T.t("status.ready");
         status.setText(text);
-        status.setTextColor(!ready ? Ui.FAINT : running ? Ui.MINT : Ui.ACCENT);
+        status.setTextColor(!ready ? Ui.FAINT : running ? Ui.SIGNAL : Ui.ACCENT);
         if (installHint != null)
             installHint.setVisibility(ready ? View.GONE : View.VISIBLE);
-        // The rail's power glyph doubles as the session LED: mint while Linux runs, dim when only the rootfs is there.
+        // The rail's power glyph doubles as the session LED: Signal Green while Linux runs, dim when only the rootfs is there.
         if (powerIcon != null)
-            powerIcon.setColor(!ready ? Ui.FAINT : running ? Ui.MINT : Ui.DIM);
+            powerIcon.setColor(!ready ? Ui.FAINT : running ? Ui.SIGNAL : Ui.DIM);
     }
 
     /** PowerMenu calls this once a session start/stop has settled, so the chip and the rail follow in place. */
@@ -523,17 +611,26 @@ public class ShellActivity extends Activity {
         updateEntryLabel();
     }
 
-    /** Rail glyphs, drawn instead of shipping five drawables: same 1.8dp stroke everywhere. */
+    /** Rail glyphs, drawn instead of shipping five drawables: same 1.8dp stroke everywhere. The overview glyph is
+     *  the single approved bitmap (@drawable/brand_logo, derived from LOGO1.png), tinted to the tab state. */
     static final class RailIcon extends View {
         private final int index;
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private int color = Ui.DIM;
+        /** One decoded copy of the approved mark, shared by every rail redraw. */
+        private static android.graphics.Bitmap mark;
 
         RailIcon(android.content.Context c, int index) {
             super(c);
             this.index = index;
             paint.setStyle(Paint.Style.STROKE);
             paint.setStrokeCap(Paint.Cap.ROUND);
+        }
+
+        private static android.graphics.Bitmap brandMark(android.content.Context c) {
+            if (mark == null)
+                mark = android.graphics.BitmapFactory.decodeResource(c.getResources(), R.drawable.brand_logo);
+            return mark;
         }
 
         void setColor(int c) {
@@ -548,13 +645,16 @@ public class ShellActivity extends Activity {
             paint.setColor(color);
             paint.setStrokeWidth(s * 0.075f);
             float left = (w - s) / 2f, top = (h - s) / 2f;
-            float cell = s * 0.36f, gap = s * 0.12f;
             switch (index) {
-                case 0: // overview: four tiles
-                    for (int i = 0; i < 4; i++) {
-                        float x = left + (i % 2) * (cell + gap) + s * 0.06f;
-                        float y = top + (i / 2) * (cell + gap) + s * 0.06f;
-                        canvas.drawRoundRect(new RectF(x, y, x + cell, y + cell), s * 0.09f, s * 0.09f, paint);
+                case 0: // overview: the one approved bitmap, tinted to the tab state
+                    android.graphics.Bitmap logo = brandMark(getContext());
+                    if (logo != null) {
+                        Paint tint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                        tint.setColorFilter(new android.graphics.PorterDuffColorFilter(
+                                color, android.graphics.PorterDuff.Mode.SRC_IN));
+                        float side = s * 0.84f;
+                        float bx = left + (s - side) / 2f, by = top + (s - side) / 2f;
+                        canvas.drawBitmap(logo, null, new RectF(bx, by, bx + side, by + side), tint);
                     }
                     break;
                 case 1: // system: a chip
@@ -586,16 +686,20 @@ public class ShellActivity extends Activity {
                         canvas.drawCircle(left + s * (0.3f + i * 0.2f), y, s * 0.085f, paint);
                     }
                     break;
-                default: // settings: ring with spokes
-                    canvas.drawCircle(left + s * 0.5f, top + s * 0.5f, s * 0.22f, paint);
+                default: // settings: a gear (square teeth + hub), not the ring-with-spokes "sun" it used to be —
+                         // the system tab already owns the radiating-chip shape; one glyph, one meaning.
+                    float cx = left + s * 0.5f, cy = top + s * 0.5f;
+                    canvas.drawCircle(cx, cy, s * 0.24f, paint);
+                    canvas.drawCircle(cx, cy, s * 0.09f, paint);
+                    paint.setStyle(Paint.Style.FILL);
                     for (int i = 0; i < 8; i++) {
-                        double a = i * Math.PI / 4;
-                        float x1 = (float) (left + s * 0.5f + Math.cos(a) * s * 0.28f);
-                        float y1 = (float) (top + s * 0.5f + Math.sin(a) * s * 0.28f);
-                        float x2 = (float) (left + s * 0.5f + Math.cos(a) * s * 0.42f);
-                        float y2 = (float) (top + s * 0.5f + Math.sin(a) * s * 0.42f);
-                        canvas.drawLine(x1, y1, x2, y2, paint);
+                        canvas.save();
+                        canvas.rotate(i * 45f, cx, cy);
+                        canvas.drawRect(new RectF(cx - s * 0.055f, cy - s * 0.44f,
+                                cx + s * 0.055f, cy - s * 0.28f), paint);
+                        canvas.restore();
                     }
+                    paint.setStyle(Paint.Style.STROKE);
                     break;
             }
         }

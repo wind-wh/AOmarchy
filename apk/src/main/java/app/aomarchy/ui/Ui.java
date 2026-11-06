@@ -2,13 +2,18 @@ package app.aomarchy.ui;
 
 import android.content.Context;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
+import android.widget.SeekBar;
 import android.widget.TextView;
+
+import android.content.res.ColorStateList;
+import android.os.Build;
 
 import java.io.File;
 
@@ -17,27 +22,30 @@ import java.io.File;
  * androidx, everything drawn with framework views so the APK stays tiny.
  */
 public final class Ui {
-    /** Palette — keep in sync with docs/ui-redesign-plan.md. */
+    /** Palette — keep in sync with res/values/colors.xml and
+     *  docs/2026-11-05-AOmarchy-UI交互设计规范.md (dual-tone design system). */
     public static final int BG = 0xFF0A0C10;
     public static final int SURFACE = 0xFF14171F;
     public static final int SURFACE_HI = 0xFF1C2230;
     public static final int LINE = 0xFF262C3A;
-    /** Frosted glass: translucent dark panels over the blurred wallpaper, with a light edge. */
-    public static final int GLASS = 0x5E0B0E12; // darker glass (37%): the picture is texture, not readable text
-    /** The rail is the largest glass slab: a touch more opaque than a card so the labels stay calm, but light enough
-     *  (55%) that the wallpaper still reads through it. */
-    public static final int GLASS_STRONG = 0x6B14171F;
-    /** The rail is a night slab, not a card: deep and almost opaque so it never looks washed out. */
-    public static final int RAIL_TOP = 0xF211141B;
-    public static final int RAIL_BOTTOM = 0xE80B0D13;
+    /** Real glass: translucent enough for the blurred backdrop to read through, dark enough for body text.
+     *  CardBackground lights it from above (thickness gradient, top glow, lit rim). */
+    public static final int GLASS = 0x4D101622; // bumped from 0x33 (20%) → 0x4D (30%): less transparent, still glass
+    /** The rail and floating pills: a little denser than a card so labels stay calm, but still glass. */
+    public static final int GLASS_STRONG = 0x6610151F; // bumped from 0x47 (28%) → 0x66 (40%): reads as solid glass over the backdrop
     public static final int GLASS_LINE = 0xB0FFFFFF;
     public static final int GLASS_LINE_SOFT = 0x2EFFFFFF;
+    /** Structural primary: actions, selection, focus, navigation. The full 50-900 scale lives in colors.xml. */
     public static final int ACCENT = 0xFF7C8CFF;
+    /** Status only: running / ready / success. Never use as a primary button or a large fill. */
+    public static final int SIGNAL = 0xFF9CD462;
+    /** Terminal startup mode only — NOT a general status colour. */
     public static final int MINT = 0xFF5FE1B4;
     public static final int WARN = 0xFFFF6B6B;
     public static final int TEXT = 0xFFE6E9F0;
     public static final int DIM = 0xFFA8B3C4; // brighter: clear glass shows the picture, secondary text needs more contrast
-    public static final int FAINT = 0xFF5C6675;
+    /** Tertiary text. #5C6675 was 3.4:1 on BG (below WCAG 2.2 AA); #7A8595 reaches 5.2:1. */
+    public static final int FAINT = 0xFF7A8595;
 
     private static Typeface cjk;
 
@@ -81,18 +89,14 @@ public final class Ui {
         return d;
     }
 
-    /** A frosted-glass panel: translucent surface, light hairline, for the rail and the floating bars. */
-    public static GradientDrawable surface(Context c, float radiusDp) {
-        return rounded(c, GLASS_STRONG, GLASS_LINE, radiusDp);
+    /** A frosted-glass panel: translucent surface, light hairline, for pills, cells and floating bars. */
+    public static Drawable surface(Context c, float radiusDp) {
+        return new CardBackground(c, GLASS_STRONG, GLASS_LINE, 1f, radiusDp);
     }
 
-    /** The console rail: a near-opaque vertical gradient, so it reads as night even over a bright backdrop. */
-    public static GradientDrawable rail(Context c) {
-        GradientDrawable d = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[] {RAIL_TOP, RAIL_BOTTOM});
-        d.setCornerRadius(dp(c, 22));
-        d.setStroke(Math.max(1, dp(c, 1)), 0x2EFFFFFF);
-        return d;
+    /** The console rail: the same glass as the cards, so the blurred backdrop and its light read through it too. */
+    public static Drawable rail(Context c) {
+        return new CardBackground(c, GLASS_STRONG, GLASS_LINE, 1.2f, 22);
     }
 
     public static LinearLayout column(Context c) {
@@ -129,9 +133,9 @@ public final class Ui {
     public static LinearLayout card(Context c, String title) {
         LinearLayout card = column(c);
         // Glass card: translucent over the blurred wallpaper, light hairline and a soft shadow so it floats.
-        CardBackground bg = new CardBackground(c, GLASS, GLASS_LINE, 1.2f, 22);
+        CardBackground bg = new CardBackground(c, GLASS, GLASS_LINE, 1.2f, 24);
         card.setBackground(bg);
-        card.setElevation(dp(c, 8)); // a little more float, so the bevel has something to sit on
+        card.setElevation(dp(c, 12)); // a soft, slightly deeper float so the lit bevel has something to sit on
         CardBackground.attach(card, bg);
         GlassTint.register(card); // the backdrop's colour becomes this card's glow
         int pad = dp(c, 14);
@@ -161,7 +165,7 @@ public final class Ui {
     public static TextView button(Context c, String s, boolean primary, View.OnClickListener onClick) {
         TextView t = text(c, s, 14, primary ? 0xFF0A0C10 : TEXT, true);
         t.setGravity(Gravity.CENTER);
-        t.setBackground(rounded(c, primary ? ACCENT : 0x9E1C2230, primary ? 0 : GLASS_LINE, 14));
+        t.setBackground(rounded(c, primary ? ACCENT : 0x3D1C2230, primary ? 0 : GLASS_LINE, 14));
         Motion.pressable(t);
         int v = dp(c, 12), h = dp(c, 18);
         t.setPadding(h, v, h, v);
@@ -261,5 +265,54 @@ public final class Ui {
         r.setOnClickListener(v -> onClick.run());
         r.setClickable(true);
         return r;
+    }
+
+    /** A settings slider: a title + live value on top, a SeekBar below. Reports user-driven changes (0..max). */
+    public static LinearLayout slider(Context c, String title, int value, int max, String unit, OnSeek onSeek) {
+        LinearLayout wrap = column(c);
+        wrap.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        wrap.setPadding(0, dp(c, 6), 0, dp(c, 2));
+
+        LinearLayout head = row(c);
+        head.addView(text(c, title, 14, TEXT, false),
+                new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView val = text(c, "", 13, ACCENT, true);
+        head.addView(val);
+        wrap.addView(head);
+
+        SeekBar bar = new SeekBar(c);
+        bar.setMax(max);
+        bar.setProgress(value);
+        bar.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        if (Build.VERSION.SDK_INT >= 21) {
+            bar.setThumbTintList(ColorStateList.valueOf(ACCENT));
+            bar.setProgressTintList(ColorStateList.valueOf(ACCENT));
+            bar.setProgressBackgroundTintList(ColorStateList.valueOf(GLASS_LINE_SOFT));
+        }
+        final String u = unit;
+        bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                val.setText(progress + (u == null || u.isEmpty() ? "" : " " + u));
+                if (fromUser && onSeek != null)
+                    onSeek.onSeek(progress);
+            }
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+            }
+        });
+        val.setText(value + (u == null || u.isEmpty() ? "" : " " + u));
+        wrap.addView(bar);
+        return wrap;
+    }
+
+    /** Callback for the settings pages' slider rows: reports the new value while the user drags. */
+    public interface OnSeek {
+        void onSeek(int value);
     }
 }

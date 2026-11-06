@@ -14,6 +14,9 @@ import java.nio.charset.StandardCharsets;
  * {@link #nativeClipboardSync} and {@link #nativeClipListening} directly on it
  * (resolved by name via JNI) — those three names and signatures must stay in sync
  * with {@code jni/native_consumer.c}.
+ *
+ * Every entry point honours the Controls page's clipboard-passthrough switch. When it is off, the listener may
+ * still be registered by native, but no text crosses either way.
  */
 public final class Clipboard {
     private final Context context;
@@ -25,11 +28,16 @@ public final class Clipboard {
         this.context = context;
     }
 
+    private boolean enabled() {
+        return Prefs.clipboardPassthrough(context);
+    }
+
     private final ClipboardManager.OnPrimaryClipChangedListener clipListener =
         () -> pushClipboard();
 
     // Called from the native event thread to set clipboard text on Android.
     public void nativeSetClipboardText(String text) {
+        if (!enabled()) return;
         ClipboardManager cm = context.getSystemService(ClipboardManager.class);
         if (cm != null) {
             mLastSentClip = text;  // 记录，clipListener 回环时会比对跳过
@@ -39,6 +47,7 @@ public final class Clipboard {
 
     // Called from native C on exit_fallback to send initial clipboard sync.
     public void nativeClipboardSync() {
+        if (!enabled()) return;
         ClipboardManager cm = context.getSystemService(ClipboardManager.class);
         if (cm == null) return;
         ClipData clip = cm.getPrimaryClip();
@@ -53,9 +62,10 @@ public final class Clipboard {
 
     // Called from native C: true = register clip listener, false = unregister.
     public void nativeClipListening(boolean enable) {
+        boolean on = enable && enabled(); // the user switch can veto the native request
         ClipboardManager cm = context.getSystemService(ClipboardManager.class);
         if (cm == null) return;
-        if (enable) {
+        if (on) {
             if (mClipListening) return;  // already registered
             cm.addPrimaryClipChangedListener(clipListener);
             mClipListening = true;
@@ -68,6 +78,7 @@ public final class Clipboard {
 
     // Push clipboard only if content actually changed.
     public void pushClipboard() {
+        if (!enabled()) return;
         ClipboardManager cm = context.getSystemService(ClipboardManager.class);
         if (cm == null) return;
         ClipData clip = cm.getPrimaryClip();

@@ -110,7 +110,7 @@ final class TerminalCommandsView extends LinearLayout {
         editing = !editing;
         editButton.setText(TerminalPresets.text(editing ? "panel.done" : "panel.edit",
                 editing ? "完成" : "编辑"));
-        editButton.setTextColor(editing ? Ui.MINT : Ui.ACCENT);
+        editButton.setTextColor(editing ? Ui.SIGNAL : Ui.ACCENT);
         rebuild();
     }
 

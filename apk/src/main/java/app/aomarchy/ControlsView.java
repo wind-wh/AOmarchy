@@ -1,11 +1,7 @@
 package app.aomarchy;
 
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
-import android.content.Intent;
 import android.media.AudioManager;
-import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
@@ -13,23 +9,21 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.File;
-import java.nio.file.Files;
-
 import app.aomarchy.i18n.T;
 import app.aomarchy.ui.Ui;
 
 /**
- * The high-frequency switchboard: session, volume, display, clipboard, input. Used both as the Controls page of the
- * console and as the half-screen sheet that opens over the desktop (ControlsActivity).
+ * The high-frequency switchboard: volume, display and clipboard passthrough. Used both as the Controls page of the
+ * console and as the half-screen sheet over the desktop (ControlsActivity).
+ * Session power actions live in the rail's PowerMenu; startup mode lives in the global top bar.
  */
 final class ControlsView {
     final LinearLayout root;
 
     private final Context ctx;
     private final AudioManager audio;
-    private final TextView sessionState;
-    private final TextView clipboardState;
+    private final TextView clipboardToggle;
+    private final String clipboardLabel;
 
     ControlsView(Context ctx) {
         this.ctx = ctx;
@@ -42,8 +36,7 @@ final class ControlsView {
                 && ctx.checkSelfPermission("android.permission.POST_NOTIFICATIONS")
                 != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             LinearLayout warn = Ui.card(ctx, T.t("card.notifications_off"));
-            warn.addView(Ui.text(ctx, T.t("controls.warn_notifications"),
-                    13, Ui.DIM, false));
+            warn.addView(Ui.text(ctx, T.t("controls.warn_notifications"), 13, Ui.DIM, false));
             warn.addView(Ui.gap(ctx, 8));
             warn.addView(button(T.t("btn.enable_notifications"), true, v -> {
                 android.content.Intent i = new android.content.Intent(
@@ -53,20 +46,6 @@ final class ControlsView {
             }));
             root.addView(warn);
         }
-        LinearLayout session = Ui.card(ctx, T.t("card.session"));
-        sessionState = Ui.text(ctx, "—", 13, Ui.DIM, false);
-        session.addView(sessionState);
-        session.addView(Ui.gap(ctx, 10));
-        LinearLayout sessionButtons = Ui.row(ctx);
-        sessionButtons.addView(button(T.t("btn.enter_desktop"), true, v -> openDesktop()));
-        sessionButtons.addView(Ui.space(ctx, 8));
-        sessionButtons.addView(button(T.t("btn.restart_session"), false,
-                v -> confirmPower("reboot", T.t("dialog.restart_session_title"))));
-        sessionButtons.addView(Ui.space(ctx, 8));
-        sessionButtons.addView(button(T.t("btn.close_desktop"), false,
-                v -> confirmPower("shutdown", T.t("dialog.shutdown_title"))));
-        session.addView(sessionButtons);
-        root.addView(session);
 
         LinearLayout sound = Ui.card(ctx, T.t("card.sound"));
         int max = audio != null ? audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC) : 15;
@@ -97,18 +76,32 @@ final class ControlsView {
         display.addView(displayLink);
         root.addView(display);
 
+        // Clipboard is one switch now: on = transparent two-way passthrough (default), off = no sync at all.
         LinearLayout clip = Ui.card(ctx, T.t("card.clipboard"));
-        clipboardState = Ui.text(ctx, T.t("controls.clipboard_sync"), 12, Ui.DIM, false);
-        clip.addView(clipboardState);
+        clip.addView(Ui.text(ctx, T.t("controls.clipboard_passthrough_hint"), 12, Ui.DIM, false));
         clip.addView(Ui.gap(ctx, 6));
-        LinearLayout clipButtons = Ui.row(ctx);
-        clipButtons.addView(button(T.t("btn.send_to_desktop"), false, v -> pushClipboard()));
-        clipButtons.addView(Ui.space(ctx, 8));
-        clipButtons.addView(button(T.t("btn.fetch_from_desktop"), false, v -> pullClipboard()));
-        clip.addView(clipButtons);
+        clipboardLabel = T.t("controls.clipboard_passthrough");
+        LinearLayout clipRow = Ui.row(ctx);
+        clipRow.setPadding(0, Ui.dp(ctx, 8), 0, Ui.dp(ctx, 8));
+        clipRow.addView(Ui.text(ctx, clipboardLabel, 15, Ui.TEXT, false));
+        clipRow.addView(new View(ctx), new LinearLayout.LayoutParams(0, 1, 1f));
+        clipboardToggle = Ui.text(ctx, "", 14, Ui.DIM, true);
+        clipboardToggle.setPadding(Ui.dp(ctx, 8), Ui.dp(ctx, 8), Ui.dp(ctx, 8), Ui.dp(ctx, 8));
+        clipRow.addView(clipboardToggle);
+        clipRow.setMinimumHeight(Ui.dp(ctx, 48));
+        for (int i = 0; i < clipRow.getChildCount(); i++)
+            clipRow.getChildAt(i).setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        clipRow.setClickable(true);
+        clipRow.setOnClickListener(v -> {
+            boolean on = !Prefs.clipboardPassthrough(ctx);
+            ctx.getSharedPreferences(Prefs.NAME, Context.MODE_PRIVATE)
+                    .edit().putBoolean(Prefs.PREF_CLIPBOARD_PASSTHROUGH, on).apply();
+            applyClipboardToggle(on);
+            toast(clipboardLabel + "：" + T.t(on ? "state.on" : "state.off"));
+        });
+        clip.addView(clipRow);
         root.addView(clip);
-
-
+        applyClipboardToggle(Prefs.clipboardPassthrough(ctx));
     }
 
     private LinearLayout slider(String label, int stream, int max) {
@@ -166,81 +159,17 @@ final class ControlsView {
         return b;
     }
 
-    /** Called when the page/sheet becomes visible. */
+    /** Called when the page/sheet becomes visible: re-read the switch in case it changed elsewhere. */
     void refresh() {
-        boolean ready = SessionService.rootfsReady(ctx);
-        sessionState.setText(ready
-                ? (SessionService.started ? T.t("controls.session_running") : T.t("controls.session_ready"))
-                : T.t("controls.no_system"));
-        sessionState.setTextColor(ready ? Ui.DIM : Ui.FAINT);
+        applyClipboardToggle(Prefs.clipboardPassthrough(ctx));
     }
 
-    private void openDesktop() {
-        if (!SessionService.rootfsReady(ctx)) {
-            toast(T.t("toast.system_missing"));
-            return;
-        }
-        if (ctx instanceof android.app.Activity)
-            ((android.app.Activity) ctx).finish(); // leave the sheet so the session is visible
-        boolean terminal = "terminal".equals(ctx.getSharedPreferences(Prefs.NAME,
-                android.content.Context.MODE_PRIVATE).getString("session_mode", "desktop"));
-        if (!terminal)
-            SessionService.start(ctx);
-        Intent next = new Intent(ctx, terminal ? TerminalActivity.class : MainActivity.class);
-        next.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        ctx.startActivity(next);
-    }
-
-    private void confirmPower(String action, String title) {
-        if (!SessionService.rootfsReady(ctx)) {
-            toast(T.t("toast.system_missing"));
-            return;
-        }
-        new android.app.AlertDialog.Builder(ctx)
-                .setTitle(title)
-                .setNegativeButton(T.t("btn.cancel"), null)
-                .setPositiveButton(T.t("btn.confirm"), (d, w) -> Restarter.power(ctx, action))
-                .show();
-    }
-
-    private void pushClipboard() {
-        ClipboardManager cm = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
-        ClipData clip = cm == null ? null : cm.getPrimaryClip();
-        CharSequence text = clip == null || clip.getItemCount() == 0 ? null : clip.getItemAt(0).coerceToText(ctx);
-        if (text == null || text.length() == 0) {
-            toast(T.t("toast.clipboard_empty"));
-            return;
-        }
-        write(SessionService.runDir(ctx), "clipboard-from-android", text.toString());
-        clipboardState.setText(T.t("toast.sent_to_desktop", text.length()));
-    }
-
-    private void pullClipboard() {
-        File f = new File(SessionService.runDir(ctx), "clipboard-to-android");
-        try {
-            String text = Files.exists(f.toPath()) ? new String(Files.readAllBytes(f.toPath())) : "";
-            if (text.isEmpty()) {
-                toast(T.t("toast.nothing_to_fetch"));
-                return;
-            }
-            ClipboardManager cm = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
-            cm.setPrimaryClip(ClipData.newPlainText("AOmarchy", text));
-            clipboardState.setText(T.t("toast.fetched", text.length()));
-        } catch (Exception e) {
-            toast(T.t("toast.read_clipboard_failed", String.valueOf(e.getMessage())));
-        }
-    }
-
-    private static void write(File run, String name, String text) {
-        run.mkdirs();
-        File tmp = new File(run, name + ".tmp");
-        try {
-            Files.write(tmp.toPath(), text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            if (!tmp.renameTo(new File(run, name)))
-                throw new java.io.IOException("rename failed");
-        } catch (java.io.IOException e) {
-            android.util.Log.w("Controls", "write " + name + " failed", e);
-        }
+    private void applyClipboardToggle(boolean on) {
+        clipboardToggle.setText(T.t(on ? "state.on" : "state.off"));
+        clipboardToggle.setTextColor(on ? Ui.ACCENT : Ui.DIM);
+        View row = (View) clipboardToggle.getParent();
+        if (row != null)
+            row.setContentDescription(clipboardLabel + "，" + T.t(on ? "state.on" : "state.off"));
     }
 
     private void toast(String text) {

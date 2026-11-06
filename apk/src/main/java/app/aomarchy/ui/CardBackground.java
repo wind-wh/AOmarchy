@@ -7,6 +7,7 @@ import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RadialGradient;
+import android.graphics.SweepGradient;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
@@ -15,27 +16,44 @@ import android.view.View;
 import android.view.animation.OvershootInterpolator;
 
 /**
- * The glass panel surface: a translucent fill, a diagonal sheen from the top-left corner, a 1dp bright inner rim, the
- * finger "glint" and the press squash. Drawn inside the rounded-rectangle clip, so it works for any panel size — cards
- * (22dp radius) and the square side rail (0dp) alike.
+ * Real glass, not a dark card: a translucent slab lit by the picture behind it.
  *
- * <p>Glass layers, bottom to top: fill → diagonal sheen ({@value #SHEEN_START} at the top-left, transparent by 55% of
- * the diagonal) → press glint → 1dp inner rim ({@value #INNER_RIM}) → outer hairline stroke. The sheen and the rim are
- * what make the panel read as glass instead of a flat translucent box; both stay inside the clip, so the outer edge
- * never gets a bright halo.
+ * Layers, bottom to top, all clipped to the rounded rect:
+ *   1. thickness fill — a faint vertical gradient, barely lighter at the top (a whisper of thickness, not a band);
+ *   2. one soft edge ring — a single subtle ring just inside the outline so the edge diffuses instead of reading
+ *      as a hard drawn line (no stacked white glows);
+ *   3. diagonal sheen — the top-left corner highlight, the tell-tale reflection of real glass;
+ *   4. ambient wash — the backdrop's own colour, so the glass is lit by the picture behind it;
+ *   5. finger glint and press squash;
+ *   6. a 1dp inner rim, and the prismatic edge: a 1dp chromatic fringe running the ENTIRE outline as an angular
+ *      (sweep) gradient — indigo, blue, teal, signal green and amber cycle around the whole perimeter, so every
+ *      side carries prismatic dispersion, not just the corners.
+ *
+ * Used for cards (24dp radius), the side rail (22dp) and every small pill/cell via {@link Ui#surface}.
  */
 public final class CardBackground extends Drawable {
-    /** 10% white at the top-left corner, fading to nothing by 55% of the diagonal. */
-    private static final int SHEEN_START = 0x14FFFFFF;
+    /** Diagonal sheen: 12% white at the top-left corner, gone by 55% of the diagonal. */
+    private static final int SHEEN_START = 0x1AFFFFFF;
     private static final int SHEEN_END = 0x00FFFFFF;
-    /** 15% white 1dp rim inset from the outer edge: the "thickness" of the glass edge. */
-    private static final int INNER_RIM = 0x1AFFFFFF;
-    /** Top-inner highlight: light comes from above, so the bevel catches it. */
-    private static final int BEVEL_LIGHT = 0x2EFFFFFF;
-    /** Bottom-inner shadow: the thickness of the slab, so the panel reads as a solid piece of glass. */
-    private static final int BEVEL_SHADOW = 0x4A000000;
-    /** The sheen is gone by this fraction of the diagonal (0.55 = 55%). */
     private static final float SHEEN_EXTENT = 0.55f;
+    /** Faint white 1dp rim inset from the outer edge: the inside of the glass edge, kept low so the slab feels thin. */
+    private static final int INNER_RIM = 0x1CFFFFFF;
+    /**
+     * The prismatic edge: a 1dp chromatic fringe that runs the ENTIRE outline as an angular (sweep) gradient around
+     * the panel centre. Indigo, blue, teal, signal green and amber cycle around the whole perimeter, so every side
+     * carries prismatic dispersion — not just the corners. Peaks at white, troughs at ~25% so it reads as a thin
+     * dispersion line, not a rainbow band.
+     */
+    private static final int[] EDGE_COLORS = {
+            0x70FFFFFF, // white
+            0x5A7C8CFF, // indigo
+            0x5040C0FF, // blue
+            0x4848D8C8, // teal
+            0x489CD462, // signal green
+            0x48FFC66B, // amber
+            0x70FFFFFF  // back to white
+    };
+    private static final float[] EDGE_STOPS = {0f, 0.16f, 0.33f, 0.50f, 0.66f, 0.83f, 1f};
 
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint sheen = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -43,9 +61,12 @@ public final class CardBackground extends Drawable {
     private final Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint ring = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint border = new Paint(Paint.ANTI_ALIAS_FLAG);
-    /** The outline is a gradient (bright top-left → dim bottom-right), rebuilt only when the bounds change. */
-    private LinearGradient borderShader;
+    /** The prismatic fringe: an angular (sweep) gradient around the panel centre, rebuilt only when bounds change. */
+    private Shader borderShader;
     private final RectF borderBounds = new RectF();
+    /** The thickness fill is a vertical gradient, also rebuilt only when the bounds change. */
+    private LinearGradient fillShader;
+    private final RectF fillBounds = new RectF();
     private final Path clip = new Path();
     private final RectF rect = new RectF();
     private final RectF rimRect = new RectF();
@@ -68,8 +89,7 @@ public final class CardBackground extends Drawable {
         this.density = c.getResources().getDisplayMetrics().density;
         this.radiusPx = Ui.dp(c, radiusDp);
         this.rimPx = Math.max(1f, Ui.dp(c, 1f));
-        // The card's translucent glass fill. This was never assigned before, so Paint's default opaque black won and
-        // every "glass" card painted as a solid black box — the main reason 2.9 read as dark and showed no backdrop.
+        // Assign the fill: a default opaque Paint would turn every "glass" panel into a solid black box.
         fill.setColor(baseColor);
         fill.setStyle(Paint.Style.FILL);
         sheen.setStyle(Paint.Style.FILL);
@@ -144,7 +164,7 @@ public final class CardBackground extends Drawable {
         clip.addRoundRect(r, radiusPx, radiusPx, Path.Direction.CW);
         canvas.save();
         canvas.clipPath(clip);
-        canvas.drawRect(r, fill);
+        drawThickness(canvas, r);
         drawBevel(canvas, r);
         drawSheen(canvas, r);
         drawAmbient(canvas, r);
@@ -162,42 +182,54 @@ public final class CardBackground extends Drawable {
         float rimRadius = Math.max(0f, radiusPx - rimPx);
         canvas.drawRoundRect(rimRect, rimRadius, rimRadius, rim);
         canvas.restore();
-        drawGradientBorder(canvas, r);
+        drawChromaticBorder(canvas, r);
     }
 
-    /** One hairline, but lit: bright at the top-left, fading along the diagonal, so the edge looks like real glass. */
-    private void drawGradientBorder(Canvas canvas, RectF r) {
-        if (borderShader == null || !borderBounds.equals(r)) {
-            borderBounds.set(r);
-            borderShader = new LinearGradient(r.left, r.top, r.right, r.bottom,
-                    new int[] {0xF2FFFFFF, 0x8CFFFFFF, 0x2EFFFFFF},
-                    new float[] {0f, 0.42f, 1f}, Shader.TileMode.CLAMP);
-            border.setShader(borderShader);
+    /** The slab's thickness: a faint vertical gradient, barely lighter at the top — a whisper, not a visible band. */
+    private void drawThickness(Canvas canvas, RectF r) {
+        if (fillShader == null || !fillBounds.equals(r)) {
+            fillBounds.set(r);
+            fillShader = new LinearGradient(r.left, r.top, r.left, r.bottom,
+                    lighten(baseColor, 0.025f), baseColor, Shader.TileMode.CLAMP);
+            fill.setShader(fillShader);
         }
-        canvas.drawRoundRect(r, radiusPx, radiusPx, border);
+        canvas.drawRect(r, fill);
     }
 
-    /**
-     * The 3D part of the glass: a bright band under the top edge and a dark band above the bottom edge, both inside the
-     * clip. Together with the brighter rim this makes the panel read as a thick slab lit from above, not a flat tint.
-     */
+    private static int lighten(int color, float amount) {
+        int add = Math.round(255 * amount);
+        int r = Math.min(255, ((color >> 16) & 0xFF) + add);
+        int g = Math.min(255, ((color >> 8) & 0xFF) + add);
+        int b = Math.min(255, (color & 0xFF) + add);
+        return (color & 0xFF000000) | (r << 16) | (g << 8) | b;
+    }
+
+    /** A single soft ring just inside the outline: the edge diffuses outward as a faint glow, not a hard drawn line. */
     private void drawBevel(Canvas canvas, RectF r) {
         if (r.height() <= 0)
             return;
-        // Reference look: one even luminous edge, no top band. A soft 3dp ring just inside the stroke gives the outline
-        // a gentle fall-off so it glows instead of reading as a drawn hairline.
-        float corner = Math.max(0f, radiusPx - rimPx);
+        float w = 6f * density;
         ring.setStyle(Paint.Style.STROKE);
-        float[] widths = {3f, 6f};
-        int[] alphas = {0x1EFFFFFF, 0x0CFFFFFF};
-        for (int i = 0; i < widths.length; i++) {
-            ring.setStrokeWidth(widths[i] * density);
-            ring.setColor(alphas[i]);
-            rimRect.set(r);
-            rimRect.inset(rimPx + widths[i] * density * 0.5f, rimPx + widths[i] * density * 0.5f);
-            canvas.drawRoundRect(rimRect, Math.max(0f, corner - widths[i] * density * 0.5f),
-                    Math.max(0f, corner - widths[i] * density * 0.5f), ring);
+        ring.setStrokeWidth(w);
+        ring.setColor(0x0CFFFFFF);
+        rimRect.set(r);
+        rimRect.inset(rimPx + w * 0.5f, rimPx + w * 0.5f);
+        canvas.drawRoundRect(rimRect, Math.max(0f, radiusPx - rimPx - w * 0.5f),
+                Math.max(0f, radiusPx - rimPx - w * 0.5f), ring);
+    }
+
+    /**
+     * The prismatic edge: a 1dp chromatic fringe running the ENTIRE outline. An angular (sweep) gradient around the
+     * panel centre cycles indigo → blue → teal → signal green → amber → white around the perimeter, so every side
+     * carries prismatic dispersion — not just the corners. Drawn as the rounded-rect stroke, so it hugs the outline.
+     */
+    private void drawChromaticBorder(Canvas canvas, RectF r) {
+        if (borderShader == null || !borderBounds.equals(r)) {
+            borderBounds.set(r);
+            borderShader = new SweepGradient(r.centerX(), r.centerY(), EDGE_COLORS, EDGE_STOPS);
+            border.setShader(borderShader);
         }
+        canvas.drawRoundRect(r, radiusPx, radiusPx, border);
     }
 
     /** Diagonal glass sheen: bright at the top-left corner, transparent by {@link #SHEEN_EXTENT} of the diagonal. */

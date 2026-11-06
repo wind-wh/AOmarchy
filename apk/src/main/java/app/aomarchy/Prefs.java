@@ -13,6 +13,9 @@ final class Prefs {
     static final String NAME = "andromarchy_settings";
     private static final String OLD_NAME = "anland_settings";
 
+    /** Clipboard passthrough switch (Controls page). On by default: Android ↔ desktop sync happens automatically. */
+    static final String PREF_CLIPBOARD_PASSTHROUGH = "clipboard_passthrough";
+
     // The validated setup (tablet, 2026-10-06): what a new install starts with.
     private static final Object[][] DEFAULTS = {
         {"screen_orientation", "auto"},
@@ -36,11 +39,18 @@ final class Prefs {
         {"kb_layouts", ""}, // empty: keep whatever the installer chose from the device language
         {"open_desktop_on_start", false},
         {"session_mode", "desktop"}, // desktop | terminal: what the big button starts
+        {PREF_CLIPBOARD_PASSTHROUGH, true}, // Controls page clipboard switch: passthrough on by default
         {"term_font", 13f}, // terminal mode font size in sp
         {"backup_keep", 3}, // how many backup archives to keep; older ones are pruned after a backup
     };
 
     private static boolean done;
+
+    /** Read by both the Controls switch and Clipboard.java; missing key means the default (on). */
+    static boolean clipboardPassthrough(Context ctx) {
+        return ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+                .getBoolean(PREF_CLIPBOARD_PASSTHROUGH, true);
+    }
 
     static synchronized void init(Context ctx) {
         if (done)

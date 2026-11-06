@@ -4,58 +4,63 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AOmarchy</title>
-<!-- Design: splash.html (repo root). Offline: no CDN; the rootfs's JetBrains Mono when it is there. -->
+<!-- Design source: splash.html (repo root). Offline: no CDN; the rootfs's JetBrains Mono when it is there.
+     Visual language: dual-tone system — Indigo #7C8CFF is structure, Signal Green #9CD462 is status only.
+     The old green CRT treatment (scanlines / vignette / beam sweep / flicker / glow pulse) was removed in
+     the brand rollout; the motion here is a single calm reveal plus a staggered fade. -->
 <style>
   @font-face { font-family: 'JBM'; src: url('file:///data/data/app.aomarchy/files/rootfs/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Regular.ttf'); }
   @font-face { font-family: 'JBM'; font-weight: bold; src: url('file:///data/data/app.aomarchy/files/rootfs/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Bold.ttf'); }
   /* Omarchy Font by Mark Cuda (name table: "Free to use, share and modify. Not affiliated with Omarchy or 37signals.") */
   @font-face { font-family: 'OmarchyFont'; src: url('omarchy-font.ttf'); }
-  :root { --g: #9cd462; --bg: #0c0d14; }
+  :root {
+    --bg:#0A0C10; --surface:#14171F; --line:#262C3A;
+    --text:#E6E9F0; --dim:#A8B3C4; --faint:#7A8595;
+    --indigo:#7C8CFF; --indigo-soft:#9AA8FF; --indigo-deep:#4C5BD4;
+    --signal:#9CD462;
+  }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: var(--bg); color: #cbd5e1; font-family: 'JBM', monospace; overflow: hidden; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: 'JBM', monospace; overflow: hidden; }
   body { display: flex; flex-direction: column; align-items: center; justify-content: space-between; position: relative; }
   .layer { position: absolute; inset: 0; pointer-events: none; }
-  .dots { background-image: radial-gradient(rgba(156,212,98,.15) 1px, transparent 1px); background-size: 24px 24px; opacity: .35; }
-  .glow { background: radial-gradient(circle at center, rgba(156,212,98,.08) 0%, transparent 65%); }
-  .scan { z-index: 20; background: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,.35) 50%); background-size: 100% 4px; }
-  .vignette { z-index: 20; background: radial-gradient(circle at center, transparent 40%, rgba(5,6,10,.85) 100%); }
-  .beam { z-index: 20; inset: auto 0; height: 96px; opacity: .4; background: linear-gradient(to bottom, transparent, rgba(156,212,98,.1), transparent); animation: beam 8s linear infinite; }
-  @keyframes beam { from { transform: translateY(-100%); } to { transform: translateY(1000%); } }
+  .dots { background-image: radial-gradient(rgba(124,140,255,.14) 1px, transparent 1px); background-size: 24px 24px; opacity: .3; }
+  .ambient { background: radial-gradient(circle at 50% 40%, rgba(124,140,255,.10) 0%, transparent 62%); }
   main { position: relative; z-index: 30; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; max-width: 42rem; padding: 0 16px; text-align: center; }
-  .tag { display: flex; gap: 8px; font-size: 13px; letter-spacing: .15em; color: rgba(156,212,98,.75); margin-bottom: 20px; }
-  .tag b { color: var(--g); } .tag .d { color: #64748b; } .tag .t { color: #94a3b8; }
-  .logo { position: relative; padding: 16px 8px; animation: flicker .2s infinite; will-change: opacity; }
-  h1 { margin: 0; font-family: 'OmarchyFont', 'JBM', monospace; font-weight: normal; font-size: clamp(36px, 9vw, 72px); color: var(--g); letter-spacing: .12em; user-select: none; }
+  .mark { display:block; width: 88px; height: 88px; margin-bottom: 18px; }
+  .tag { display: flex; gap: 8px; font-size: 13px; letter-spacing: .15em; color: var(--dim); margin-bottom: 20px; }
+  .tag b { color: var(--indigo); } .tag .d { color: var(--faint); } .tag .t { color: var(--dim); }
+  .logo { position: relative; padding: 8px; }
   .under { display: none; } /* a full-screen blur exceeds WebView's tile memory at 2560x1600: nothing drew */
-  .main { animation: reveal 1.6s cubic-bezier(.16,1,.3,1) forwards, pulse 3s ease-in-out 1.6s infinite; }
-  @keyframes reveal { 0% { opacity: 0; filter: blur(12px) brightness(2); transform: scale(.92); letter-spacing: .35em; }
-    40% { opacity: .8; filter: blur(4px) brightness(1.5); } 100% { opacity: 1; filter: none; transform: none; letter-spacing: .12em; } }
-  @keyframes pulse { 0%,100% { text-shadow: 0 0 10px rgba(156,212,98,.6), 0 0 25px rgba(156,212,98,.4), 0 0 50px rgba(156,212,98,.2); opacity: .96; transform: scale(1); }
-    50% { text-shadow: 0 0 18px rgba(156,212,98,.95), 0 0 45px rgba(156,212,98,.7), 0 0 80px rgba(156,212,98,.35); opacity: 1; transform: scale(1.015); } }
-  @keyframes flicker { 0% { opacity: .98; } 4% { opacity: .92; } 8% { opacity: .99; } 15% { opacity: .88; } 19% { opacity: .99; } 55% { opacity: .97; } 60% { opacity: .93; } 65%,100% { opacity: 1; } }
-  .badge { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 6px; background: #161a24; border: 1px solid rgba(156,212,98,.3); box-shadow: 0 0 12px rgba(156,212,98,.15); font-size: 12px; color: var(--g); }
-  .badge .sep { color: #475569; } .badge .ed { color: #cbd5e1; }
-  #status { font-size: 12px; color: #94a3b8; height: 20px; margin-top: 8px; display: flex; align-items: center; }
+  h1 { margin: 0; font-family: 'OmarchyFont', 'JBM', monospace; font-weight: normal; font-size: clamp(36px, 9vw, 72px); color: var(--text); letter-spacing: .12em; user-select: none; }
+  .main { animation: reveal 1.1s cubic-bezier(.16,1,.3,1) forwards; }
+  @keyframes reveal { 0% { opacity: 0; filter: blur(10px); transform: scale(.96); letter-spacing: .3em; }
+    100% { opacity: 1; filter: none; transform: none; letter-spacing: .12em; } }
+  .badge { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 6px; background: var(--surface); border: 1px solid var(--line); font-size: 12px; color: var(--dim); }
+  .badge .sep { color: var(--faint); } .badge .ed { color: var(--text); }
+  #status { font-size: 12px; color: var(--dim); height: 20px; margin-top: 8px; display: flex; align-items: center; }
   #msg { transition: opacity .2s; }
-  .cursor { display: inline-block; width: 6px; height: 14px; background: var(--g); margin-left: 4px; animation: blink .85s infinite; }
+  .cursor { display: inline-block; width: 6px; height: 14px; background: var(--indigo); margin-left: 4px; animation: blink .85s infinite; }
   @keyframes blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
   .bar { width: 100%; max-width: 28rem; margin-top: 32px; padding: 0 16px; }
-  .bar .row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px; color: #94a3b8; }
-  .bar .row b { color: var(--g); } .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--g); margin-right: 6px; }
-  .track { height: 6px; background: #171a25; border-radius: 99px; overflow: hidden; border: 1px solid rgba(156,212,98,.2); padding: 1px; }
-  #fill { height: 100%; width: 0; border-radius: 99px; background: linear-gradient(to right, #6e9b3a, #9cd462, #c7f495); box-shadow: 0 0 10px #9cd462; transition: width .6s cubic-bezier(.25,1,.5,1); }
+  .bar .row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px; color: var(--dim); }
+  .bar .row b { color: var(--indigo); }
+  .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--signal); margin-right: 6px; }
+  .track { height: 6px; background: var(--surface); border-radius: 99px; overflow: hidden; border: 1px solid var(--line); padding: 1px; }
+  #fill { height: 100%; width: 0; border-radius: 99px; background: linear-gradient(to right, var(--indigo-deep), var(--indigo), var(--indigo-soft)); transition: width .6s cubic-bezier(.25,1,.5,1); }
   footer { position: relative; z-index: 30; width: 100%; max-width: 36rem; padding: 0 16px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-  .specs { width: 100%; display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; font-size: 11px; color: #94a3b8; border-top: 1px solid rgba(156,212,98,.15); padding-top: 12px; }
-  .specs b { color: var(--g); font-weight: normal; margin-right: 8px; }
-  .hint { font-size: 10px; color: #475569; letter-spacing: .1em; }
-  .f1, .f2, .f3 { opacity: 0; animation: fade .8s ease-out forwards; } .f1 { animation-delay: .4s; } .f2 { animation-delay: 1.2s; } .f3 { animation-delay: 1.8s; }
+  .specs { width: 100%; display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; font-size: 11px; color: var(--dim); border-top: 1px solid rgba(124,140,255,.18); padding-top: 12px; }
+  .specs b { color: var(--indigo); font-weight: normal; margin-right: 8px; }
+  .hint { font-size: 10px; color: var(--faint); letter-spacing: .1em; }
+  .f1, .f2, .f3 { opacity: 0; animation: fade .8s ease-out forwards; } .f1 { animation-delay: .3s; } .f2 { animation-delay: .7s; } .f3 { animation-delay: 1.1s; }
   @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 </style>
 </head>
 <body onclick="A.skip()">
-  <div class="layer dots"></div><div class="layer glow"></div>
-  <div class="layer scan"></div><div class="layer vignette"></div><div class="layer beam"></div>
+  <div class="layer dots"></div><div class="layer ambient"></div>
   <main>
+    <!-- Approved master lockup (refined concept 2): nested frame, negative-space A, one slanted green accent.
+         Same geometry as res/drawable/ic_launcher_foreground.xml — keep the three in sync. -->
+    <img class="mark f1" src="brand-logo.png" alt="AOmarchy">
     <div class="tag f1"><span>&lt;</span><b>INIT_RUNNER</b><span class="d">::</span><span class="t">ARCH LINUX ON ANDROID</span><span>&gt;</span></div>
     <div class="logo">
       <div class="under"><h1>AOmarchy</h1></div>
@@ -63,7 +68,7 @@
     </div>
     <div class="f2" style="display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:16px">
       <div class="badge">&gt;_ <b id="ver"></b><span class="sep">|</span><span class="ed">Omarchy · Hyprland</span></div>
-      <p id="status"><span style="color:var(--g);margin-right:8px">›</span><span id="msg"></span><span class="cursor"></span></p>
+      <p id="status"><span style="color:var(--indigo);margin-right:8px">›</span><span id="msg"></span><span class="cursor"></span></p>
     </div>
     <div class="bar f3">
       <div class="row"><span><span class="dot"></span>STARTING SESSION</span><b id="pct">0%</b></div>

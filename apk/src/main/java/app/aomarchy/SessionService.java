@@ -67,6 +67,19 @@ public class SessionService extends Service {
         return new File(rootfs(ctx), "opt/lotfix/arch-glibc/ld-linux-aarch64.so.1").exists();
     }
 
+    /**
+     * What is actually running right now — not the {@code session_mode} pref, which only plans the *next* launch.
+     * Used by the top bar's startup-mode switch to decide whether a restart has to be offered:
+     * "none" (no rootfs), "stopped" (installed, no live session), "desktop" (compositor service) or
+     * "terminal" (one pty, no service).
+     */
+    public static String runningMode(Context ctx) {
+        if (!rootfsReady(ctx)) return "none";
+        if (TerminalActivity.sRunning) return "terminal";
+        if (started) return "desktop";
+        return "stopped";
+    }
+
     public static void start(Context ctx) {
         ctx.startForegroundService(new Intent(ctx, SessionService.class));
     }

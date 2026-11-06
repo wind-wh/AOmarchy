@@ -45,7 +45,7 @@ import app.aomarchy.i18n.T;
  *       so the console still has depth when no picture can be read.</li>
  * </ol>
  *
- * <p>The picture is drawn CENTER_CROP, blurred on API 31+, and covered by a 70% brand scrim, so the
+ * <p>The picture is drawn CENTER_CROP, blurred on API 31+ (20dp), and covered by a light 35% brand scrim, so the
  * console keeps its fixed dark look and white-on-dark text stays readable over any photo. Decoding runs off the UI
  * thread (downsampled to {@link #MAX_IMAGE_SIDE} px, memory friendly) and the layers never intercept touches.
  *
@@ -55,11 +55,11 @@ import app.aomarchy.i18n.T;
  */
 public final class Wallpaper {
     /**
-     * Brand background at 70%: the wallpaper (already blurred by 30dp) shows through as texture, while the glass cards
-     * add their own ~50% fill on top — worst case (a near-white photo) still leaves body text at ≈10:1 and secondary
-     * text at ≈4.7:1, so the scrim does not need to be any darker for readability.
+     * Brand scrim at 35%: the backdrop is blurred (20dp) before this layer, so detail has already melted into colour.
+     * The glass panels then add their own translucent fill on top; body text stays readable because the blur, not a
+     * near-opaque scrim, is what removes the picture's high-frequency detail.
      */
-    private static final int SCRIM = 0x9E0A0C10; // 62%: clear glass, the picture stays recognisable
+    private static final int SCRIM = 0x590A0C10; // 35%: blurred backdrop stays visible as colour and light, not a black void
     /** Longest decoded side of a picture: enough for a tablet panel at 2x, small enough to stay cheap. */
     private static final int MAX_IMAGE_SIDE = 2000;
     /** Brand gradient endpoints (keep in sync with {@link Ui}). */
@@ -72,6 +72,10 @@ public final class Wallpaper {
     private static final String PREFS = "andromarchy_settings";
     private static final String KEY_MODE = "console_bg_mode";
     private static final String KEY_URI = "console_bg_uri";
+    /** User-tunable backdrop blur radius in dp (0 = sharp .. 24 = heavy frosting). */
+    private static final String KEY_BLUR = "console_bg_blur";
+    /** Default blur when the preference is unset: a barely-there frosting, the backdrop stays essentially sharp. */
+    private static final int DEFAULT_BLUR_DP = 4;
 
     /** The saved {@code console_bg_mode} values. */
     public static final String MODE_BUILTIN = "builtin"; // the shipped backdrop picture (default)
@@ -185,6 +189,21 @@ public final class Wallpaper {
             wallpaperAvailableCheckedAt = SystemClock.elapsedRealtime();
         }
         return available;
+    }
+
+    /** The saved backdrop blur radius in dp (0..24); defaults to {@link #DEFAULT_BLUR_DP}. */
+    public static int blurDp(Activity activity) {
+        if (activity == null)
+            return DEFAULT_BLUR_DP;
+        return prefs(activity).getInt(KEY_BLUR, DEFAULT_BLUR_DP);
+    }
+
+    /** Stores the backdrop blur radius in dp, clamped to 0..24. */
+    public static void setBlur(Activity activity, int dp) {
+        if (activity == null)
+            return;
+        int v = Math.max(0, Math.min(24, dp));
+        prefs(activity).edit().putInt(KEY_BLUR, v).apply();
     }
 
     /** The stored {@code console_bg_mode}: {@link #MODE_BUILTIN} when unset or unrecognised. */
@@ -512,10 +531,10 @@ public final class Wallpaper {
         return new LayerDrawable(new Drawable[] {base, glow});
     }
 
-    /** Clear glass: the picture is shown as-is (no blur); the scrim alone keeps text readable. */
+    /** Real frosted glass: blur the backdrop so the panels read as glass, not as tinted windows over a sharp photo. */
     private static void blur(Activity activity, ImageView picture) {
         if (Build.VERSION.SDK_INT >= 31) {
-            float radius = 0f; // clear glass: no frosted blur, the wallpaper stays recognisable
+            float radius = Ui.dp(activity, blurDp(activity)); // user-tunable 0..24dp, default a barely-there frosting
             picture.setRenderEffect(RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP));
         }
     }

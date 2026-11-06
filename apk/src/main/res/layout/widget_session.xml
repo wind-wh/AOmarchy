@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Home-screen widget body (SessionWidget): one status line + the 控制台 / 终端 entries.
-     RemoteViews supports only a small view set, so this stays a plain LinearLayout/TextView layout and gets its
-     colours from the console palette (bg #0A0C10 is too dark for a launcher card: surface #14171F is used). -->
+     RemoteViews supports only a small view set, so this stays a plain LinearLayout/TextView layout. Colours are
+     @color references so the widget follows the single brand palette in values/colors.xml instead of drifting
+     out of sync (bg is too dark for a launcher card: brand_surface #14171F is used). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#14171F"
+    android:background="@color/brand_surface"
     android:orientation="vertical"
     android:padding="14dp">
 
@@ -17,7 +18,7 @@
         android:gravity="center_vertical"
         android:maxLines="2"
         android:text="@string/widget_label"
-        android:textColor="#E6E9F0"
+        android:textColor="@color/brand_text"
         android:textSize="15sp" />
 
     <LinearLayout
@@ -30,10 +31,10 @@
             android:layout_width="0dp"
             android:layout_height="40dp"
             android:layout_weight="1"
-            android:background="#1C2230"
+            android:background="@color/brand_surface_hi"
             android:gravity="center"
             android:text="@string/widget_btn_console"
-            android:textColor="#E6E9F0"
+            android:textColor="@color/brand_text"
             android:textSize="14sp" />
 
         <TextView
@@ -42,10 +43,10 @@
             android:layout_height="40dp"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:background="#7C8CFF"
+            android:background="@color/brand_accent"
             android:gravity="center"
             android:text="@string/widget_btn_terminal"
-            android:textColor="#0A0C10"
+            android:textColor="@color/brand_bg"
             android:textSize="14sp" />
     </LinearLayout>
 </LinearLayout>

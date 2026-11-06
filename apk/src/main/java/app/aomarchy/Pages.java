@@ -94,7 +94,6 @@ class OverviewPage extends Page {
     };
 
     private TextView state;
-    private TextView heroChip;
     private TextView uptime;
     private TextView cpuValue;
     private TextView cpuSub;
@@ -127,8 +126,7 @@ class OverviewPage extends Page {
         View headSpace = new View(shell);
         decorative(headSpace);
         head.addView(headSpace, new LinearLayout.LayoutParams(0, 1, 1f));
-        heroChip = Ui.chip(shell, "● " + T.t("status.ready"), Ui.MINT);
-        head.addView(heroChip);
+        // The top bar owns the single status capsule; the hero uses its title + subline instead of a second one.
         hero.addView(head);
         hero.addView(Ui.gap(shell, 6));
         uptime = Ui.text(shell, T.t("overview.tagline"), 13, Ui.DIM, false);
@@ -376,13 +374,8 @@ class OverviewPage extends Page {
         boolean ready = SessionService.rootfsReady(shell);
         boolean terminal = "terminal".equals(shell.getSharedPreferences(Prefs.NAME,
                 android.content.Context.MODE_PRIVATE).getString("session_mode", "desktop"));
-        state.setText(!ready ? T.t("status.not_installed")
-                : terminal ? T.t("status.terminal_mode") : (SessionService.started ? T.t("status.running") : T.t("status.ready")));
-        state.setTextColor(ready ? Ui.TEXT : Ui.DIM);
-        heroChip.setText(!ready ? "○ " + T.t("status.not_installed")
-                : terminal ? "● " + T.t("status.terminal_mode")
-                : (SessionService.started ? "● " + T.t("status.running") : "● " + T.t("status.ready")));
-        heroChip.setTextColor(ready ? Ui.MINT : Ui.FAINT);
+        // One status source: the shell's top-bar chip. Here the title stays put and the subline carries the
+        // session type / uptime, so the hero no longer repeats the same state twice in one card.
         if (heroEntry != null)
             heroEntry.setText(T.t(terminal ? "btn.enter_terminal" : "btn.enter_desktop"));
         uptime.setText(!ready ? T.t("overview.tagline")
@@ -1302,7 +1295,7 @@ class SystemPage extends Page {
     void refresh() {
         boolean ready = SessionService.rootfsReady(shell);
         stateValue.setText(ready ? T.t("state.installed") : T.t("status.not_installed"));
-        stateValue.setTextColor(ready ? Ui.MINT : Ui.FAINT);
+        stateValue.setTextColor(ready ? Ui.SIGNAL : Ui.FAINT);
         if (!ready) {
             knownSize = -1;
             size.setText("—");
@@ -1549,7 +1542,6 @@ class SettingsPage extends Page {
     private TextView nameValue;
     private TextView emailValue;
     private TextView kbValue;
-    private TextView modeValue;
     private SettingsExportView exportView; // the 配置备份 sheet, while it is open
     private KeepAliveView keepAliveView; // the 后台运行 sheet
     private BackgroundPickerView backgroundView; // the 控制台背景 sheet
@@ -1558,7 +1550,6 @@ class SettingsPage extends Page {
     private LinearLayout nameRow;
     private LinearLayout emailRow;
     private LinearLayout kbRow;
-    private LinearLayout modeRow;
     private LinearLayout langRow;
 
     SettingsPage(ShellActivity shell) {
@@ -1592,10 +1583,7 @@ class SettingsPage extends Page {
         body.addView(keyboard);
 
         LinearLayout startup = Ui.card(shell, T.t("card.startup"));
-        modeValue = value("—", Ui.TEXT);
-        modeRow = row(T.t("label.startup_mode"), modeValue, this::pickMode);
-        startup.addView(modeRow);
-        startup.addView(divider());
+        // Startup mode now lives in the global top bar (ShellActivity); this card keeps only the launch shortcut.
         LinearLayout row = Ui.row(shell);
         row.setPadding(0, Ui.dp(shell, 8), 0, Ui.dp(shell, 8));
         row.addView(Ui.text(shell, T.t("settings.open_desktop_toggle"), 15, Ui.TEXT, false));
@@ -1662,6 +1650,7 @@ class SettingsPage extends Page {
         detailed.addView(divider());
         detailed.addView(row(T.t("card.console_bg"), value("›", Ui.FAINT), () -> {
             backgroundView = BackgroundPickerView.create(shell);
+            backgroundView.setListener(shell::refreshConsoleBackground); // live preview while dragging blur / switching mode
             openPage(T.t("card.console_bg"), backgroundView.view(), () -> {
                 if (backgroundView != null) {
                     backgroundView.dispose();
@@ -1804,22 +1793,7 @@ class SettingsPage extends Page {
                 .show();
     }
 
-    private void pickMode() {
-        String[] names = {T.t("mode.desktop_full"), T.t("mode.terminal")};
-        int checked = "terminal".equals(prefs().getString("session_mode", "desktop")) ? 1 : 0;
-        new android.app.AlertDialog.Builder(shell)
-                .setTitle(T.t("label.startup_mode"))
-                .setSingleChoiceItems(names, checked, (d, which) -> {
-                    prefs().edit().putString("session_mode", which == 1 ? "terminal" : "desktop").apply();
-                    SessionWidget.refresh(shell); // the widget's state text follows the startup mode
-                    d.dismiss();
-                    refresh();
-                    toast(which == 1 ? T.t("toast.next_terminal_mode") : T.t("toast.next_desktop_mode"));
-                    shell.updateEntryLabel();
-                })
-                .setNegativeButton(T.t("btn.cancel"), null)
-                .show();
-    }
+    /** Startup mode is chosen from the global top bar now (ShellActivity.pickStartupMode). */
     private void pickLayout() {
         String current = prefs().getString("kb_layouts", "");
         int checked = 0;
@@ -1920,9 +1894,6 @@ class SettingsPage extends Page {
             kb = installedLayout(); // what the installer picked from the device language
         kbValue.setText(orDash(kb));
         refreshRow(kbRow, T.t("label.kb_layout"), kbValue);
-        String mode = prefs().getString("session_mode", "desktop");
-        modeValue.setText("terminal".equals(mode) ? T.t("mode.terminal_short") : T.t("mode.desktop"));
-        refreshRow(modeRow, T.t("label.startup_mode"), modeValue);
         langValue.setText(languageLabel(T.savedLang(shell)));
         refreshRow(langRow, T.t("label.ui_lang"), langValue);
     }

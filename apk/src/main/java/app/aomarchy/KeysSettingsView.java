@@ -282,7 +282,7 @@ public final class KeysSettingsView {
         String error = ExtraKeysBar.validateLayout(text);
         if (error == null) {
             status.setText(T.t("keys.layout_valid"));
-            status.setTextColor(Ui.MINT);
+            status.setTextColor(Ui.SIGNAL);
         } else {
             status.setText("✗ " + error);
             status.setTextColor(Ui.WARN);

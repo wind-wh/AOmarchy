@@ -13,8 +13,8 @@ import app.aomarchy.ui.Ui;
 import app.aomarchy.ui.Wallpaper;
 
 /**
- * 设置 → 控制台背景: chooses where the console's backdrop comes from — the system wallpaper, a custom picture picked
- * through the system document picker, or the flat brand background.
+ * 设置 → 控制台背景: chooses where the console's backdrop comes from — the built-in picture, a custom picture picked
+ * through the system document picker, or the flat brand background; a "背景模糊" slider tunes the backdrop frosting.
  *
  * <p>The chosen mode is the {@code console_bg_mode} preference and the picture's URI is {@code console_bg_uri}; both are
  * read by {@link Wallpaper}, so this page never draws the backdrop itself. The picture grant is persisted with
@@ -32,9 +32,8 @@ import app.aomarchy.ui.Wallpaper;
  * layers, so it is safe to call again) or rebuilds the console; without a listener the new choice simply shows up the
  * next time the console is built.
  *
- * <p>When the ROM refuses to hand the wallpaper over ({@link Wallpaper#systemWallpaperAvailable(Activity)}), the page
- * keeps the same three-way choice but warns under the "系统壁纸" row and offers the custom image as the working
- * alternative, so a user does not sit on a mode that can only show the brand gradient.
+ * <p>The "背景模糊" slider persists {@code console_bg_blur} (0..24dp) and, through the host listener, re-applies the
+ * console backdrop live while dragged, so the frosting change is visible immediately.
  */
 public final class BackgroundPickerView {
     /** Request code for {@link Intent#ACTION_OPEN_DOCUMENT}, kept unique among the settings pages' pickers. */
@@ -47,7 +46,7 @@ public final class BackgroundPickerView {
 
     /** Parallel to the mode rows and to {@code Wallpaper.MODE_*}. */
     private static final String[] MODES = {
-            Wallpaper.MODE_BUILTIN, Wallpaper.MODE_LINUX, Wallpaper.MODE_CUSTOM, Wallpaper.MODE_OFF
+            Wallpaper.MODE_BUILTIN, Wallpaper.MODE_CUSTOM, Wallpaper.MODE_OFF
     };
 
     private final Activity host;
@@ -56,10 +55,6 @@ public final class BackgroundPickerView {
     private final LinearLayout[] rows = new LinearLayout[MODES.length];
     private final TextView[] checks = new TextView[MODES.length];
     private final TextView hint;
-    /** Warning under the "系统壁纸" row while the ROM refuses to hand the wallpaper over. */
-    private TextView systemWarn;
-    /** Top-of-page shortcut to a custom image, shown for the same reason. */
-    private TextView customShortcut;
     private Listener listener;
     private boolean disposed;
 
@@ -74,20 +69,11 @@ public final class BackgroundPickerView {
 
         LinearLayout card = Ui.card(host, T.t("card.console_bg"));
         card.addView(Ui.text(host, T.t("bg.desc"), 12, Ui.DIM, false));
-        // When the wallpaper cannot be read, the top description points straight at the working alternative: the
-        // same "›" link affordance the rest of the console uses.
-        customShortcut = Ui.text(host, T.t("bg.mode_custom") + " ›", 12, Ui.ACCENT, true);
-        customShortcut.setPadding(0, Ui.dp(host, 6), 0, Ui.dp(host, 6));
-        customShortcut.setMinimumHeight(Ui.dp(host, 44));
-        customShortcut.setVisibility(View.GONE);
-        customShortcut.setOnClickListener(v -> pickCustomFromShortcut());
-        card.addView(customShortcut);
         card.addView(Ui.gap(host, 6));
 
         labels[0] = T.t("bg.mode_builtin");
-        labels[1] = T.t("bg.mode_system");
-        labels[2] = T.t("bg.mode_custom");
-        labels[3] = T.t("bg.mode_off");
+        labels[1] = T.t("bg.mode_custom");
+        labels[2] = T.t("bg.mode_off");
         for (int i = 0; i < MODES.length; i++) {
             rows[i] = modeRow(i);
             card.addView(rows[i]);
@@ -99,9 +85,14 @@ public final class BackgroundPickerView {
         card.addView(Ui.gap(host, 4));
         card.addView(hint);
 
-        card.addView(Ui.gap(host, 8));
-        card.addView(Ui.button(host, T.t("bg.pick"), true, v -> pickImage()));
-        card.addView(Ui.gap(host, 6));
+        // Live backdrop blur: dragging re-applies the console background (host listener) so the change shows at once.
+        card.addView(Ui.slider(host, T.t("bg.blur"), Wallpaper.blurDp(host), 24, T.t("bg.dp"),
+                dp -> {
+                    Wallpaper.setBlur(host, dp);
+                    changed();
+                }));
+
+        card.addView(Ui.gap(host, 4));
         card.addView(Ui.button(host, T.t("bg.reset"), false, v -> reset()));
 
         root.addView(card);
@@ -143,7 +134,7 @@ public final class BackgroundPickerView {
 
     // ---- rows ----------------------------------------------------------------------------------------------------
 
-    /** One radio-style row: the mode label on the left (plus the wallpaper warning for the system row), ✓ on the right. */
+    /** One radio-style row: the mode label on the left, ✓ on the right. The custom row also keeps its "选择图片…" action. */
     private LinearLayout modeRow(int index) {
         LinearLayout row = Ui.row(host);
         row.setLayoutParams(new LinearLayout.LayoutParams(
@@ -155,17 +146,16 @@ public final class BackgroundPickerView {
         TextView label = Ui.text(host, labels[index], 14, Ui.TEXT, false);
         label.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         texts.addView(label);
-        if (index == 1) {
-            // The Linux row explains whether the desktop wallpaper was actually found.
-            boolean fromLinux = app.aomarchy.ui.Wallpaper.lastSourceWasLinux(host);
-            systemWarn = Ui.text(host, T.t(fromLinux ? "bg.linux_used" : "bg.system_unavailable"), 11,
-                    fromLinux ? Ui.DIM : Ui.WARN, false);
-            systemWarn.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-            systemWarn.setVisibility(View.GONE);
-            texts.addView(systemWarn);
-        }
         row.addView(texts, new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        // The custom-image row keeps its "选择图片…" action on the same line as the radio.
+        if (index == customIndex()) {
+            TextView pick = Ui.button(host, T.t("bg.pick"), false, v -> pickImage());
+            pick.setTextSize(13);
+            row.addView(pick);
+            row.addView(Ui.space(host, 8));
+        }
 
         checks[index] = Ui.text(host, "", 14, Ui.ACCENT, true);
         checks[index].setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
@@ -175,27 +165,23 @@ public final class BackgroundPickerView {
         return row;
     }
 
-    /** Redraws the ✓ marks, the wallpaper warning and the mode hint from the stored prefs. */
+    /** Index of the custom-image mode in {@link #MODES} ({@code BUILTIN, CUSTOM, OFF}). */
+    private static int customIndex() {
+        return 1;
+    }
+
+    /** Redraws the ✓ marks from the stored prefs. */
     private void update() {
         String current = Wallpaper.mode(host);
-        boolean fromLinux = app.aomarchy.ui.Wallpaper.lastSourceWasLinux(host);
-        boolean linuxMode = Wallpaper.MODE_LINUX.equals(current);
         for (int i = 0; i < MODES.length; i++) {
             boolean selected = MODES[i].equals(current);
             checks[i].setText(selected ? "✓" : "");
             checks[i].setTextColor(selected ? Ui.ACCENT : Ui.FAINT);
             String description = selected ? labels[i] + "，" + T.t("state.on") : labels[i];
-            if (i == 1)
-                description += "，" + T.t(fromLinux ? "bg.linux_used" : "bg.system_unavailable");
             rows[i].setContentDescription(description);
         }
-        // The Linux row explains itself: "using the desktop wallpaper" or "none found, the built-in one is shown".
-        systemWarn.setText(T.t(fromLinux ? "bg.linux_used" : "bg.system_unavailable"));
-        systemWarn.setTextColor(fromLinux ? Ui.DIM : Ui.WARN);
-        systemWarn.setVisibility(linuxMode ? View.VISIBLE : View.GONE);
-        customShortcut.setVisibility(linuxMode && !fromLinux ? View.VISIBLE : View.GONE);
-        hint.setText(linuxMode && fromLinux ? T.t("bg.linux_hint") : "");
-        hint.setVisibility(linuxMode && fromLinux ? View.VISIBLE : View.GONE);
+        hint.setText("");
+        hint.setVisibility(View.GONE);
     }
 
     /** Saves the mode; picking "自定义图片" with no picture yet goes straight to the document picker. */
@@ -224,22 +210,12 @@ public final class BackgroundPickerView {
         }
     }
 
-    /** Top-of-page shortcut for the "wallpaper unreadable" case: switch to a custom image and open the picker. */
-    private void pickCustomFromShortcut() {
-        if (disposed)
-            return;
-        Wallpaper.setMode(host, Wallpaper.MODE_CUSTOM);
-        update();
-        changed();
-        pickImage();
-    }
-
-    /** 「恢复默认」: forget the picture (and its grant) and go back to the system wallpaper. */
+    /** 「恢复默认」: forget the picture (and its grant) and go back to the built-in backdrop. */
     private void reset() {
         if (disposed)
             return;
         Wallpaper.clearCustom(host);
-        Wallpaper.setMode(host, Wallpaper.MODE_SYSTEM);
+        Wallpaper.setMode(host, Wallpaper.MODE_BUILTIN);
         update();
         changed();
     }

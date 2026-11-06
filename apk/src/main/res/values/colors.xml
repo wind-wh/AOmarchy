@@ -1,17 +1,53 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- AOmarchy brand (fixed dark, not the desktop's Omarchy theme): keep in sync with app.aomarchy.ui.Ui.
-         brand_bg / brand_accent are used by Theme.AOmarchy; the rest is the console palette (documented in Ui.java). -->
+    <!-- AOmarchy brand (fixed dark, not the desktop's Omarchy theme). Keep in sync with app.aomarchy.ui.Ui
+         and docs/2026-11-05-AOmarchy-UI交互设计规范.md. The dual-tone rule: Indigo = structure
+         (actions / selection / focus / navigation), Signal Green = status only (running / ready / success).
+         Mint #5FE1B4 is reserved for terminal startup mode, never a general status colour. -->
     <color name="brand_bg">#0A0C10</color>
     <color name="brand_surface">#14171F</color>
     <color name="brand_surface_hi">#1C2230</color>
     <color name="brand_line">#262C3A</color>
     <color name="brand_accent">#7C8CFF</color>
+    <color name="brand_signal">#9CD462</color>
     <color name="brand_mint">#5FE1B4</color>
     <color name="brand_warn">#FF6B6B</color>
     <color name="brand_text">#E6E9F0</color>
-    <color name="brand_dim">#98A2B3</color>
+    <color name="brand_dim">#A8B3C4</color>
 
-    <!-- Adaptive launcher icon background (mipmap-anydpi-v26/ic_launcher.xml) -->
+    <!-- Semantic additions. brand_faint is the AA-compliant tertiary text colour (#7A8595 ≈ 5.2:1 on
+         brand_bg); the old #5C6675 was 3.4:1 and must only be used for decoration / disabled states. -->
+    <color name="brand_info">#9AA8FF</color>
+    <color name="brand_faint">#7A8595</color>
+    <color name="brand_faint_decor">#5C6675</color>
+    <color name="brand_warn_bg">#3A1A1E</color>
+
+    <!-- Indigo scale — structural primary (50..900). Mirrors the indigo custom properties in
+         2026-11-05-AOmarchy-VI-Manual.html. -->
+    <color name="indigo_50">#EEF0FF</color>
+    <color name="indigo_100">#D8DDFF</color>
+    <color name="indigo_200">#B4BEFF</color>
+    <color name="indigo_300">#9AA8FF</color>
+    <color name="indigo_400">#7C8CFF</color>
+    <color name="indigo_500">#6172F0</color>
+    <color name="indigo_600">#4C5BD4</color>
+    <color name="indigo_700">#3B47A8</color>
+    <color name="indigo_800">#2A3277</color>
+    <color name="indigo_900">#1A1F4A</color>
+
+    <!-- Signal scale — status only (50..900). Mirrors the signal custom properties in the VI manual. -->
+    <color name="signal_50">#F0FBE4</color>
+    <color name="signal_100">#DDF5C2</color>
+    <color name="signal_200">#BDEB92</color>
+    <color name="signal_300">#9CD462</color>
+    <color name="signal_400">#7FBB48</color>
+    <color name="signal_500">#639A34</color>
+    <color name="signal_600">#4B7826</color>
+    <color name="signal_700">#38591C</color>
+    <color name="signal_800">#263D13</color>
+    <color name="signal_900">#17260B</color>
+
+    <!-- Adaptive launcher icon background (mipmap-anydpi-v26/ic_launcher.xml). The approved master is a dark
+         lockup, so the plate stays brand dark; the artwork above it is the single LOGO1.png-derived bitmap. -->
     <color name="ic_launcher_background">#0A0C10</color>
 </resources>

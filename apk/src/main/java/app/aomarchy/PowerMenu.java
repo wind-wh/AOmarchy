@@ -49,7 +49,7 @@ final class PowerMenu {
         panel.addView(Ui.text(host, T.t("power.title"), 16, Ui.TEXT, true));
         TextView state = Ui.text(host, !ready ? T.t("power.need_system")
                         : running ? T.t("power.state_running") : T.t("power.state_stopped"),
-                12, !ready ? Ui.FAINT : running ? Ui.MINT : Ui.DIM, false);
+                12, !ready ? Ui.FAINT : running ? Ui.SIGNAL : Ui.DIM, false);
         state.setPadding(0, Ui.dp(host, 2), 0, 0);
         panel.addView(state);
         panel.addView(Ui.gap(host, 8));
@@ -64,7 +64,7 @@ final class PowerMenu {
         panel.addView(row(host, dialog, T.t("power.background"),
                 T.t("power.background_hint") + "\n" + T.t("keepalive.auto_off"),
                 T.t(keepAlive ? "power.background_on" : "power.background_off"),
-                keepAlive ? Ui.MINT : Ui.FAINT, true, () -> toggleBackground(host)));
+                keepAlive ? Ui.SIGNAL : Ui.FAINT, true, () -> toggleBackground(host)));
         // 重启 / 关机 only make sense with a running Linux: dimmed with the reason in place otherwise.
         panel.addView(row(host, dialog, T.t("power.restart"),
                 !ready ? T.t("power.need_system")
